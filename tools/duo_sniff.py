@@ -12,6 +12,10 @@ beginnen, sind Kommentare, etwa Markierungen wie `# jetzt 93 -> 94 Grad`.
 
 Befehle:
 
+    dgus    DWIN-DGUS-Protokoll des Displays (DMT32240M035, "Mini DGUS"):
+            Rahmen 5A A5 <len> <cmd> ..., Registerzugriffe 0x80/0x81,
+            Variablen (VP) 0x82/0x83. Zeigt Seitenwechsel, jede VP-Aenderung
+            und Touch-Meldungen des Displays. Am wahrscheinlichsten richtig.
     stats   Laengen, Anfangsbytes, druckbarer Anteil, Pruefsummen-Kandidaten
     gicar   ASCII-Registerprotokoll wie beim Gicar 3d5 (Ascaso Baby T):
             r/w, Offset, Laenge, Hexdaten, Summe mod 256. Zeigt jede
@@ -21,6 +25,7 @@ Befehle:
 
 Beispiele:
 
+    python3 duo_sniff.py dgus mitschnitt.log
     python3 duo_sniff.py stats mitschnitt.log
     python3 duo_sniff.py gicar mitschnitt.log
     python3 duo_sniff.py diff mitschnitt.log --dir A --len 18
@@ -156,6 +161,9 @@ def cmd_stats(frames: list[Frame], out=sys.stdout) -> None:
         print("  Laengen:   " + ", ".join(f"{l}B x{n}" for l, n in laengen.most_common(8)), file=out)
         koepfe = Counter(f.daten[:1].hex() for f in fs if f.daten)
         print("  Byte 0:    " + ", ".join(f"{k} x{n}" for k, n in koepfe.most_common(8)), file=out)
+        dgus = sum(1 for f in fs if DGUS_KOPF in f.daten)
+        if dgus:
+            print(f"  DGUS:      {dgus} Frames enthalten 5A A5 -> `dgus` benutzen", file=out)
         dr = sum(druckbar_anteil(f.daten) for f in fs) / len(fs)
         print(f"  druckbar:  {dr:.0%}" + ("  -> vermutlich ASCII-Protokoll" if dr > 0.95 else ""), file=out)
         if len(fs) > 1:
@@ -252,6 +260,191 @@ def _u16(d: bytes) -> str:
     return str(int.from_bytes(d[:2], "little")) if len(d) >= 2 else "-"
 
 
+# ─── dgus (DWIN-Display) ─────────────────────────────────────────────────────
+#
+# Rahmenformat nach ADVi3++ (andrivet/ADVi3pp, Marlin/src/advi3pp/core/dgus.h),
+# das dieselbe DWIN-M-Serie ("Mini DGUS") ansteuert:
+#
+#   5A A5 | LEN | CMD | Parameter | Daten      LEN zaehlt CMD + Parameter + Daten
+#
+#   80 reg daten...          Register schreiben (03 = PIC_ID, also Seitenwechsel)
+#   81 reg n                 Register lesen, Antwort: 81 reg n daten...
+#   82 vpH vpL worte...      Variable schreiben (VP = Wortadresse, big-endian)
+#   83 vpH vpL n             Variable lesen, Antwort: 83 vpH vpL n worte...
+#                            Dieselbe Form schickt das Display ungefragt, wenn
+#                            eine Taste mit Tastencode gedrueckt wurde.
+#   84 ...                   Kurvendaten
+#
+# Optional haengt eine CRC-16/Modbus ueber CMD+Daten an (Schalter in R2). Das
+# Skript erkennt das je Rahmen selbst. DGUS-II-Displays quittieren 0x82 mit
+# `82 4F 4B` ("OK"); Mini DGUS tut das nicht. Beides wird verstanden.
+
+DGUS_KOPF = b"\x5a\xa5"
+
+DGUS_REGISTER = {
+    0x00: "Version",
+    0x01: "Helligkeit",
+    0x02: "Summer",
+    0x03: "PIC_ID (Seite)",
+    0x05: "Touch-Flag",
+    0x06: "Touch-Status",
+    0x07: "Touch-Position",
+    0x0B: "Touch an/aus",
+    0x0C: "Laufzeit",
+    0x20: "RTC",
+    0x40: "EnLibOP",
+    0x41: "LibOPMode",
+    0x42: "LibID",
+    0x43: "LibAddress",
+    0x46: "LibOP-VP",
+    0x48: "LibOP-Laenge",
+    0x4F: "Tastencode",
+    0xEE: "Reset",
+}
+
+
+@dataclass
+class DgusFrame:
+    t_ms: int
+    richtung: str
+    cmd: int
+    nutz: bytes  # Parameter + Daten, ohne CRC
+    crc: bool
+
+
+class DgusParser:
+    """Zerlegt den Bytestrom je Richtung in DGUS-Rahmen. Der Sniffer trennt
+    nach Pausen, nicht nach Protokoll: Ein Sniffer-Frame kann mehrere Rahmen
+    oder einen halben enthalten. Deshalb wird je Richtung aneinandergehaengt
+    und am Kopf neu synchronisiert."""
+
+    def __init__(self, kopf: bytes = DGUS_KOPF):
+        self.kopf = kopf
+        self.puffer: dict[str, bytearray] = defaultdict(bytearray)
+        self.zeit: dict[str, int] = {}
+
+    def feed(self, f: Frame) -> list[DgusFrame]:
+        raus = []
+        b = self.puffer[f.richtung]
+        if not b:
+            self.zeit[f.richtung] = f.t_ms
+        b.extend(f.daten)
+        while True:
+            i = b.find(self.kopf)
+            if i < 0:
+                del b[: max(0, len(b) - len(self.kopf) + 1)]
+                break
+            if i:
+                del b[:i]
+            if len(b) < 4:
+                break
+            n = b[2]
+            if len(b) < 3 + n:
+                break
+            koerper = bytes(b[3 : 3 + n])
+            del b[: 3 + n]
+            mit_crc = len(koerper) >= 3 and _crc16_modbus(koerper[:-2]) in (
+                int.from_bytes(koerper[-2:], "little"),
+                int.from_bytes(koerper[-2:], "big"),
+            )
+            if mit_crc:
+                koerper = koerper[:-2]
+            if koerper:
+                raus.append(DgusFrame(self.zeit.get(f.richtung, f.t_ms), f.richtung, koerper[0], koerper[1:], mit_crc))
+            self.zeit[f.richtung] = f.t_ms
+        return raus
+
+
+def dgus_rahmen(frames: Iterable[Frame], kopf: bytes = DGUS_KOPF) -> Iterator[DgusFrame]:
+    p = DgusParser(kopf)
+    for f in frames:
+        yield from p.feed(f)
+
+
+def dgus_beschreibung(r: DgusFrame) -> tuple[str, int | None, bytes]:
+    """(Text, VP-Adresse oder None, Nutzdaten der Variable)."""
+    c, p = r.cmd, r.nutz
+    if c == 0x80 and p:
+        name = DGUS_REGISTER.get(p[0], f"R{p[0]:02X}")
+        rest = p[1:]
+        if p[0] == 0x03 and len(rest) >= 2:
+            return f"Register schreiben {name} = Seite {int.from_bytes(rest[:2], 'big')}", None, b""
+        return f"Register schreiben {name} = {rest.hex(' ')}", None, b""
+    if c == 0x81 and len(p) >= 2:
+        name = DGUS_REGISTER.get(p[0], f"R{p[0]:02X}")
+        if len(p) == 2:
+            return f"Register lesen {name}, {p[1]} Byte", None, b""
+        rest = p[2:]
+        if p[0] == 0x03 and len(rest) >= 2:
+            return f"Register {name} ist Seite {int.from_bytes(rest[:2], 'big')}", None, b""
+        return f"Register {name} = {rest.hex(' ')}", None, b""
+    if c == 0x82:
+        if p == b"OK":
+            return "Quittung OK", None, b""
+        if len(p) >= 2:
+            vp = int.from_bytes(p[:2], "big")
+            return f"VP schreiben 0x{vp:04X} = {_worte(p[2:])}", vp, p[2:]
+    if c == 0x83 and len(p) >= 3:
+        vp = int.from_bytes(p[:2], "big")
+        if len(p) == 3:
+            return f"VP lesen 0x{vp:04X}, {p[2]} Wort", None, b""
+        return f"VP 0x{vp:04X} meldet {_worte(p[3:])}", vp, p[3:]
+    if c == 0x84:
+        return f"Kurvendaten {p.hex(' ')}", None, b""
+    return f"unbekannt cmd=0x{c:02X} {p.hex(' ')}", None, b""
+
+
+def _worte(d: bytes) -> str:
+    if len(d) % 2 == 0 and d:
+        w = [int.from_bytes(d[i : i + 2], "big") for i in range(0, len(d), 2)]
+        text = " ".join(f"{x:04X}({x})" for x in w[:8])
+        if len(w) > 8:
+            text += f" ... ({len(w)} Worte)"
+    else:
+        text = d.hex(" ")
+    if druckbar_anteil(d.rstrip(b"\x00\xff")) > 0.9 and len(d) >= 4:
+        text += f'  "{d.rstrip(bytes([0, 0xFF])).decode("latin-1")}"'
+    return text
+
+
+def cmd_dgus(eintraege: list[Frame | str], nur_aenderungen: bool = False, out=sys.stdout) -> dict[int, bytes]:
+    """Gibt jeden DGUS-Rahmen aus (bei `nur_aenderungen` nur neue VP-Werte,
+    Seitenwechsel und Touch-Meldungen) und am Ende eine Tabelle aller VPs.
+    Rueckgabe: VP-Adresse -> letzter Wert."""
+    vps: dict[int, bytes] = {}
+    zaehler: Counter = Counter()
+    von: dict[int, set] = defaultdict(set)
+    n = n_crc = 0
+    parser = DgusParser()
+    for e in eintraege:
+        if isinstance(e, str):
+            print(f"-- {e}", file=out)
+            continue
+        for r in parser.feed(e):
+            n += 1
+            n_crc += r.crc
+            text, vp, daten = dgus_beschreibung(r)
+            neu = True
+            if vp is not None:
+                zaehler[vp] += 1
+                von[vp].add(r.richtung)
+                neu = vps.get(vp) != daten
+                vps[vp] = daten
+            # Ein einzelnes Wort per 0x83 ist meist ein Tastendruck: jedes Mal zeigen.
+            taste = r.cmd == 0x83 and len(daten) == 2
+            if not nur_aenderungen or r.cmd == 0x80 or (vp is not None and (neu or taste)):
+                print(f"{r.t_ms:>9} {r.richtung} {text}", file=out)
+
+    print(f"\n{n} DGUS-Rahmen, davon {n_crc} mit CRC.", file=out)
+    if not n:
+        print("Kein 5A A5 gefunden. Baudrate/Invertierung pruefen oder `stats` ansehen.", file=out)
+    if vps:
+        print("\nVP      Anzahl  Richtung  letzter Wert", file=out)
+        for vp in sorted(vps):
+            print(f"0x{vp:04X}  {zaehler[vp]:>6}  {','.join(sorted(von[vp])):<8}  {_worte(vps[vp])}", file=out)
+    return vps
+
+
 # ─── diff (Binaerprotokoll) ──────────────────────────────────────────────────
 
 
@@ -303,9 +496,11 @@ def cmd_diff(
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("stats", "gicar", "diff"):
+    for name in ("dgus", "stats", "gicar", "diff"):
         p = sub.add_parser(name)
         p.add_argument("log", help="Sniffer-Log, '-' fuer stdin")
+        if name == "dgus":
+            p.add_argument("--changes", action="store_true", help="nur neue Werte, Seitenwechsel, Tasten")
         if name == "diff":
             p.add_argument("--dir", default="A", help="Richtung A oder B")
             p.add_argument("--len", type=int, help="nur Frames dieser Laenge (Standard: haeufigste)")
@@ -316,7 +511,9 @@ def main(argv: list[str] | None = None) -> int:
     with quelle:
         eintraege = list(lese_log(quelle))
 
-    if a.cmd == "stats":
+    if a.cmd == "dgus":
+        cmd_dgus(eintraege, a.changes)
+    elif a.cmd == "stats":
         cmd_stats(nur_frames(eintraege))
     elif a.cmd == "gicar":
         cmd_gicar(eintraege)

@@ -18,7 +18,7 @@
 // Befehle ueber den seriellen Monitor (Zeile mit Enter abschliessen):
 //   scan         2 s lang Flanken messen: Ruhepegel und kuerzester Puls
 //                -> Baudrate und ob die Leitung invertiert ist
-//   b <baud>     Baudrate setzen, z. B. "b 9600"
+//   b <baud>     Baudrate setzen, z. B. "b 9600" (Start: 115200)
 //   i            Invertierung umschalten
 //   p <8N1|8E1>  Paritaet
 //   g <ms>       Pause, ab der ein neuer Frame beginnt (Standard: auto)
@@ -36,7 +36,7 @@ static const int PIN_B = 17;
 static const int PIN_TX_FREI_A = 25;
 static const int PIN_TX_FREI_B = 26;
 
-static uint32_t baud = 9600;
+static uint32_t baud = 115200;  // DWIN-DGUS-Standard
 static bool invertiert = false;
 static uint32_t paritaet = SERIAL_8N1;
 static uint32_t pauseMsFest = 0;  // 0 = automatisch aus der Baudrate

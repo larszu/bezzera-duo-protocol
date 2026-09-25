@@ -5,89 +5,111 @@ Arbeitsstand, um die Verbindung zwischen Mainboard (7661047.xx) und dem
 Matrix zu entschlüsseln. Ziel ist dasselbe wie beim Reddit-Projekt von
 *Vivid-Ad-2039*: ein ESP32, der Register liest und schreibt.
 
-## 1. Recherche (Stand 2026-09-24)
+## 1. Was feststeht
 
-### Gibt es schon Code? Nein.
+**Das Display ist ein DWIN DMT32240M035_07WTZ4**, darauf ein Touch-Overlay
+CDQ9439-3.5-A (abgelesen an einer Duo DE, 2026-09-25). DWIN-Displays sind
+fertige serielle HMI-Module: Bilder, Schriften und die Lage der Touchflächen
+liegen im Flash des Displays. Das Display selbst hat keine Maschinenlogik. Es
+zeigt Variablen an und meldet Touch-Eingaben über UART. Das Touch-Overlay
+wertet der Displaycontroller selbst aus, für das Protokoll spielt es keine Rolle.
 
-| Suche | Ergebnis |
+Daraus folgt sehr wahrscheinlich:
+
+- **Das Mainboard ist der Master und hält die ganze Logik**: PID, Sollwerte,
+  Passwörter, Chrono. Das passt dazu, dass ein Mainboard-Reset die Passwörter
+  auf 1901/1906 setzt.
+- **Die „Register“ von Vivid-Ad-2039 sind DGUS-Variablen (VPs).** Das Mainboard
+  schreibt Werte in VP-Adressen des Displays, das Display meldet Eingaben als
+  VP-Wert zurück. Das ist tatsächlich „quite simple“.
+- **„MCU Passthrough“** heißt dann: Der ESP32 sitzt zwischen Mainboard und
+  Display und reicht die DGUS-Rahmen durch. Zum Testen kann er das Durchreichen
+  abschalten.
+
+### Das Protokoll: DWIN „Mini DGUS“
+
+Die M-Serie von DWIN (DMT…M…) läuft mit „Mini DGUS“. Dieselbe Serie steckt im
+Drucker Wanhao i3 Plus (DMT48270M043). Dafür hat
+[ADVi3++](https://github.com/andrivet/ADVi3pp) das Protokoll vollständig
+implementiert (`Marlin/src/advi3pp/core/dgus.h`):
+
+```
+5A A5 | LEN | CMD | Parameter | Daten        LEN = Bytes ab CMD (inkl. CRC, falls an)
+
+80 reg daten...        Register schreiben     80 03 00 05  -> auf Seite 5 wechseln
+81 reg n               Register lesen         Antwort: 81 reg n daten...
+82 vpH vpL worte...    Variable schreiben     82 10 00 03 A7 -> VP 0x1000 = 935
+83 vpH vpL n           Variable lesen         Antwort: 83 vpH vpL n worte...
+                       Dieselbe Form sendet das Display ungefragt bei Tasten
+                       mit Tastencode:        83 20 00 01 00 02
+84 ...                 Kurvendaten
+```
+
+- Worte sind big-endian. Eine Temperatur steht wahrscheinlich als Wert × 10 in
+  einem Wort (93,5 °C = 935 = `03 A7`). Das ist nicht bestätigt, bei DGUS aber üblich.
+- Wichtige Register: `03` aktuelle Seite (PIC_ID), `4F` Tastencode, `05`–`07`
+  Touch, `00` Firmwareversion.
+- Rahmenkopf (`5A A5`), Baudrate und CRC sind im Display einstellbar
+  (`DWIN_SET/CONFIG.txt`, Register R1/R2/R3/RA). ADVi3++ nutzt 115200 Baud,
+  Kopf 5A A5, ohne CRC. Bezzera kann das anders eingestellt haben. Das Skript
+  erkennt eine CRC-16/Modbus pro Rahmen selbst.
+- Neuere DGUS-II-Displays (T5/T5L) nutzen dasselbe Rahmenformat, wechseln die
+  Seite aber über VP `0x0084` und quittieren 0x82 mit `4F 4B`. Beides versteht
+  das Skript auch.
+
+### Was es sonst gibt
+
+| Suche (2026-09-24) | Ergebnis |
 |---|---|
 | GitHub-Code `setwarmup bezzera`, `"/set/espresso"` | 0 Treffer |
 | GitHub-Nutzer `Vivid-Ad-2039` | existiert nicht |
-| GitHub-Repos `bezzera` | nur [BB005-Mühlentimer](https://github.com/hellgelino/bezzera-bb005-digital-timer) und [bezzi-tank](https://github.com/hcrohland/bezzi-tank) (Ultraschall-Füllstand für die Duo, fasst die Elektronik nicht an) |
-| GitHub-Code `bezzera duo esp32` | zusätzlich nur [brewos-io/firmware](https://github.com/brewos-io/firmware). Das *ersetzt* die Steuerung komplett und listet Duo/Matrix nur als ungetestet, ohne Protokoll |
-| Reddit-Profil | von hier aus nicht erreichbar (reddit gesperrt). Bitte selbst ansehen: `old.reddit.com/user/Vivid-Ad-2039` |
+| GitHub-Repos `bezzera` | nur [BB005-Mühlentimer](https://github.com/hellgelino/bezzera-bb005-digital-timer) und [bezzi-tank](https://github.com/hcrohland/bezzi-tank) (Ultraschall-Füllstand, fasst die Elektronik nicht an) |
+| `bezzera duo esp32` | [brewos-io/firmware](https://github.com/brewos-io/firmware): ersetzt die ganze Steuerung, Duo/Matrix ungetestet, kein Protokoll |
+| Reddit-Profil | von hier aus nicht erreichbar. Selbst ansehen: `old.reddit.com/user/Vivid-Ad-2039` |
+| `DMT32240M035_07WTZ4` | kein Datenblatt zu genau dieser Variante gefunden. `_07` und `Z4` sind vermutlich kundenspezifisch. Die Serie DMT32240M035_03W ist als „Smart UART, TTL“ beschrieben |
 
-### Der eigentliche Fund: Das Mainboard ist von Gicar
+### Frühere Hypothese: Gicar-Protokolle
 
-Händler beschreiben die Steuerung der Duo/Matrix MN als „Gicar PID controller“
-([Whole Latte Love, Matrix MN](https://www.wholelattelove.com/products/bezzera-matrix-mn-dual-boiler-espresso-machine)).
-Für Gicar-Steuerungen gibt es zwei sauber dokumentierte Protokolle. Eines
-davon passt sehr wahrscheinlich, oder beide in Varianten:
+Händler nennen die Steuerung „Gicar PID controller“
+([Whole Latte Love](https://www.wholelattelove.com/products/bezzera-matrix-mn-dual-boiler-espresso-machine)).
+Für Gicar sind zwei Protokolle dokumentiert: das ASCII-Registerprotokoll der
+Ascaso Baby T ([antondlr/gicar-serial](https://github.com/antondlr/gicar-serial):
+`r/w` + Offset + Länge, Summe mod 256, 115200 Baud) und das Binärprotokoll
+Display ↔ Platine der Lelit Bianca
+([lelit-bianca-protocol](https://github.com/magnusnordlander/lelit-bianca-protocol):
+9600 Baud invertiert, Summe mod 128). **Für die Displayleitung der Duo ist das
+mit dem DWIN-Fund unwahrscheinlich.** Die Hauptplatine kann trotzdem von Gicar
+sein. Das Gicar-ASCII-Protokoll könnte an einer anderen Schnittstelle des
+Mainboards hängen, etwa an einem Service- oder Bluetooth-Anschluss. Das Skript
+kann deshalb beides weiterhin erkennen (`gicar`, `stats`).
 
-**A) Gicar-ASCII-Registerprotokoll**
-([antondlr/gicar-serial](https://github.com/antondlr/gicar-serial), Ascaso Baby T, Gicar „3d5 Maestro“)
-
-```
-115200 Baud, 8N1, reiner ASCII-Text
-Lesen:     r OOOO LLLL CC            r000500D7xx  -> 0xD7 Bytes ab Offset 5
-Antwort:   r OOOO LLLL <hex-daten> CC
-Schreiben: w OOOO LLLL <hex-daten> CC   w005600010164  (Dampfkessel an)
-Quittung:  w OOOO LLLL OK CC            w00560001OK9D
-CC = Summe aller Zeichen davor, mod 256, als zwei Hex-Zeichen
-Temperaturen als u16 little-endian, Wert x 10 (93,5 °C = 935 = A7 03)
-```
-
-Das passt auffällig gut zur Featureliste von Vivid-Ad-2039 („reading/writing
-registers“, „looks quite simple“) und zu den Bereichen 89–96 °C / 100–130 °C.
-**Wichtige Einschränkung** aus demselben Repo: Diese Schnittstelle trägt dort
-*nur Einstellungen*, keine Live-Temperaturen und keinen Shot-Timer. Die liefen
-bei Ascaso über eine zweite serielle Verbindung. Bei der Duo zeigt das Display
-aber live Temperatur und Chrono, also muss über das Display-Kabel mehr laufen.
-
-**B) Gicar-Binärprotokoll Display ↔ Steuerplatine**
-([magnusnordlander/lelit-bianca-protocol](https://github.com/magnusnordlander/lelit-bianca-protocol), Lelit Bianca V2)
-
-```
-9600 Baud, 8N1, INVERTIERT (Ruhepegel low!)
-6-poliges Kabel: 12 V, TX 3,3 V, RX 5 V, GND, 3,3 V, 3,3 V
-Display ist Master, sendet 80 ii jj bb zz   (Relais-Bits, Tasten, Prüfsumme)
-Platine antwortet 81 ... zz, 18 Byte        (ADC-Rohwerte der Fühler, Füllstände, Hebel/Microswitch)
-zz = Summe mod 128
-```
-
-Die Aufteilung ähnelt der Duo. Bei der Bianca ist das Display der eigentliche
-Regler (PID), die Platine schaltet nur Relais und misst. Wenn die Duo auch so
-arbeitet, liegen die Sollwerte im **Display**, und das Mainboard kennt gar
-keine Temperaturgrenzen. Dann wäre Vivid-Ad-2039s „Passthrough“ ein ESP32,
-der das Display ersetzt oder die Pakete umschreibt.
-
-Die Werte 1901/1906 als Werks-Passwörter nach Mainboard-Reset sprechen
-eher dafür, dass Einstellungen (auch) auf dem Mainboard liegen, also für A
-oder eine Mischform. Klären lässt sich das nur mit einem Mitschnitt.
-
-## 2. Messen: So geht es weiter
+## 2. Messen
 
 > ⚠️ In der Maschine liegen 230 V. Stecker ziehen, bevor du etwas anklemmst.
 > Mit laufender Maschine nur an die bereits verlegten Messleitungen gehen.
 > Kessel und Dampf sind heiß.
 
-### 2.1 Stecker finden und Pegel messen
+### 2.1 Stecker am Display
 
-1. Stecker zwischen Mainboard und Displayplatine finden, Adern zählen, Foto machen.
-2. Maschine an, Multimeter gegen GND (Gehäuse ist *nicht* sicher GND, das
-   Minus der Elektronik nehmen, meist die Ader mit der größten Kupferfläche):
-   - Adern mit festen 12 V / 5 V / 3,3 V sind Versorgung.
-   - Datenleitungen zeigen einen „krummen“ Mittelwert, der leicht zappelt.
-   - Ruhepegel nahe Versorgung = normales UART. Nahe 0 V = invertiert (wie Lelit).
-   - Zwei Datenadern, die sich spiegeln (A = 2,8 V, B = 2,2 V, gegenläufig
-     zappelnd) = differenziell, RS-485. Dann einen MAX485-/SP3485-Wandler
-     davor (nur RO benutzen, DE/RE fest auf GND) statt direkt an den ESP32.
+Das Displaymodul hat einen eigenen UART-Stecker. Bei DWIN sind das typisch
+Versorgung (+5 V oder mehr, je nach Modell), GND, TX, RX. Die genaue Belegung
+steht oft auf der Platinenrückseite neben dem Stecker. Bitte ein Foto von
+beiden Seiten des Displaymoduls machen.
+
+1. Adern zählen und Beschriftung am Stecker notieren.
+2. Maschine an, Multimeter gegen GND der Elektronik:
+   - feste Spannung = Versorgung
+   - leicht zappelnder Wert nahe 3,3 V oder 5 V = Datenleitung im Ruhezustand.
+     DWIN nutzt TTL, Ruhepegel high, also nicht invertiert. RS-232 (±5–12 V)
+     ist bei DWIN wählbar, ab Werk aber aus. Liegt eine Datenader deutlich
+     **unter 0 V**, ist es RS-232. Dann niemals direkt an den ESP32, sondern
+     über einen MAX3232.
 
 ### 2.2 Sniffer anklemmen
 
 Firmware: [`sniffer/duo_sniffer/duo_sniffer.ino`](sniffer/duo_sniffer/duo_sniffer.ino),
-Arduino-IDE, Board „ESP32 Dev Module“. Der Sniffer sendet nichts, das Original-
-Display bleibt angeschlossen und läuft normal weiter.
+Arduino-IDE, Board „ESP32 Dev Module“. Der Sniffer sendet nichts, das Display
+läuft normal weiter. Startwert ist 115200 Baud.
 
 ```
 Datenleitung 1 ──[10k]──┬── GPIO16 (Kanal A)      Spannungsteiler nur bei 5-V-Pegel:
@@ -97,74 +119,73 @@ Datenleitung 2 ──[10k]──┬── GPIO17 (Kanal B)
 GND Maschine ──────────────── GND ESP32
 ```
 
-Bei 3,3-V-Pegel reichen 1-kΩ-Schutzwiderstände in Reihe. Den ESP32 per USB
-vom Laptop versorgen, nicht aus der Maschine: Laptop am Akku, damit keine
-Masseschleife über das Netzteil entsteht.
+Bei 3,3-V-Pegel reichen 1-kΩ-Widerstände in Reihe. Den ESP32 per USB vom
+Laptop versorgen, der dabei am Akku hängt, damit keine Masseschleife über das
+Netzteil entsteht.
 
 ### 2.3 Mitschneiden
 
-Seriellen Monitor mit **921600 Baud** öffnen (oder `pio device monitor -b 921600`,
-`screen /dev/ttyUSB0 921600`, auf Windows PuTTY). Dann:
+Seriellen Monitor mit **921600 Baud** öffnen, zum Beispiel
+`pio device monitor -b 921600 | tee mitschnitt.log`. Dann:
 
-1. `scan` eingeben. Das zeigt je Kanal Ruhepegel, kürzesten Puls und die
-   nächstliegende Baudrate. Erwartung: 9600 invertiert (B) oder 115200 normal (A).
-2. `b 9600` bzw. `b 115200`, bei Bedarf `i` (invertiert). Die Zeilen müssen
-   nun regelmäßig und gleich lang kommen. Wenn nicht, `p 8E1` probieren.
-3. Log in eine Datei laufen lassen. Bei jeder Aktion am Display eine Markierung
-   setzen, **vorher**:
+1. `scan` eingeben und prüfen, ob Kanal A/B „normal“ und ~115200 Baud zeigt.
+   Wenn nicht, mit `b <baud>` und `i` anpassen.
+2. Die Zeilen sollten mit `5a a5` beginnen.
+3. Bei jeder Aktion am Display **vorher** eine Markierung setzen:
 
 | Markierung (`m ...`) | Aktion |
 |---|---|
-| `m ruhe` | 30 s nichts tun |
-| `m bruehtemp 93.0 -> 93.5` | Brühtemperatur einen Schritt hoch |
-| `m bruehtemp 93.5 -> 93.0` | und wieder runter |
+| `m kalt eingeschaltet` | Mitschnitt vor dem Einschalten starten: Bootsequenz, Seitenaufbau |
+| `m ruhe` | 30 s nichts tun: was das Mainboard regelmäßig schreibt (Ist-Temperaturen) |
+| `m bruehtemp 93.0 -> 93.5` | Brühtemperatur einen Schritt hoch, dann wieder runter |
 | `m dampf 125 -> 126` | Dampftemperatur ändern |
 | `m hebel hoch` / `m hebel runter` | Bezug starten/stoppen (Chrono) |
+| `m menue einstellungen` | Menü öffnen, Passwort 1901 eingeben |
 | `m standby an` / `m standby aus` | Standby |
-| `m kalt eingeschaltet` | Mitschnitt schon *vor* dem Einschalten starten: Bootsequenz |
 
 ### 2.4 Auswerten
 
 [`tools/duo_sniff.py`](tools/duo_sniff.py), nur Python-Standardbibliothek:
 
 ```bash
-python3 tools/duo_sniff.py stats mitschnitt.log   # ASCII oder binär? Welche Prüfsumme passt?
-python3 tools/duo_sniff.py gicar mitschnitt.log   # falls Protokoll A: jede Registeränderung mit Adresse
-python3 tools/duo_sniff.py diff  mitschnitt.log --dir B   # falls binär: welche Bytes sich wann ändern
+python3 tools/duo_sniff.py dgus mitschnitt.log             # jeder DGUS-Rahmen, Tabelle aller VPs
+python3 tools/duo_sniff.py dgus mitschnitt.log --changes   # nur neue Werte, Seitenwechsel, Tasten
+python3 tools/duo_sniff.py stats mitschnitt.log            # falls kein 5A A5 auftaucht
 ```
 
-`stats` probiert zehn Prüfsummenverfahren durch (Summe mod 256/128, XOR,
-Zweierkomplement, CRC-16/Modbus, Gicar-ASCII) und zeigt, welches bei den
-Frames passt. `gicar` und `diff` geben die Markierungen aus dem Log mit aus,
-so sieht man direkt, welche Adresse oder welches Byte nach `m bruehtemp ...`
-umspringt.
+`dgus` setzt Rahmen auch dann richtig zusammen, wenn der Sniffer sie auf
+mehrere Zeilen verteilt oder mehrere in eine packt. Es gibt die Markierungen
+an der richtigen Stelle mit aus. So sieht man direkt, welche VP-Adresse sich
+nach `m bruehtemp ...` ändert und welcher Tastencode vom Display kam.
 
-Tests: `python3 -m unittest discover -s tests` (im Repo-Wurzelverzeichnis).
+Tests: `python3 -m unittest discover -s tests`.
 
-## 3. Danach: Schreiben
+## 3. Danach
 
-Erst wenn Richtung, Prüfsumme und die Adressen für Temperaturen feststehen:
+Wenn die Karte der VP-Adressen steht (Ist-/Solltemperaturen, Chrono,
+Tastencodes, Seiten):
 
-- **Protokoll A:** Ein zweiter ESP32-UART *mit* TX hängt sich parallel an die
-  Leitung. Er sendet nur in den Pausen zwischen den Abfragen des Displays
-  einen einzelnen `w`-Befehl. Danach sofort per `r` zurücklesen, genau so
-  macht es gicar-serial. Nicht dauerhaft pollen, das Display ist Master.
-- **Protokoll B:** Man-in-the-Middle. Leitung auftrennen, der ESP32 empfängt
-  auf einer Seite und gibt auf der anderen weiter („MCU passthrough“), beim
-  Weitergeben werden einzelne Bytes ersetzt. Aus dem Lelit-Projekt: Die
-  Platine fällt **nicht** in einen sicheren Zustand, wenn keine Pakete mehr
-  kommen. Vor dem Abschalten des ESP32 also ein Paket mit allen Relais aus
-  senden.
-
-Grenzen (89–96 °C, 100–130 °C) nie über das hinaus schreiben, was das Display
-selbst anbietet. gicar-serial meldet, dass die Ascaso bei Werten außerhalb
-ihres Bereichs in einen Fehler geht und Einstellungen zurücksetzt.
+- **Nur lesen (Home Assistant):** Der passive Sniffer reicht. Er dekodiert
+  die `82`-Rahmen des Mainboards und veröffentlicht die Werte.
+- **Steuern:** ESP32 als Man-in-the-Middle. Leitung auftrennen, zwei UARTs
+  (Mainboard-Seite und Display-Seite), alle Rahmen durchreichen. Eingaben wie
+  „Brühtemperatur +“ als eigene `83`-Rahmen Richtung Mainboard einspeisen,
+  genau so, wie das Display sie schickt. Das Mainboard prüft dann selbst die
+  Grenzen (89–96 °C, 100–130 °C), weil es denselben Weg wie ein Fingerdruck geht.
+- **Die ganze VP-Karte aus dem Display holen:** Die Konfiguration liegt im
+  Display-Flash (`13…bin` Touch, `14…bin` Variablen). Mini DGUS kann über die
+  Register `40`–`48` (LibOP) Flash-Bereiche in den VP-Speicher lesen, der sich
+  dann per `83` auslesen lässt. Damit ließe sich die komplette Karte ohne Raten
+  gewinnen. **Vorsicht:** Derselbe Mechanismus kann auch *schreiben* und das
+  Display unbrauchbar machen. Nur mit dem DWIN-DGUS-Handbuch (Kapitel
+  „DGUS Register“, 0x40–0x48) daneben und nur im Lesemodus. Wenn überhaupt,
+  dann an einem ausgebauten Display mit eigener 5-V-Versorgung.
 
 ## Quellen
 
-- [antondlr/gicar-serial](https://github.com/antondlr/gicar-serial): Gicar-ASCII-Protokoll, ESPHome-Komponente
-- [magnusnordlander/lelit-bianca-protocol](https://github.com/magnusnordlander/lelit-bianca-protocol): Gicar-Binärprotokoll Display ↔ Platine
-- [magnusnordlander/smart-lcc](https://github.com/magnusnordlander/smart-lcc): Ersatz-Display auf dieser Basis (Vorbild für einen Passthrough)
-- [Whole Latte Love: Matrix MN](https://www.wholelattelove.com/products/bezzera-matrix-mn-dual-boiler-espresso-machine): „Gicar PID controller“
+- [andrivet/ADVi3pp](https://github.com/andrivet/ADVi3pp), `Marlin/src/advi3pp/core/dgus.h` und `dgus.cpp`: Mini-DGUS-Befehle, Register, 115200 Baud; `LCD-Panel/DGUS-root/DWIN_SET/CONFIG.txt`: Beispiel für R0–RA
+- [Sébastien Andrivet: DWIN Mini DGUS Display Development Guide (non-official)](https://sebastien.andrivet.com/en/posts/dwin-mini-dgus-display-development-guide-non-official/)
+- DWIN DGUS Development Guide [v4.0 (2014)](https://cdn.papouch.com/data/user-content/old_eshop/files/DIS_DMT48270T043_3WT/dwin-dgus-dev-guide_v40_2014.pdf), [v4.3 (2015)](https://whiteelectronics.pl/img/cms/DWIN_DGUS_DEV_GUIDE_V43_2015.pdf): Kapitel 4 „DGUS Register (0x80/0x81)“
+- [dwinhmi/DWIN_DGUS_HMI](https://github.com/dwinhmi/DWIN_DGUS_HMI): offizielle DWIN-Bibliothek für DGUS II (Seitenwechsel über VP 0x0084)
+- [antondlr/gicar-serial](https://github.com/antondlr/gicar-serial), [magnusnordlander/lelit-bianca-protocol](https://github.com/magnusnordlander/lelit-bianca-protocol): Gicar-Protokolle
 - [1st-line: Matrix/Duo Software-Kompatibilität](https://www.1st-line.com/technical-support/bezzera-technical-support/bezzera-matrix-duo-software-compatibility-changes/): Versionspaare Mainboard/Display
-- [espresso.co.nz: Display V2.2 5963201.01R](https://www.espresso.co.nz/parts/display-assembly-with-integrated-touchscreen-v2-2-duo-matrix-bezzera-5963201-01r/) und [V1.1 5963202R](https://www.espresso.co.nz/parts-care/display-assembly-with-integrated-touchscreen-v1-1-duo-matrix-bezzera-5963202r/)
