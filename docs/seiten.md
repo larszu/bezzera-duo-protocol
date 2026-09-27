@@ -1,8 +1,10 @@
 # Seitenkatalog des Displays (Duo DE, Display-Projekt „TFT 2.0“)
 
 Aufgenommen 2026-09-27 mit `tools/seiten_foto.py`: Display allein an der
-ESP32-Bridge, jede Seite per `80 03 00 NN` angewählt und fotografiert. Die
-Fotos liegen lokal unter `captures/seiten/` (nicht im Repo).
+ESP32-Bridge, jede Seite per `80 03 00 NN` angewählt und fotografiert.
+Fotos: [`docs/seiten/seite_NNN.jpg`](seiten/) (verkleinert auf 1024 px),
+Übersichtsbögen mit je 40 Seiten: [`uebersicht_000.jpg`](seiten/uebersicht_000.jpg)
+bis [`uebersicht_280.jpg`](seiten/uebersicht_280.jpg), zeilenweise 8 Seiten.
 
 **Aufbau:** drei Sprachen zu je 100 Seiten.
 

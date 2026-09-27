@@ -414,7 +414,8 @@ Kein Login: nur im eigenen Netz betreiben.
 - [`tools/seiten_foto.py`](tools/seiten_foto.py) schaltet über die Bridge
   Seite für Seite um und fotografiert jede mit einer USB-Webcam
   (`brew install imagesnap`). Vorher füllt es VP `0x0050` mit 10…18, damit
-  man sieht, welches Wort wo steht. Ergebnis: [`docs/seiten.md`](docs/seiten.md).
+  man sieht, welches Wort wo steht. Ergebnis: [`docs/seiten.md`](docs/seiten.md),
+  Fotos aller 300 Seiten in [`docs/seiten/`](docs/seiten/).
   ffmpeg/avfoundation hat die Webcam nach Abbrüchen blockiert, imagesnap nicht.
 - [`tools/tasten_scan.py`](tools/tasten_scan.py) probiert Tastencodes über
   Register `0x4F` durch. **Ergebnis an diesem Display: keine Wirkung**, auf

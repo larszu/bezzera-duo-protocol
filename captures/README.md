@@ -16,4 +16,4 @@ python3 tools/duo_live.py --replay captures/boot.sr
 | `tank.sr` | 3 s nach Wackeln am Touch-Kabel, Display zeigt wieder „Bitte Tank füllen“ |
 | `probe.sr` | Testaufnahme ohne Signal |
 
-Die Seitenfotos (`captures/seiten/`) sind nicht im Repo.
+Die Seitenfotos liegen verkleinert unter [`docs/seiten/`](../docs/seiten/).
