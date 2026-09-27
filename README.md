@@ -192,7 +192,32 @@ Bei RS-232 liegt der Ruhepegel **negativ**. Genau das zerstört einen
 ESP32-Eingang sofort. Der MAX3232 dreht die Logik auch wieder richtig herum,
 der Sniffer bleibt dann auf „nicht invertiert“.
 
-### 2.3 Sniffer anklemmen
+### 2.3 Einfachster Weg: Logic Analyzer (24 MHz, 8 Kanäle, „fx2lafw“)
+
+Ein billiger USB-Logic-Analyzer reicht für den ersten Mitschnitt, ganz ohne
+ESP32-Firmware.
+
+1. Software: [PulseView](https://sigrok.org/wiki/Downloads) (sigrok). Unter
+   Windows vorher mit Zadig den WinUSB-Treiber für das Gerät installieren.
+2. Anschluss: `GND` an die GND-Ader, `CH0`/`D0` an die erste Datenader,
+   `CH1`/`D1` an die zweite. **Erst messen:** Diese Analyzer vertragen meist
+   bis 5 V, aber **keine negativen Spannungen** (RS-232). Wer bei 5 V sicher
+   gehen will, schaltet 1 kΩ in Reihe.
+3. PulseView: Gerät „fx2lafw“, **2 MHz**, Samples so wählen, dass es für
+   20–60 s reicht (z. B. 100 M). Aufnehmen, dabei die Aktionen notieren
+   (Uhrzeit ab Start), dann **als `.sr` speichern**.
+4. Umwandeln und auswerten:
+
+```bash
+python3 tools/sr2log.py mitschnitt.sr > mitschnitt.log   # UART-Dekodierung, Baudrate automatisch
+python3 tools/duo_sniff.py dgus mitschnitt.log
+```
+
+`sr2log.py` erkennt die Baudrate aus dem kürzesten Puls. Optionen: `--a`/`--b`
+für andere Kanäle, `--baud` fest, `--invert` bei invertierter Leitung.
+
+### 2.4 Dauerhaft: ESP32-Sniffer
+
 
 **Einkaufsliste:**
 
@@ -226,7 +251,7 @@ Bei 3,3-V-Pegel reichen 1-kΩ-Widerstände in Reihe. Den ESP32 per USB vom
 Laptop versorgen, der dabei am Akku hängt, damit keine Masseschleife über das
 Netzteil entsteht.
 
-### 2.4 Mitschneiden
+### 2.5 Mitschneiden
 
 Seriellen Monitor mit **921600 Baud** öffnen, zum Beispiel
 `pio device monitor -b 921600 | tee mitschnitt.log`. Dann:
@@ -246,7 +271,7 @@ Seriellen Monitor mit **921600 Baud** öffnen, zum Beispiel
 | `m menue einstellungen` | Menü öffnen, Passwort 1901 eingeben |
 | `m standby an` / `m standby aus` | Standby |
 
-### 2.5 Auswerten
+### 2.6 Auswerten
 
 [`tools/duo_sniff.py`](tools/duo_sniff.py), nur Python-Standardbibliothek:
 
