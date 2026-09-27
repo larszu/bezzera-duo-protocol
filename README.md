@@ -137,6 +137,12 @@ falls eine andere Baureihe doch ein Gicar-Board hat.
   Controller-Chip** und geht auf einen 6-poligen Stecker. Das ist ein
   **kapazitiver** Touch mit I²C-Controller, nicht resistiv. Das Flachkabel ist
   über den Halter der Knopfzelle geknickt.
+- **LCD-Panel** hinter dem Touch: Aufkleber `LQ035NC1…` (abgeschnitten),
+  vermutlich das verbreitete 3,5"-QVGA-Panel LQ035NC111 mit 54-poligem
+  RGB-Flachkabel. Ein Standardteil.
+- **Befund 2026-09-27:** Beim Wackeln am 6-poligen Touch-Stecker piept das
+  Display beim Drücken zeitweise. Der Touch selbst lebt also, der Fehler ist ein
+  Wackelkontakt am Stecker bzw. Flachkabel.
 - **Halter für eine Knopfzelle** unter dem Touch-Flachkabel, **leer**. Die
   Uhrzeit stimmt trotzdem. Also stellt vermutlich das Mainboard die Uhr, etwa
   über Register `20` (RTC) oder über VPs. Das sollte im Mitschnitt kurz nach
