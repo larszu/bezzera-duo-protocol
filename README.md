@@ -110,15 +110,26 @@ kann deshalb beides weiterhin erkennen (`gicar`, `stats`).
   Controller-Chip** und geht auf einen 6-poligen Stecker. Das ist ein
   **kapazitiver** Touch mit I²C-Controller, nicht resistiv. Das Flachkabel ist
   über den Halter der Knopfzelle geknickt.
-- **Knopfzelle** unter dem Touch-Flachkabel: Pufferbatterie der Display-Uhr.
-- **microSD-Schacht** unten rechts: Darüber spielt DWIN neue Oberflächen ein
+- **Halter für eine Knopfzelle** unter dem Touch-Flachkabel, **leer**. Die
+  Uhrzeit stimmt trotzdem. Also stellt vermutlich das Mainboard die Uhr, etwa
+  über Register `20` (RTC) oder über VPs. Das sollte im Mitschnitt kurz nach
+  dem Einschalten auftauchen.
+- **microSD-Schacht** unten rechts, **leer**. Das ist normal, die Karte wird
+  nur für Updates gebraucht. Darüber spielt DWIN neue Oberflächen ein
   (`DWIN_SET`). Ein Bezzera-Update-Paket für das Display, etwa vom
   Kundendienst, enthielte die Dateien `13…bin` und `14…bin` und damit die
   komplette VP-Karte.
 - Eine unbestückte Reihe von 5 Pads in der Mitte ist vermutlich ein Programmier-
   oder Debug-Anschluss.
 
-Auf dem Startbildschirm zeigt das Display Brühtemperatur, Dampftemperatur, zwei
+Der Standby-Bildschirm zeigt „press to start“, ein Schraubenschlüssel-Symbol
+(Servicemenü), Uhrzeit/Datum und zwei Versionen: **„FW: 2.1“** (rot,
+vermutlich das Mainboard) und **„… 2.0“** (blau, teilweise verdeckt,
+vermutlich die Displaysoftware). Auch das Einschalten aus dem Standby
+geht über den Touch. Der Tastencode für „press to start“ ist also der erste,
+den man braucht.
+
+Auf dem Hauptbildschirm zeigt das Display Brühtemperatur, Dampftemperatur, zwei
 Druckanzeigen (Brühgruppe 0–10 bar, Dampfkessel 0–2,5 bar), den Wasserstand
 („Niveau Wasser“ min–max) sowie Uhrzeit und Datum. Diese Werte muss das
 Mainboard regelmäßig per `82` schreiben. Das sind die ersten VPs, nach denen
