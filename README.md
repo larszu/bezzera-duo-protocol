@@ -400,6 +400,9 @@ Display grün an ESP32 **5V**, braun an GND, gelb an GPIO15, weiß an GPIO18.
 | `d <hex …>` / `m <hex …>` | Rohbytes an Display / Mainboard |
 | `s <von> <bis> [ms]` | Seiten durchschalten |
 | `n <ssid> <passwort>` | Heim-WLAN speichern (nur 2,4 GHz), `n ?` listet sichtbare Netze |
+| `e [0\|1]` | Display-Emulation aus/an (gespeichert) |
+| `j [seit]` | Zustand als JSON-Zeile `#J {…}` |
+| `M <hex …>` | Test: Rahmen behandeln, als käme er vom Mainboard |
 
 **Weboberfläche:** eigenes WLAN `duo-bridge` (Passwort `espresso1`) →
 http://192.168.4.1, im Heimnetz http://duo.local, per Ethernet ebenso.
@@ -408,6 +411,45 @@ Temperaturverlauf, alle VPs, Ereignisprotokoll und den Seitenkatalog. Klicks
 auf Menüzeilen schalten die Seite wie das Display selbst. Tasten, die das
 Mainboard auswerten muss, sind noch nicht belegt, solange ihre Codes fehlen.
 Kein Login: nur im eigenen Netz betreiben.
+
+**Stecker CN6 am Mainboard** (Pin 1 links): 1 = +5 V (Originalkabel rot,
+Displaykabel grün), 2 = TX Mainboard (rosa / weiß), 3 = RX Mainboard
+(grün / gelb), 4 = GND (schwarz / braun). Ein Ersatzkabel mit den
+Displayfarben ist damit 1:1: grün, weiß, gelb, braun. Steckplan fürs
+Breadboard: [`docs/bridge_breadboard.png`](docs/bridge_breadboard.png).
+
+**Display-Emulation** (`e 1`, bleibt nach Neustart gespeichert): Der ESP32
+beantwortet die Leseanfragen des Mainboards (0x81, 0x83) selbst aus einem
+Modell des Display-Speichers (alle VPs, Register, laufende Uhr). Antworten
+eines angeschlossenen Displays werden verworfen. Tastendrücke aus der
+Weboberfläche landen im Modell und werden beim nächsten Abfragen gemeldet.
+Getestet mit simulierten Mainboard-Rahmen (`M <hex>`): Antworten stimmen
+Byte für Byte mit denen des echten Displays überein.
+
+**Befund 2026-09-28: Ohne Display sendet das Mainboard nichts.** Mit nur dem
+ESP32 an CN6 (TX über Teiler, RX, GND) blieb die Leitung stumm. Aufbau, der
+funktioniert: Display an Versorgung und TX Mainboard lassen und nur seine
+Antwortleitung auftrennen:
+
+| Verbindung | wie |
+|---|---|
+| braun Maschine ↔ braun Display | direkt, dazu ESP32 GND |
+| grün Maschine ↔ grün Display | direkt |
+| weiß Maschine ↔ weiß Display | direkt, Abzweig über Teiler an GPIO17 |
+| gelb Maschine | ← GPIO16 |
+| gelb Display | → GPIO15 |
+
+**Fallen beim Aufbau:** Display-braun und Display-grün vertauscht verpolt das
+Display; seine Schutzdiode schließt dann die 5 V der Maschine kurz (gemessen
+~0 V an der Versorgung). Das Display hat es überstanden. Ohne gemeinsame
+Masse zwischen Maschine und ESP32 kommen nur Störbytes an; Maschinen-GND
+direkt an einen GND-Pin des ESP32 stecken.
+
+**Oberfläche am Rechner ohne WLAN:**
+[`tools/web_lokal.py`](tools/web_lokal.py) liefert dieselbe Oberfläche unter
+http://localhost:8080 und spricht per USB mit dem ESP32 (Befehl `j` liefert
+den Zustand als JSON). Die Lampe „Mainboard“ leuchtet nur bei gültigen
+Rahmen; Störbytes stehen im Ereignisprotokoll.
 
 ### 2.8 Seiten fotografieren, Tastencodes suchen
 

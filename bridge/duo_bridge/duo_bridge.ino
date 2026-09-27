@@ -36,14 +36,21 @@
 //   s <von> <bis> [ms]   Seiten von..bis durchschalten, je ms (Standard 3000)
 //   s                    Durchschalten abbrechen
 //   n <ssid> <passwort>  Heim-WLAN speichern (nur ueber USB), "n -" loescht es
+//   j [seit]             Zustand als JSON-Zeile "#J {...}" (tools/web_lokal.py)
+//   M <hex ...>          Test: Rahmen behandeln, als kaeme er vom Mainboard
+//   e [0|1]              Display-Emulation: der ESP32 beantwortet die Leseanfragen
+//                        des Mainboards selbst (Display optional)
 //   x                    Mitschnitt-Ausgabe an/aus (Durchreichen laeuft immer)
 //   ?                    Zustand
 
 #include <Arduino.h>
+#include <Preferences.h>
 #include <driver/gpio.h>
 
 // Vorwaertsdeklaration: die Arduino-IDE setzt Funktionsprototypen vor die Typen.
 struct Parser;
+static void modellSchreiben(const uint8_t *r, size_t n);
+static void emuliereAntwort(const uint8_t *r, size_t n);
 
 static const int PIN_RX_DISPLAY = 15;
 static const int PIN_TX_MAINBOARD = 16;
@@ -96,6 +103,17 @@ static void ereignis(const char *fmt, ...) {
   ereignisNr++;
 }
 
+// Stoerbytes (kein gueltiger Rahmen) hoechstens einmal je 5 s melden.
+static uint32_t muellAnzahl[2] = {0, 0};
+static void ereignisMuell(char quelle) {
+  static uint32_t zuletzt = 0;
+  muellAnzahl[quelle == 'B']++;
+  if (millis() - zuletzt > 5000) {
+    zuletzt = millis();
+    ereignis("%c Stoerbytes, kein gueltiger Rahmen (%lu bisher)", quelle, (unsigned long)muellAnzahl[quelle == 'B']);
+  }
+}
+
 static void merkeVp(uint16_t vp, const uint8_t *d, size_t n, char quelle) {
   if (n > sizeof(vpTabelle[0].d)) n = sizeof(vpTabelle[0].d);
   VpWert *e = nullptr;
@@ -124,6 +142,11 @@ static void merkeVp(uint16_t vp, const uint8_t *d, size_t n, char quelle) {
 // Display bzw. eingeschoben), B/b zum Display (vom Mainboard bzw. eingeschoben).
 static void beobachte(char quelle, const uint8_t *r, size_t n) {
   bool zumDisplay = quelle == 'B' || quelle == 'b';
+  if (n < 5 || r[0] != KOPF0 || r[1] != KOPF1 || r[2] + 3u != n) {
+    if (quelle == 'A' || quelle == 'B') ereignisMuell(quelle);
+    return;
+  }
+  // Lebenszeichen nur fuer gueltige Rahmen: Stoerbytes zaehlen nicht
   if (quelle == 'A') {
     leitung.rahmenDisplay++;
     leitung.zuletztDisplay = millis();
@@ -131,7 +154,7 @@ static void beobachte(char quelle, const uint8_t *r, size_t n) {
     leitung.rahmenMainboard++;
     leitung.zuletztMainboard = millis();
   }
-  if (n < 5 || r[0] != KOPF0 || r[1] != KOPF1 || r[2] + 3u != n) return;
+  if (zumDisplay) modellSchreiben(r, n);
   const uint8_t cmd = r[3];
   const uint8_t *p = r + 4;
   size_t pn = n - 4;
@@ -156,9 +179,22 @@ static void beobachte(char quelle, const uint8_t *r, size_t n) {
   }
 }
 
+// ─── Display-Emulation ──────────────────────────────────────────────────────
+// Modell des Display-Speichers: alle VPs (Worte) und Register (Bytes), wie sie
+// Mainboard, Weboberflaeche und Befehle geschrieben haben. Im Emulationsmodus
+// ("e 1") beantwortet der ESP32 die Leseanfragen des Mainboards (0x81, 0x83)
+// selbst aus diesem Modell; Antworten eines angeschlossenen Displays werden
+// dann verworfen. Das echte Display ist optional und zeigt weiter an.
+static const uint16_t VP_ANZAHL = 0x1000;  // 0x0000..0x0FFF, mehr nutzt das Projekt nicht
+static uint16_t vpRam[VP_ANZAHL];
+static uint8_t regRam[256];
+static bool emulation = false;
+static uint32_t rtcBasisMs = 0;  // millis() beim letzten Stellen der Uhr
+
 void webSetup();
 void webLoop();
 void heimWlan(char *s);
+String statusText(uint32_t seit);
 
 // ─── Rahmen-Parser je Richtung ─────────────────────────────────────────────
 
@@ -211,6 +247,10 @@ static void seite(uint16_t s) {
 // Ein vollstaendiger Rahmen vom Display: ggf. Antwort ueberschreiben, dann
 // an das Mainboard weiterreichen.
 static void rahmenVomDisplay(uint8_t *r, size_t n) {
+  if (emulation) {  // das Mainboard bekommt nur die Antworten des Emulators
+    beobachte('A', r, n);
+    return;
+  }
   // C6 A5 06 83 vpH vpL 01 wH wL
   if (n == 9 && r[3] == 0x83 && r[6] == 0x01) {
     uint16_t vp = (r[4] << 8) | r[5];
@@ -236,6 +276,7 @@ static void rahmenVomDisplay(uint8_t *r, size_t n) {
 static void rahmenVomMainboard(uint8_t *r, size_t n) {
   uartB.write(r, n);
   logZeile('B', r, n);
+  if (emulation) emuliereAntwort(r, n);
 }
 
 // Liest Bytes, setzt Rahmen zusammen. Bytes ausserhalb eines Rahmens werden
@@ -306,8 +347,8 @@ static size_t hexBytes(char *s, uint8_t *out, size_t max) {
 }
 
 static void zustand() {
-  Serial.printf("# baud=%lu kopf=%02X %02X ausgabe=%d scan=%s\n", (unsigned long)BAUD, KOPF0, KOPF1, ausgabe,
-                scanAktiv ? "an" : "aus");
+  Serial.printf("# baud=%lu kopf=%02X %02X ausgabe=%d scan=%s emulation=%d\n", (unsigned long)BAUD, KOPF0, KOPF1,
+                ausgabe, scanAktiv ? "an" : "aus", emulation);
   for (auto &o : overrides)
     if (o.aktiv) Serial.printf("# override vp=0x%04X wert=0x%04X rest=%ld\n", o.vp, o.wert, (long)o.rest);
 }
@@ -379,6 +420,23 @@ static void befehl(char *z) {
     scanNaechster = 0;
   } else if (c == 'n') {
     heimWlan(s);
+  } else if (c == 'j') {  // Zustand als JSON fuer die lokale Oberflaeche
+    long seit = zahl(s, ok);
+    Serial.print("#J ");
+    Serial.println(statusText(ok ? seit : 0));
+  } else if (c == 'M') {  // Test: Rahmen verarbeiten, als kaeme er vom Mainboard
+    uint8_t b[256];
+    size_t n = hexBytes(s, b, sizeof b);
+    if (n >= 4) rahmenVomMainboard(b, n);
+  } else if (c == 'e') {
+    long an = zahl(s, ok);
+    emulation = ok ? an != 0 : !emulation;
+    Preferences pref;  // dauerhaft: USB-Verbindungsaufbau startet den ESP32 neu
+    pref.begin("bridge", false);
+    pref.putBool("emulation", emulation);
+    pref.end();
+    Serial.printf("# Display-Emulation %s (gespeichert)\n", emulation ? "an" : "aus");
+    ereignis("- Emulation %s", emulation ? "an" : "aus");
   } else if (c == 'x') {
     ausgabe = !ausgabe;
     Serial.printf("# ausgabe %s\n", ausgabe ? "an" : "aus");
@@ -422,6 +480,12 @@ void setup() {
   // damit es weder beim Display noch beim Mainboard ankommt.
   while (uartA.available()) uartA.read();
   while (uartB.available()) uartB.read();
+  {
+    Preferences pref;
+    pref.begin("bridge", true);
+    emulation = pref.getBool("emulation", false);
+    pref.end();
+  }
   Serial.println("# duo_bridge bereit, ? fuer Zustand");
   zustand();
   webSetup();
@@ -442,6 +506,87 @@ void loop() {
       scanNaechster = millis() + scanMs;
     }
   }
+}
+
+// ─── Display-Emulation: Implementierung ─────────────────────────────────────
+
+static uint8_t bcd(uint32_t v) { return ((v / 10) << 4) | (v % 10); }
+static uint32_t vonBcd(uint8_t b) { return (b >> 4) * 10 + (b & 0x0F); }
+
+// Aktuelle Uhrzeit aus dem zuletzt gestellten Wert (Register 0x20..0x26,
+// BCD: JJ MM TT Wochentag hh mm ss) plus vergangener Zeit.
+static void rtcAktuell(uint8_t *aus) {
+  memcpy(aus, regRam + 0x20, 7);
+  uint32_t sek = vonBcd(aus[4]) * 3600 + vonBcd(aus[5]) * 60 + vonBcd(aus[6]) + (millis() - rtcBasisMs) / 1000;
+  sek %= 86400;  // Datumswechsel wird nicht nachgefuehrt
+  aus[4] = bcd(sek / 3600);
+  aus[5] = bcd(sek / 60 % 60);
+  aus[6] = bcd(sek % 60);
+}
+
+// Schreibzugriffe Richtung Display ins Modell uebernehmen.
+static void modellSchreiben(const uint8_t *r, size_t n) {
+  const uint8_t cmd = r[3];
+  const uint8_t *p = r + 4;
+  size_t pn = n - 4;
+  if (cmd == 0x80 && pn >= 2) {
+    uint8_t reg = p[0];
+    if (reg == 0x1F && pn >= 9 && p[1] == 0x5A) {  // Uhr stellen: 1F 5A JJ MM TT WT hh mm ss
+      memcpy(regRam + 0x20, p + 2, 7);
+      rtcBasisMs = millis();
+    } else {
+      for (size_t i = 1; i < pn && reg + i - 1 < 256; i++) regRam[reg + i - 1] = p[i];
+    }
+  } else if (cmd == 0x82 && pn >= 4) {
+    uint16_t vp = (p[0] << 8) | p[1];
+    for (size_t i = 2; i + 1 < pn; i += 2, vp++)
+      if (vp < VP_ANZAHL) vpRam[vp] = (p[i] << 8) | p[i + 1];
+  }
+}
+
+// Leseanfragen des Mainboards beantworten wie das Display: 81 reg n / 83 vp n.
+static void emuliereAntwort(const uint8_t *r, size_t n) {
+  if (n < 6) return;
+  const uint8_t cmd = r[3];
+  uint8_t a[260];
+  size_t k = 0;
+  if (cmd == 0x81 && n >= 6) {
+    uint8_t reg = r[4], anz = r[5];
+    if (anz > 60) return;
+    a[k++] = 0x81; a[k++] = reg; a[k++] = anz;
+    uint8_t rtc[7];
+    rtcAktuell(rtc);
+    for (uint8_t i = 0; i < anz; i++) {
+      uint16_t rg = reg + i;
+      if (rg >= 0x20 && rg <= 0x26) a[k++] = rtc[rg - 0x20];
+      else if (rg == 0x00) a[k++] = 0x22;  // Firmware-Version des echten Displays
+      else a[k++] = rg < 256 ? regRam[rg] : 0;
+    }
+  } else if (cmd == 0x83 && n >= 7) {
+    uint16_t vp = (r[4] << 8) | r[5];
+    uint8_t anz = r[6];
+    if (anz == 0 || anz > 32) return;  // das echte Display kann hoechstens 32 Worte
+    a[k++] = 0x83; a[k++] = r[4]; a[k++] = r[5]; a[k++] = anz;
+    for (uint8_t i = 0; i < anz; i++) {
+      uint16_t w = (vp + i) < VP_ANZAHL ? vpRam[vp + i] : 0;
+      a[k++] = w >> 8;
+      a[k++] = w & 0xFF;
+    }
+  } else {
+    return;
+  }
+  // Tastendruck-Ueberschreibung (Befehl o) gilt auch im Emulationsmodus
+  if (a[0] == 0x83 && a[3] == 1) {
+    uint16_t vp = (a[1] << 8) | a[2];
+    for (auto &o : overrides) {
+      if (o.aktiv && o.vp == vp) {
+        a[4] = o.wert >> 8;
+        a[5] = o.wert & 0xFF;
+        if (o.rest > 0 && --o.rest == 0) o.aktiv = false;
+      }
+    }
+  }
+  sendeRahmen(uartA, 'a', a, k);
 }
 
 // Weboberflaeche am Ende eingebunden: nutzt Zustand und befehl() von oben.

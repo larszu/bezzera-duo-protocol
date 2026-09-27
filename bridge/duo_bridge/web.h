@@ -53,8 +53,9 @@ static void netzEreignis(arduino_event_id_t e) {
   }
 }
 
-static void statusJson() {
-  uint32_t seit = server.hasArg("seit") ? server.arg("seit").toInt() : 0;
+// Zustand als JSON; genutzt von /api/status und vom USB-Befehl "j" (lokale
+// Oberflaeche am Rechner, tools/web_lokal.py).
+String statusText(uint32_t seit) {
   uint32_t jetzt = millis();
   String j;
   j.reserve(6000);
@@ -74,11 +75,11 @@ static void statusJson() {
   j += ",\"display\":{\"rahmen\":";
   j += leitung.rahmenDisplay;
   j += ",\"still_ms\":";
-  j += leitung.rahmenDisplay ? jetzt - leitung.zuletztDisplay : -1;
+  j += leitung.rahmenDisplay ? (long)(jetzt - leitung.zuletztDisplay) : -1L;
   j += "},\"mainboard\":{\"rahmen\":";
   j += leitung.rahmenMainboard;
   j += ",\"still_ms\":";
-  j += leitung.rahmenMainboard ? (long)(jetzt - leitung.zuletztMainboard) : -1;
+  j += leitung.rahmenMainboard ? (long)(jetzt - leitung.zuletztMainboard) : -1L;
   j += "},\"vps\":[";
   for (size_t i = 0; i < vpAnzahl; i++) {
     const VpWert &v = vpTabelle[i];
@@ -122,14 +123,21 @@ static void statusJson() {
     }
     j += '"';
   }
-  j += "]}";
-  server.send(200, "application/json", j);
+  j += "],\"emulation\":";
+  j += emulation ? "true" : "false";
+  j += "}";
+  return j;
+}
+
+static void statusJson() {
+  uint32_t seit = server.hasArg("seit") ? server.arg("seit").toInt() : 0;
+  server.send(200, "application/json", statusText(seit));
 }
 
 static void befehlWeb() {
   String z = server.arg("plain");
   z.trim();
-  if (!z.length() || z.length() > 380 || strchr("pwodms", z[0]) == nullptr) {
+  if (!z.length() || z.length() > 380 || strchr("pwodmse", z[0]) == nullptr) {
     server.send(400, "text/plain", "unbekannter Befehl");
     return;
   }

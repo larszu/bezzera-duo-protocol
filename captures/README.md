@@ -17,3 +17,4 @@ python3 tools/duo_live.py --replay captures/boot.sr
 | `probe.sr` | Testaufnahme ohne Signal |
 
 Die Seitenfotos liegen verkleinert unter [`docs/seiten/`](../docs/seiten/).
+| `neukabel.sr` | Ersatzkabel mit Displayfarben direkt am Display, Analyzer parallel: D1 = TX Mainboard, D2 = TX Display (D0 ohne Daten) |
