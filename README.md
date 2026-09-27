@@ -69,20 +69,47 @@ implementiert (`Marlin/src/advi3pp/core/dgus.h`):
 | Reddit-Profil | von hier aus nicht erreichbar. Selbst ansehen: `old.reddit.com/user/Vivid-Ad-2039` |
 | `DMT32240M035_07WTZ4` | kein Datenblatt zu genau dieser Variante gefunden. `_07` und `Z4` sind vermutlich kundenspezifisch. Die Serie DMT32240M035_03W ist als „Smart UART, TTL“ beschrieben |
 
+### Das Mainboard (Fotos 2026-09-27, Duo DE)
+
+**Hersteller ist PRO.EL.IND (Italien), nicht Gicar.** Deckelaufkleber:
+`SDEDB` / `BZ1PTE` / `7661047PR`, Produktionsaufkleber `1809` (September 2018,
+passend zum Display von August 2018). Versorgung 12 V DC, Sicherung 3,15 A.
+
+| Bauteil | Was es ist | Bedeutung |
+|---|---|---|
+| NXP/Freescale **MC9S08PA32** (LQFP-64, Aufdruck „M9S8PA32A VLH“) | 8-Bit-Mikrocontroller S08, 32 KB Flash, läuft mit 3,3 oder 5 V | die ganze Maschinenlogik. Keine Spur von einem RS-232-Wandler auf dem Board, also spricht die MCU ziemlich sicher TTL |
+| **CNPR**, 4-polige Stiftleiste | vermutlich der BDM-Programmieranschluss der S08 (BKGD, RESET, VDD, GND) | Firmware-Update ab Werk. Auslesen ist bei gesetztem Security-Bit gesperrt, Finger weg |
+| ST **M41T56** + Quarz + **eingelötete Knopfzelle** (gelb) | I²C-Echtzeituhr mit 56 Byte NVRAM | erklärt, warum die Uhr trotz leerem Batteriefach im Display stimmt: Das Mainboard stellt sie |
+| RECOM-DC/DC-Wandler | 12 V → 5 V | vermutlich die 5 V für das Display („5V ONLY“) |
+| ULN2003 + 5 Omron-Relais, TLP3063 (Optotriac mit Nulldurchgang) | Relais- und Lasttreiber | Heizung Gruppe, Magnetventile, Pumpe |
+| Stecker **CN6 „DISPLAY“** | 4 Adern (rot, rosa, grün, schwarz) | die Leitung zum Display, hier wird mitgeschnitten |
+
+Belegung laut Deckelaufkleber:
+
+- **Relaisausgänge 1–7:** 1 Heizung Gruppe, 2 EV Wassernetz, 3 EV Tank,
+  4 EV Füllen (Dampfkessel), 5 EV Gruppe, 6 Pumpe, 7 Common
+- **Fühler:** NTC Gruppe, NTC Kaffee(kessel), NTC Dampf(kessel), also die
+  drei PIDs der DE. Dazu SSR Kaffee und SSR Dampf.
+- **PRESS.:** Drucksensor (die Druckanzeige im Display)
+- **CAP. SENS:** kapazitiver Füllstandssensor (die Anzeige „Niveau Wasser“)
+- **5-poliger Klemmblock:** Durchflussmesser (1 −, 2 +, 3 OUT1),
+  4 Microswitch (Hebel), 5 S.LIV (Füllstandssonde Dampfkessel)
+- **LED FRONT, LED RETRO** (12 V), **KEYBOARD** (graues Flachbandkabel)
+
+1st-line führt `7661047PR` als Mainboard „1.2“. Das Display meldet aber
+„FW: 2.1“. Entweder wurde die Firmware später aktualisiert, oder die Zahlen
+bedeuten nicht dasselbe. Für den Mitschnitt spielt das keine Rolle.
+
 ### Frühere Hypothese: Gicar-Protokolle
 
 Händler nennen die Steuerung „Gicar PID controller“
 ([Whole Latte Love](https://www.wholelattelove.com/products/bezzera-matrix-mn-dual-boiler-espresso-machine)).
-Für Gicar sind zwei Protokolle dokumentiert: das ASCII-Registerprotokoll der
-Ascaso Baby T ([antondlr/gicar-serial](https://github.com/antondlr/gicar-serial):
-`r/w` + Offset + Länge, Summe mod 256, 115200 Baud) und das Binärprotokoll
-Display ↔ Platine der Lelit Bianca
-([lelit-bianca-protocol](https://github.com/magnusnordlander/lelit-bianca-protocol):
-9600 Baud invertiert, Summe mod 128). **Für die Displayleitung der Duo ist das
-mit dem DWIN-Fund unwahrscheinlich.** Die Hauptplatine kann trotzdem von Gicar
-sein. Das Gicar-ASCII-Protokoll könnte an einer anderen Schnittstelle des
-Mainboards hängen, etwa an einem Service- oder Bluetooth-Anschluss. Das Skript
-kann deshalb beides weiterhin erkennen (`gicar`, `stats`).
+**Bei dieser Duo DE (2018) stimmt das nicht, das Board ist von PRO.EL.IND.**
+Die dokumentierten Gicar-Protokolle
+([antondlr/gicar-serial](https://github.com/antondlr/gicar-serial),
+[lelit-bianca-protocol](https://github.com/magnusnordlander/lelit-bianca-protocol))
+sind damit hinfällig. Das Skript erkennt sie trotzdem weiterhin (`gicar`, `stats`),
+falls eine andere Baureihe doch ein Gicar-Board hat.
 
 ## 2. Messen
 
@@ -136,6 +163,11 @@ Mainboard regelmäßig per `82` schreiben. Das sind die ersten VPs, nach denen
 man im Mitschnitt sucht.
 
 ### 2.2 Pegel messen, bevor irgendetwas angeklemmt wird
+
+Am einfachsten misst man am Mainboard-Stecker **CN6 „DISPLAY“**: vier Adern,
+rot, rosa, grün, schwarz. Erwartung: schwarz = GND, rot = +5 V, rosa und grün
+= die beiden Datenleitungen. Die Farben sind geraten, also nachmessen. Weil die
+MCU keinen RS-232-Wandler hat, ist **TTL mit 5 V am wahrscheinlichsten**.
 
 Maschine an, Multimeter (DC) mit Schwarz auf ein `GND`-Pad, Rot nacheinander
 auf `TXD` und `RXD`:
