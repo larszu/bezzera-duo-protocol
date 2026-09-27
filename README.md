@@ -11,8 +11,9 @@ Matrix zu entschlüsseln. Ziel ist dasselbe wie beim Reddit-Projekt von
 CDQ9439-3.5-A (abgelesen an einer Duo DE, 2026-09-25). DWIN-Displays sind
 fertige serielle HMI-Module: Bilder, Schriften und die Lage der Touchflächen
 liegen im Flash des Displays. Das Display selbst hat keine Maschinenlogik. Es
-zeigt Variablen an und meldet Touch-Eingaben über UART. Das Touch-Overlay
-wertet der Displaycontroller selbst aus, für das Protokoll spielt es keine Rolle.
+zeigt Variablen an und meldet Touch-Eingaben über UART. Der Touch ist
+kapazitiv und hat einen eigenen Controller am Flachkabel. Für das Protokoll
+zum Mainboard spielt er keine Rolle.
 
 Daraus folgt sehr wahrscheinlich:
 
@@ -89,23 +90,56 @@ kann deshalb beides weiterhin erkennen (`gicar`, `stats`).
 > Mit laufender Maschine nur an die bereits verlegten Messleitungen gehen.
 > Kessel und Dampf sind heiß.
 
-### 2.1 Stecker am Display
+### 2.1 Was die Displayrückseite zeigt (Foto 2026-09-27, Duo DE)
 
-Das Displaymodul hat einen eigenen UART-Stecker. Bei DWIN sind das typisch
-Versorgung (+5 V oder mehr, je nach Modell), GND, TX, RX. Die genaue Belegung
-steht oft auf der Platinenrückseite neben dem Stecker. Bitte ein Foto von
-beiden Seiten des Displaymoduls machen.
+- **Etikett** `DMT32240M035_07WTZ4`, Datumscode `180814` (August 2018).
+  Aufdruck „5V ONLY“: Das Modul läuft mit 5 V.
+- **Maschinenkabel:** Vier Adern (braun, gelb, weiß, grün) sind **direkt auf
+  Lötpads** am rechten Rand gelötet und mit Heißkleber gesichert, kein Stecker.
+  Beschriftung der Pads von oben: `GND GND GND NC TXD RXD`, darunter zwei vom
+  Kleber verdeckte Pads (vermutlich die +5 V). Welche Farbe auf welchem Pad
+  liegt, ist auf dem Foto nicht sicher zu erkennen und muss durchgemessen werden.
+- **Direkt neben diesen Pads sitzt ein 16-poliger IC.** Auf DWIN-Modulen ist
+  das sehr wahrscheinlich der RS-232-Pegelwandler (MAX3232-Klasse). **Die
+  Leitung zum Mainboard kann also RS-232 sein (±5…12 V) statt TTL.** Vor dem
+  Anklemmen unbedingt messen (siehe unten).
+- **Unten am Rand** sitzt ein kleiner, unbenutzter Steckverbinder mit eigener
+  Beschriftung. Vermutlich ist das der DWIN-Standard-Anschluss für die
+  Benutzerschnittstelle.
+- **Touch:** Das Flachkabel `CDQ9439-3.5-A` trägt einen **eigenen großen
+  Controller-Chip** und geht auf einen 6-poligen Stecker. Das ist ein
+  **kapazitiver** Touch mit I²C-Controller, nicht resistiv. Das Flachkabel ist
+  über den Halter der Knopfzelle geknickt.
+- **Knopfzelle** unter dem Touch-Flachkabel: Pufferbatterie der Display-Uhr.
+- **microSD-Schacht** unten rechts: Darüber spielt DWIN neue Oberflächen ein
+  (`DWIN_SET`). Ein Bezzera-Update-Paket für das Display, etwa vom
+  Kundendienst, enthielte die Dateien `13…bin` und `14…bin` und damit die
+  komplette VP-Karte.
+- Eine unbestückte Reihe von 5 Pads in der Mitte ist vermutlich ein Programmier-
+  oder Debug-Anschluss.
 
-1. Adern zählen und Beschriftung am Stecker notieren.
-2. Maschine an, Multimeter gegen GND der Elektronik:
-   - feste Spannung = Versorgung
-   - leicht zappelnder Wert nahe 3,3 V oder 5 V = Datenleitung im Ruhezustand.
-     DWIN nutzt TTL, Ruhepegel high, also nicht invertiert. RS-232 (±5–12 V)
-     ist bei DWIN wählbar, ab Werk aber aus. Liegt eine Datenader deutlich
-     **unter 0 V**, ist es RS-232. Dann niemals direkt an den ESP32, sondern
-     über einen MAX3232.
+Auf dem Startbildschirm zeigt das Display Brühtemperatur, Dampftemperatur, zwei
+Druckanzeigen (Brühgruppe 0–10 bar, Dampfkessel 0–2,5 bar), den Wasserstand
+(„Niveau Wasser“ min–max) sowie Uhrzeit und Datum. Diese Werte muss das
+Mainboard regelmäßig per `82` schreiben. Das sind die ersten VPs, nach denen
+man im Mitschnitt sucht.
 
-### 2.2 Sniffer anklemmen
+### 2.2 Pegel messen, bevor irgendetwas angeklemmt wird
+
+Maschine an, Multimeter (DC) mit Schwarz auf ein `GND`-Pad, Rot nacheinander
+auf `TXD` und `RXD`:
+
+| gemessen im Ruhezustand | bedeutet | anklemmen über |
+|---|---|---|
+| ca. +3,3 V | TTL 3,3 V | 1 kΩ in Reihe direkt an GPIO16/17 |
+| ca. +5 V | TTL 5 V | Spannungsteiler 10k/20k |
+| **ca. −5 bis −12 V** | **RS-232** | **MAX3232-Modul** (nur dessen RX-Eingänge nutzen), niemals direkt |
+
+Bei RS-232 liegt der Ruhepegel **negativ**. Genau das zerstört einen
+ESP32-Eingang sofort. Der MAX3232 dreht die Logik auch wieder richtig herum,
+der Sniffer bleibt dann auf „nicht invertiert“.
+
+### 2.3 Sniffer anklemmen
 
 Firmware: [`sniffer/duo_sniffer/duo_sniffer.ino`](sniffer/duo_sniffer/duo_sniffer.ino),
 Arduino-IDE, Board „ESP32 Dev Module“. Der Sniffer sendet nichts, das Display
@@ -123,7 +157,7 @@ Bei 3,3-V-Pegel reichen 1-kΩ-Widerstände in Reihe. Den ESP32 per USB vom
 Laptop versorgen, der dabei am Akku hängt, damit keine Masseschleife über das
 Netzteil entsteht.
 
-### 2.3 Mitschneiden
+### 2.4 Mitschneiden
 
 Seriellen Monitor mit **921600 Baud** öffnen, zum Beispiel
 `pio device monitor -b 921600 | tee mitschnitt.log`. Dann:
@@ -143,7 +177,7 @@ Seriellen Monitor mit **921600 Baud** öffnen, zum Beispiel
 | `m menue einstellungen` | Menü öffnen, Passwort 1901 eingeben |
 | `m standby an` / `m standby aus` | Standby |
 
-### 2.4 Auswerten
+### 2.5 Auswerten
 
 [`tools/duo_sniff.py`](tools/duo_sniff.py), nur Python-Standardbibliothek:
 
