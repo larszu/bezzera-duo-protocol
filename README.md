@@ -135,7 +135,11 @@ falls eine andere Baureihe doch ein Gicar-Board hat.
   Benutzerschnittstelle.
 - **Touch:** Das Flachkabel `CDQ9439-3.5-A` trägt einen **eigenen großen
   Controller-Chip** und geht auf einen 6-poligen Stecker. Das ist ein
-  **kapazitiver** Touch mit I²C-Controller, nicht resistiv. Das Flachkabel ist
+  **kapazitiver** Touch mit I²C-Controller, nicht resistiv. Der Chip ist ein
+  **SiS9252** (Silicon Integrated Systems). Aufdruck schwer lesbar, etwa
+  `9252 / SiS… / PXD0431 Green / 1246DA`. Am 6-poligen Kabelende steht `VDD`
+  bei Pin 6. Ersatz-Touchpanels aus dem Handel haben fast immer FocalTech- oder
+  Goodix-Controller und passen deshalb vermutlich nicht. Das Flachkabel ist
   über den Halter der Knopfzelle geknickt.
 - **LCD-Panel** hinter dem Touch: Aufkleber `LQ035NC1…` (abgeschnitten),
   vermutlich das verbreitete 3,5"-QVGA-Panel LQ035NC111 mit 54-poligem
