@@ -187,6 +187,15 @@ class Dgus(unittest.TestCase):
         self.assertIn("0x1002", zeilen[i - 1])
         self.assertIn("03A7", zeilen[i + 1])
 
+    def test_eigener_kopf_wird_erkannt(self):
+        # Bezzera Duo: Kopf C6 A5 statt 5A A5 (R3 in CONFIG.txt umgestellt).
+        log = ["0 B c6 a5 04 80 03 00 5a c6 a5 04 83 00 00 01", "3 A c6 a5 06 83 00 00 01 00 01"]
+        out = io.StringIO()
+        vps = ds.cmd_dgus(list(ds.lese_log(log)), out=out)
+        self.assertIn("Rahmenkopf C6 A5", out.getvalue())
+        self.assertIn("Seite 90", out.getvalue())
+        self.assertEqual(vps[0x0000], b"\x00\x01")
+
     def test_stats_verweist_auf_dgus(self):
         out = io.StringIO()
         ds.cmd_stats([ds.Frame(0, "A", bytes.fromhex("5aa50480030005"))], out=out)

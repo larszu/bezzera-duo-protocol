@@ -58,6 +58,47 @@ implementiert (`Marlin/src/advi3pp/core/dgus.h`):
   Seite aber über VP `0x0084` und quittieren 0x82 mit `4F 4B`. Beides versteht
   das Skript auch.
 
+### Gemessen an einer Duo DE (Logic Analyzer, 2026-09-27)
+
+| | |
+|---|---|
+| Rahmenkopf | **`C6 A5`** (statt `5A A5`), sonst DGUS wie oben |
+| Baudrate | 115200, 8N1, nicht invertiert, ohne CRC |
+| Pegel im Ruhezustand | Display-TXD +3,2 V, Mainboard-TX +4,8 V (TTL) |
+
+**Adern.** Das Display-Kabel endet in einem weißen Zwischenstecker:
+
+| Display-Pad | Display-Ader | Maschinen-Ader | Signal |
+|---|---|---|---|
+| GND | braun | schwarz | GND |
+| TXD | gelb | grün | Display → Mainboard, 3,3 V |
+| RXD | weiß | rosa | Mainboard → Display, 5 V |
+| VCC | grün | rot | +5 V |
+
+**Ablauf beim Einschalten** (Mainboard → Display):
+
+1. Seite 90 (`80 03 00 5A`)
+2. VP `0x0063` = 21 schreiben und zurücklesen (Verbindungstest)
+3. Uhr stellen (`80 1F 5A` + Datum/Uhrzeit BCD) und zurücklesen. Das
+   Display hat eine Halterung für eine Knopfzelle.
+4. Seite 101, VP `0x0000` = 1, dann Seite 103
+
+**Laufender Betrieb:**
+
+- Alle 100 ms liest das Mainboard VP `0x0000` und VP `0x0001` (je 1 Wort).
+  `0x0001` blieb in allen Mitschnitten 0. `0x0000` war 1 und stand auf 5,
+  nachdem am Display „OK“ gedrückt wurde (Meldung „Bitte Tank füllen“).
+- Etwa alle 300 ms schreibt das Mainboard VP `0x0050`, 9 Worte. **Wort 3 ist
+  der Kaffeekessel, Wort 4 der Servicekessel, beide in °C** (ganze Grad; am
+  Display abgelesen 33 und 32 °C bei kalter Maschine, mit Testwerten auf dem
+  Startbildschirm zugeordnet). Wort 2 wechselt nach Seite 103 auf 1, Wort 7
+  steht auf 3.
+- VP `0x0063` ist die Firmware-Version des Mainboards × 10 (21 → „FW: 2.1“ auf
+  dem Startbild, Seite 90).
+- Seiten: drei Sprachen zu je 100 Seiten, Katalog in [`docs/seiten.md`](docs/seiten.md).
+- Das Display wechselt bei Touch auch selbst die Seite, ohne dass das
+  Mainboard davon erfährt. Nicht jeder Tastendruck erscheint auf der Leitung.
+
 ### Was es sonst gibt
 
 | Suche (2026-09-24) | Ergebnis |
@@ -133,6 +174,11 @@ falls eine andere Baureihe doch ein Gicar-Board hat.
 - **Unten am Rand** sitzt ein kleiner, unbenutzter Steckverbinder mit eigener
   Beschriftung. Vermutlich ist das der DWIN-Standard-Anschluss für die
   Benutzerschnittstelle.
+- **Speicher:** zwei TSOP-48-Bausteine (paralleler NAND-Flash bzw. RAM), kein
+  8-poliger SPI-Flash. Mit einem CH341A lässt sich das Projekt also nicht
+  auslesen. Dazu ein microSD-Slot (darüber wird das Projekt eingespielt, nicht
+  zurückgelesen) und eine Halterung für eine Knopfzelle (Uhr).
+- **Firmware-Version** des Displays (Register `0x00`): `0x22`.
 - **Touch:** Das Flachkabel `CDQ9439-3.5-A` trägt einen **eigenen großen
   Controller-Chip** und geht auf einen 6-poligen Stecker. Das ist ein
   **kapazitiver** Touch mit I²C-Controller, nicht resistiv. Der Chip ist ein
@@ -175,9 +221,9 @@ man im Mitschnitt sucht.
 ### 2.2 Pegel messen, bevor irgendetwas angeklemmt wird
 
 Am einfachsten misst man am Mainboard-Stecker **CN6 „DISPLAY“**: vier Adern,
-rot, rosa, grün, schwarz. Erwartung: schwarz = GND, rot = +5 V, rosa und grün
-= die beiden Datenleitungen. Die Farben sind geraten, also nachmessen. Weil die
-MCU keinen RS-232-Wandler hat, ist **TTL mit 5 V am wahrscheinlichsten**.
+rot, rosa, grün, schwarz: schwarz = GND, rot = +5 V, rosa = Mainboard →
+Display, grün = Display → Mainboard (an einer Duo DE durchgemessen, siehe
+Abschnitt 1). Gemessen wurde TTL: +4,8 V vom Mainboard, +3,2 V vom Display.
 
 Maschine an, Multimeter (DC) mit Schwarz auf ein `GND`-Pad, Rot nacheinander
 auf `TXD` und `RXD`:
@@ -215,6 +261,29 @@ python3 tools/duo_sniff.py dgus mitschnitt.log
 
 `sr2log.py` erkennt die Baudrate aus dem kürzesten Puls. Optionen: `--a`/`--b`
 für andere Kanäle, `--baud` fest, `--invert` bei invertierter Leitung.
+
+Ohne PulseView geht es auch mit `sigrok-cli` (macOS: `brew install sigrok-cli`):
+
+```bash
+sigrok-cli -d fx2lafw --config samplerate=2m --time 45s -C D0,D1 -o boot.sr
+python3 tools/duo_live.py                 # Live-Anzeige im Terminal, direkt vom Analyzer
+python3 tools/duo_live.py --replay boot.sr
+```
+
+**Fallen mit dem fx2lafw-Klon (macOS, Apple Silicon):**
+
+- **Nur mit USB High Speed (480 Mb/s).** Meldet `system_profiler SPUSBHostDataType`
+  „Link Speed: 12 Mb/s“, bricht jede Aufnahme mit `LIBUSB_ERROR_PIPE` ab.
+  Anderes Kabel oder anderen Port nehmen.
+- macOS fragt beim Einstecken „Zubehör verbinden?“. Bis dahin ist das Gerät
+  für sigrok unsichtbar.
+- Vor dem Laden der Firmware meldet sich der Analyzer ohne Namen (USB-ID
+  `0925:3881`). `sigrok-cli --scan` lädt die Firmware, danach heißt er `fx2lafw`.
+- **Eine geänderte Abtastrate gilt erst ab dem nächsten Lauf.** Die erste
+  Aufnahme nach einem Wechsel läuft noch mit der alten Rate, ist aber mit der
+  neuen beschriftet: Die Baudrate erscheint dann verdoppelt oder halbiert.
+  Immer dieselbe Rate nehmen oder einen kurzen Vorlauf machen
+  (`--samples 1000`). `duo_live.py` macht das selbst.
 
 ### 2.4 Dauerhaft: ESP32-Sniffer
 
@@ -258,7 +327,7 @@ Seriellen Monitor mit **921600 Baud** öffnen, zum Beispiel
 
 1. `scan` eingeben und prüfen, ob Kanal A/B „normal“ und ~115200 Baud zeigt.
    Wenn nicht, mit `b <baud>` und `i` anpassen.
-2. Die Zeilen sollten mit `5a a5` beginnen.
+2. Die Zeilen sollten mit `c6 a5` beginnen (Duo DE, siehe Abschnitt 1).
 3. Bei jeder Aktion am Display **vorher** eine Markierung setzen:
 
 | Markierung (`m ...`) | Aktion |
@@ -288,7 +357,81 @@ nach `m bruehtemp ...` ändert und welcher Tastencode vom Display kam.
 
 Tests: `python3 -m unittest discover -s tests`.
 
+### 2.7 ESP32-Bridge: Man-in-the-Middle, Weboberfläche
+
+Firmware: [`bridge/duo_bridge/`](bridge/duo_bridge/), für den **Waveshare
+ESP32-S3-ETH** (andere ESP32-S3 gehen auch, Pins im Kopf der `.ino`).
+Der ESP32 sitzt *in* der Leitung, reicht jeden Rahmen weiter, schreibt mit
+und kann eigene Rahmen einschieben oder Antworten des Displays überschreiben.
+
+```bash
+arduino-cli core install esp32:esp32
+arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc bridge/duo_bridge
+arduino-cli upload  --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc -p /dev/cu.usbmodem… bridge/duo_bridge
+```
+
+**Verkabelung an der Maschine** (Netzstecker gezogen, Wassertank gefüllt):
+
+| von | nach |
+|---|---|
+| Display **braun** (GND) | Maschine **schwarz** und ESP32 **GND** |
+| Display **grün** (+5 V) | Maschine **rot**, direkt, nicht an den ESP32 |
+| Display **gelb** (TXD, 3,3 V) | ESP32 **GPIO15** |
+| ESP32 **GPIO16** | Maschine **grün** (RX Mainboard) |
+| Maschine **rosa** (TX Mainboard, 4,8 V) | **10 kΩ** → **GPIO17**, GPIO17 → **20 kΩ** → GND |
+| ESP32 **GPIO18** | Display **weiß** (RXD) |
+
+Nie das Display zusätzlich direkt an die Maschine stecken, solange der ESP32
+drin ist: Dann treiben zwei Sender dieselbe Leitung, und die 5 V kommen aus
+zwei Quellen.
+
+**Nur das Display, ohne Maschine** (zum Durchschalten und Fotografieren):
+Display grün an ESP32 **5V**, braun an GND, gelb an GPIO15, weiß an GPIO18.
+3,3 V vom ESP32 reichen dem Display-Eingang.
+
+**Befehle über USB** (`python3 tools/bridge.py "<befehl>"` oder
+`arduino-cli monitor -p … -c baudrate=921600`):
+
+| Befehl | Wirkung |
+|---|---|
+| `p <seite>` | Display auf Seite schalten |
+| `w <vp> <wort> …` | VP im Display schreiben |
+| `o <vp> <wert> [n]` | die nächsten n Antworten des Displays auf „VP lesen“ überschreiben (Tastendruck für das Mainboard) |
+| `d <hex …>` / `m <hex …>` | Rohbytes an Display / Mainboard |
+| `s <von> <bis> [ms]` | Seiten durchschalten |
+| `n <ssid> <passwort>` | Heim-WLAN speichern (nur 2,4 GHz), `n ?` listet sichtbare Netze |
+
+**Weboberfläche:** eigenes WLAN `duo-bridge` (Passwort `espresso1`) →
+http://192.168.4.1, im Heimnetz http://duo.local, per Ethernet ebenso.
+Sie zeigt einen Nachbau des Displays (320 × 240, SVG) mit Live-Werten,
+Temperaturverlauf, alle VPs, Ereignisprotokoll und den Seitenkatalog. Klicks
+auf Menüzeilen schalten die Seite wie das Display selbst. Tasten, die das
+Mainboard auswerten muss, sind noch nicht belegt, solange ihre Codes fehlen.
+Kein Login: nur im eigenen Netz betreiben.
+
+### 2.8 Seiten fotografieren, Tastencodes suchen
+
+- [`tools/seiten_foto.py`](tools/seiten_foto.py) schaltet über die Bridge
+  Seite für Seite um und fotografiert jede mit einer USB-Webcam
+  (`brew install imagesnap`). Vorher füllt es VP `0x0050` mit 10…18, damit
+  man sieht, welches Wort wo steht. Ergebnis: [`docs/seiten.md`](docs/seiten.md).
+  ffmpeg/avfoundation hat die Webcam nach Abbrüchen blockiert, imagesnap nicht.
+- [`tools/tasten_scan.py`](tools/tasten_scan.py) probiert Tastencodes über
+  Register `0x4F` durch. **Ergebnis an diesem Display: keine Wirkung**, auf
+  keiner Seite (1–255 auf Seite 0, 1, 3). Auch Schreiben in die Touch-Register
+  `0x05`–`0x07` löst keinen Druck aus, das Display speichert die Werte nur.
+  Über die Datenleitung lässt sich also keine Berührung vortäuschen.
+- Die Touch-Register zeigen aber die letzte echte Berührung: x=286, y=234,
+  genau auf „OK“. Der Touch-Controller arbeitet, der Fehler sitzt im Kontakt.
+
 ## 3. Danach
+
+**Stand 2026-09-27:** Protokoll, Seiten, Temperaturen und die Bridge stehen
+(Abschnitt 1, 2.7, [`docs/seiten.md`](docs/seiten.md)). Es fehlen die
+Tastencodes: Welche Werte das Display bei welcher Taste in VP `0x0000`/`0x0001`
+legt. Wege dahin: Touch-Stecker reparieren und mitschneiden, den
+Touch-Controller am 6-poligen Flachkabel mitschneiden und vom ESP32 ersetzen
+lassen, oder die Touch-Konfiguration über LibOP (unten) lesen.
 
 Wenn die Karte der VP-Adressen steht (Ist-/Solltemperaturen, Chrono,
 Tastencodes, Seiten):

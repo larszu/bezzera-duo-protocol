@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 *.log
 .pio/
+# Seitenfotos: gross, und auf manchen spiegelt sich die Person vor dem Display
+captures/seiten/
+captures/probe/
+captures/live.jpg

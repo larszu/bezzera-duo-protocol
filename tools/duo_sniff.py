@@ -161,9 +161,10 @@ def cmd_stats(frames: list[Frame], out=sys.stdout) -> None:
         print("  Laengen:   " + ", ".join(f"{l}B x{n}" for l, n in laengen.most_common(8)), file=out)
         koepfe = Counter(f.daten[:1].hex() for f in fs if f.daten)
         print("  Byte 0:    " + ", ".join(f"{k} x{n}" for k, n in koepfe.most_common(8)), file=out)
-        dgus = sum(1 for f in fs if DGUS_KOPF in f.daten)
+        kopf = dgus_kopf_erkennen(fs)
+        dgus = sum(1 for f in fs if kopf in f.daten)
         if dgus:
-            print(f"  DGUS:      {dgus} Frames enthalten 5A A5 -> `dgus` benutzen", file=out)
+            print(f"  DGUS:      {dgus} Frames enthalten {kopf.hex(' ').upper()} -> `dgus` benutzen", file=out)
         dr = sum(druckbar_anteil(f.daten) for f in fs) / len(fs)
         print(f"  druckbar:  {dr:.0%}" + ("  -> vermutlich ASCII-Protokoll" if dr > 0.95 else ""), file=out)
         if len(fs) > 1:
@@ -280,6 +281,19 @@ def _u16(d: bytes) -> str:
 # `82 4F 4B` ("OK"); Mini DGUS tut das nicht. Beides wird verstanden.
 
 DGUS_KOPF = b"\x5a\xa5"
+
+
+def dgus_kopf_erkennen(frames: Iterable[Frame]) -> bytes:
+    """Das erste Kopfbyte ist per CONFIG.txt (R3) umstellbar, das zweite bleibt
+    A5. Nimmt das haeufigste `xx A5`, dem eine plausible Laenge und ein
+    DGUS-Befehl (80..84) folgen. Ohne Treffer: 5A A5."""
+    z: Counter = Counter()
+    for f in frames:
+        d = f.daten
+        for i in range(len(d) - 3):
+            if d[i + 1] == 0xA5 and 2 <= d[i + 2] <= 0xF0 and 0x80 <= d[i + 3] <= 0x84:
+                z[bytes(d[i : i + 2])] += 1
+    return z.most_common(1)[0][0] if z else DGUS_KOPF
 
 DGUS_REGISTER = {
     0x00: "Version",
@@ -407,7 +421,9 @@ def _worte(d: bytes) -> str:
     return text
 
 
-def cmd_dgus(eintraege: list[Frame | str], nur_aenderungen: bool = False, out=sys.stdout) -> dict[int, bytes]:
+def cmd_dgus(
+    eintraege: list[Frame | str], nur_aenderungen: bool = False, kopf: bytes | None = None, out=sys.stdout
+) -> dict[int, bytes]:
     """Gibt jeden DGUS-Rahmen aus (bei `nur_aenderungen` nur neue VP-Werte,
     Seitenwechsel und Touch-Meldungen) und am Ende eine Tabelle aller VPs.
     Rueckgabe: VP-Adresse -> letzter Wert."""
@@ -415,7 +431,10 @@ def cmd_dgus(eintraege: list[Frame | str], nur_aenderungen: bool = False, out=sy
     zaehler: Counter = Counter()
     von: dict[int, set] = defaultdict(set)
     n = n_crc = 0
-    parser = DgusParser()
+    if kopf is None:
+        kopf = dgus_kopf_erkennen(nur_frames(eintraege))
+    print(f"# Rahmenkopf {kopf.hex(' ').upper()}", file=out)
+    parser = DgusParser(kopf)
     for e in eintraege:
         if isinstance(e, str):
             print(f"-- {e}", file=out)
@@ -437,7 +456,7 @@ def cmd_dgus(eintraege: list[Frame | str], nur_aenderungen: bool = False, out=sy
 
     print(f"\n{n} DGUS-Rahmen, davon {n_crc} mit CRC.", file=out)
     if not n:
-        print("Kein 5A A5 gefunden. Baudrate/Invertierung pruefen oder `stats` ansehen.", file=out)
+        print(f"Kein {kopf.hex(' ').upper()} gefunden. Baudrate/Invertierung pruefen oder `stats` ansehen.", file=out)
     if vps:
         print("\nVP      Anzahl  Richtung  letzter Wert", file=out)
         for vp in sorted(vps):
@@ -501,6 +520,7 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("log", help="Sniffer-Log, '-' fuer stdin")
         if name == "dgus":
             p.add_argument("--changes", action="store_true", help="nur neue Werte, Seitenwechsel, Tasten")
+            p.add_argument("--kopf", help="Rahmenkopf, Hex, z. B. 5aa5 (Standard: automatisch erkennen)")
         if name == "diff":
             p.add_argument("--dir", default="A", help="Richtung A oder B")
             p.add_argument("--len", type=int, help="nur Frames dieser Laenge (Standard: haeufigste)")
@@ -512,7 +532,7 @@ def main(argv: list[str] | None = None) -> int:
         eintraege = list(lese_log(quelle))
 
     if a.cmd == "dgus":
-        cmd_dgus(eintraege, a.changes)
+        cmd_dgus(eintraege, a.changes, bytes.fromhex(a.kopf) if a.kopf else None)
     elif a.cmd == "stats":
         cmd_stats(nur_frames(eintraege))
     elif a.cmd == "gicar":
