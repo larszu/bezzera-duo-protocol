@@ -194,6 +194,22 @@ der Sniffer bleibt dann auf „nicht invertiert“.
 
 ### 2.3 Sniffer anklemmen
 
+**Einkaufsliste:**
+
+- ESP32-Devkit mit klassischem ESP32 (z. B. „ESP32 DevKitC V4“, ESP32-WROOM-32), USB-Kabel
+- 2 × 10 kΩ und 2 × 20 kΩ (für die zwei Spannungsteiler bei 5-V-Pegel)
+- Steckbrett und Dupont-Kabel
+- für den Abgriff an **CN6 „DISPLAY“**: je nach Rastermaß des Steckers eine
+  4-polige „Stacking“-Buchsenleiste mit langen Beinen (2,54 mm), die zwischen
+  Stecker und Stiftleiste gesteckt wird, oder dünne Nadeln/Dupont-Stifte, die
+  von hinten neben die Adern in das Steckergehäuse geschoben werden
+
+**Abgriff:** am Mainboard-Stecker CN6 (Adern rot, rosa, grün, schwarz). Nur
+die zwei Datenadern und GND werden angezapft, **+5 V (vermutlich rot) bleibt
+frei**. Der ESP32 bekommt Strom über USB vom Laptop. Das Display bleibt
+angeschlossen und läuft normal weiter.
+
+
 Firmware: [`sniffer/duo_sniffer/duo_sniffer.ino`](sniffer/duo_sniffer/duo_sniffer.ino),
 Arduino-IDE, Board „ESP32 Dev Module“. Der Sniffer sendet nichts, das Display
 läuft normal weiter. Startwert ist 115200 Baud.
