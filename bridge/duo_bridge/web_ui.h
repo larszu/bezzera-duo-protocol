@@ -56,7 +56,8 @@ button:hover{background:#244170}
   <section style="grid-column:1/-1">
     <h2>Display</h2>
     <div id="dsp_wrap" style="max-width:640px;margin:0 auto"><svg id="dsp" viewBox="0 0 320 240" style="width:100%;display:block;border-radius:6px;box-shadow:0 0 0 6px #000,0 6px 30px #0008"></svg></div>
-    <p class="hinweis" id="dsp_hinweis">Nachbau aus Fotos. Klick auf Menüpunkte schaltet die Seite wie das Display. Tasten, deren Code noch unbekannt ist, werden nur protokolliert.</p>
+    <div class="form" style="margin-top:8px"><label><input type="checkbox" id="f_flaechen" style="width:auto"> Tastenflächen zeigen</label></div>
+    <p class="hinweis" id="dsp_hinweis">Nachbau aus Fotos. Ein Klick wirkt wie eine Berührung an dieser Stelle: Die Taste aus der Touch-Konfiguration des Displays (1070 Tasten) schreibt ihren Wert und wechselt die Seite, genau wie das Display selbst. Ist das Mainboard verbunden, liest es den Wert beim nächsten Abfragen.</p>
   </section>
 
   <section>
@@ -103,6 +104,7 @@ button:hover{background:#244170}
     <div id="log"></div>
   </section>
 </main>
+<script src="/tasten.js"></script>
 <script>
 const SEITEN={0:"Standby",1:"Startbildschirm",2:"Alarm: Ladezeit überschritten",3:"Alarm: Tank füllen",4:"Alarm: NTC-Fehler",
 5:"Startbildschirm (Var.)",6:"Startbildschirm, ein Zeiger",7:"Einstellungen Kaffee",8:"Einstellungen Tee",9:"Kesselpriorität",10:"Vorbrühen",
@@ -218,11 +220,12 @@ const defs=`<defs>
 <linearGradient id="gbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${FARBE.bg1}"/><stop offset="1" stop-color="${FARBE.bg2}"/></linearGradient>
 <linearGradient id="gzeile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a4b73"/><stop offset=".5" stop-color="#132a47"/><stop offset="1" stop-color="#0b1a2e"/></linearGradient>
 <linearGradient id="gknopf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6f8c"/><stop offset="1" stop-color="#26344a"/></linearGradient>
+<linearGradient id="ghell" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e8f6ff"/><stop offset=".6" stop-color="#7fd0ff"/><stop offset="1" stop-color="#1c3a5c"/></linearGradient>
 <radialGradient id="gglow"><stop offset="0" stop-color="#bff0ff" stop-opacity=".9"/><stop offset=".45" stop-color="#46d2ff" stop-opacity=".35"/><stop offset="1" stop-color="#46d2ff" stop-opacity="0"/></radialGradient>
 <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>`;
 const txt=(x,y,t,o={})=>`<text x="${x}" y="${y}" fill="${o.f||FARBE.text}" font-size="${o.s||12}" font-weight="${o.w||700}" text-anchor="${o.a||"start"}" font-family="Arial Rounded MT Bold,Arial,sans-serif" ${o.glow?'filter="url(#glow)"':""}>${t}</text>`;
-const klick=(x,y,w,h,js)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent" style="cursor:pointer" onclick="${js}"/>`;
+const klick=()=>"";  // Klicks wertet die Tastentabelle aus (beruehre())
 
 function rahmen(titel){
   return `<rect width="320" height="240" fill="url(#gbg)"/>
@@ -230,7 +233,7 @@ function rahmen(titel){
   <rect x="8" y="8" width="304" height="18" fill="#1d3656"/>
   ${txt(14,21,titel,{s:13,glow:1})}`;
 }
-function okEcke(js){
+function okEcke(js=""){
   return `<path d="M222 232 L238 206 H312 V232 Z" fill="url(#gknopf)" stroke="${FARBE.rahmen}" stroke-width="2"/>
   ${txt(276,228,"OK",{s:22,a:"middle",glow:1})}${klick(222,206,90,26,js)}`;
 }
@@ -253,6 +256,23 @@ function icon(name,x,y){
   return `<g transform="translate(${x},${y})" ${o}><path d="M0 -16 L17 12 H-17 Z"/><path d="M0 -5 V3"/><circle cy="7.5" r="1" fill="${FARBE.orange}"/></g>`;
 }
 
+// Wasserstand rechts neben dem Zeiger: nach rechts offenes "C" mit Doppellinie,
+// "max" oben, "min" unten, zwei Balken in der Mitte (so auf den Fotos, Seite 101).
+function wasserstand(){
+  const cx=302, cy=131, r=40, bog=(rr,a0,a1)=>{const p=a=>[cx+Math.cos(a*Math.PI/180)*rr,cy+Math.sin(a*Math.PI/180)*rr];
+    const [x0,y0]=p(a0),[x1,y1]=p(a1);return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${rr} ${rr} 0 0 0 ${x1.toFixed(1)} ${y1.toFixed(1)}`};
+  const strich=(a,t,dy)=>{const x0=cx+Math.cos(a*Math.PI/180)*(r+4), y0=cy+Math.sin(a*Math.PI/180)*(r+4);
+    return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} l-8 ${dy>0?6:-6}" stroke="#cfeeff" stroke-width="1.5"/>`+
+      `<text x="${(x0-6).toFixed(1)}" y="${(y0+dy).toFixed(1)}" fill="#e6f6ff" font-size="7" font-weight="700" font-family="Arial,sans-serif" transform="rotate(${dy>0?35:-35} ${(x0-6).toFixed(1)} ${(y0+dy).toFixed(1)})">${t}</text>`};
+  return `<g filter="url(#glow)" fill="none">
+    <path d="${bog(r+3,250,110)}" stroke="#8fdcff" stroke-width="2"/>
+    <path d="${bog(r-3,250,110)}" stroke="#8fdcff" stroke-width="2"/>
+    <path d="${bog(r,250,110)}" stroke="#46d2ff" stroke-width="4" opacity=".45"/>
+  </g>
+  <path d="M${cx-r+2} ${cy-5} h26 M${cx-r+2} ${cy+4} h26" stroke="#e8f8ff" stroke-width="5" stroke-linecap="round" filter="url(#glow)"/>
+  ${strich(245,"max",-4)}${strich(115,"min",10)}`;
+}
+
 function seiteStandby(s,j){
   return `<rect width="320" height="240" fill="url(#gbg)"/>${logo(160,92,1.2)}
   ${txt(160,128,"BEZZERA",{s:15,a:"middle",glow:1})}${txt(160,140,"Duo MN",{s:9,a:"middle"})}
@@ -261,26 +281,27 @@ function seiteStandby(s,j){
   <path d="M270 119 l12 -12 m-2 -4 a6 6 0 1 1 6 6" stroke="${FARBE.cyan}" stroke-width="3" fill="none" stroke-linecap="round"/>
   ${klick(262,96,34,30,`geh(${lang(s)+14})`)}${uhr(j.rtc)}`;
 }
-function seiteStart(s,j,k,d){
+function seiteStart(s,j,k,d,einZeiger=false){
   const cx=160, cy=126, r=78;
   let skala="";
   // Skalen wie im Original: links 100 (oben) bis 10 (unten), rechts 2.5 bis 0.5 bar
   const links=[100,90,80,70,60,50,40,30,20,10], rechts=["2.5","2","1.5","1","0.5"];
   const pos=(grad,rr)=>[cx+Math.cos(grad*Math.PI/180)*rr, cy+Math.sin(grad*Math.PI/180)*rr+3];
   links.forEach((v,i)=>{const [x,y]=pos(255-i*(150/9),r+17); skala+=txt(x,y,v,{s:8,a:"middle",w:400,f:"#e6f6ff"})});
-  rechts.forEach((v,i)=>{const [x,y]=pos(285+i*(150/5),r+17); skala+=txt(x,y,v,{s:8,a:"middle",w:400,f:"#e6f6ff"})});
+  if(!einZeiger) rechts.forEach((v,i)=>{const [x,y]=pos(285+i*(150/5),r+17); skala+=txt(x,y,v,{s:8,a:"middle",w:400,f:"#e6f6ff"})});
   const bogen=(a0,a1)=>{const p=(a)=>[cx+Math.cos(a*Math.PI/180)*r,cy+Math.sin(a*Math.PI/180)*r];const [x0,y0]=p(a0),[x1,y1]=p(a1);return `M${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1}`};
   return `<rect width="320" height="240" fill="url(#gbg)"/>
   <circle cx="${cx}" cy="${cy}" r="${r-8}" fill="url(#gglow)"/>
   <path d="${bogen(95,265)}" stroke="#e8f8ff" stroke-width="13" fill="none" filter="url(#glow)"/>
-  <path d="${bogen(275,445)}" stroke="#e8f8ff" stroke-width="13" fill="none" filter="url(#glow)"/>
+  ${einZeiger?"":`<path d="${bogen(275,445)}" stroke="#e8f8ff" stroke-width="13" fill="none" filter="url(#glow)"/>`}
   ${skala}${txt(cx,cy+r+14,"0 bar",{s:8,a:"middle",w:400})}
-  <g stroke="#dff6ff" stroke-width="2" fill="none"><path d="M${cx-30} ${cy-26} h16 v6 q-8 8 -16 0 z"/><path d="M${cx+18} ${cy-28} q-6 6 0 12 m6 -12 q-6 6 0 12"/></g>
-  ${txt(cx-22,cy+10,k??"–",{s:26,a:"middle",glow:1})}${txt(cx+26,cy+10,d??"–",{s:26,a:"middle",glow:1})}
+  ${einZeiger?`<g stroke="#dff6ff" stroke-width="2" fill="none"><path d="M${cx-8} ${cy-26} h16 v6 q-8 8 -16 0 z"/></g>${txt(cx,cy+10,k??"–",{s:26,a:"middle",glow:1})}`
+  :`<g stroke="#dff6ff" stroke-width="2" fill="none"><path d="M${cx-30} ${cy-26} h16 v6 q-8 8 -16 0 z"/><path d="M${cx+18} ${cy-28} q-6 6 0 12 m6 -12 q-6 6 0 12"/></g>
+  ${txt(cx-22,cy+10,k??"–",{s:26,a:"middle",glow:1})}${txt(cx+26,cy+10,d??"–",{s:26,a:"middle",glow:1})}`}
   <g fill="${FARBE.cyan}"><rect x="10" y="10" width="7" height="7" rx="2"/><rect x="10" y="20" width="7" height="7" rx="2"/><rect x="10" y="30" width="7" height="7" rx="2"/></g>
   ${klick(6,6,16,36,`geh(${lang(s)+14})`)}${logo(40,30,.45)}${txt(52,20,"BEZZERA",{s:12})}${txt(56,31,"Duo MN",{s:8})}
-  <path d="M268 88 a40 40 0 0 1 0 76" stroke="${FARBE.cyan}" stroke-width="6" fill="none" opacity=".7"/>
-  ${klick(cx-60,cy-60,120,120,"taste('Zeiger')")}${uhr(j.rtc)}`;
+  ${einZeiger?"":wasserstand()}
+  ${uhr(j.rtc)}`;
 }
 function seiteAlarm(s,j){
   const b=s%100;
@@ -308,22 +329,272 @@ function seiteTemperatur(s,j){
     knopf(206,104,40,38,"–","taste('Temperatur –')",22)+knopf(252,104,40,38,"+","taste('Temperatur +')",22)+
     (b==7||b==12?txt(18,226,tx("gruppe",s)+"  OFF",{s:10})+txt(120,226,tx("vorb",s),{s:10}):"")+okEcke("taste('OK')");
 }
+
+// ─── Baukasten für die übrigen Seiten (deutsche Nummern 100–195) ───────────
+// Englische (0–95) und italienische (200–295) Seiten nutzen dieselbe Vorlage
+// über seite%100+100; nur Titel, die in T stehen, erscheinen übersetzt.
+let dspJ=null, dspFehlt=new Set(), dspGefragt=new Set();
+function vpw(vp,i=0){const e=dspJ&&dspJ.vps.find(v=>v.vp==vp); if(!e||e.w.length<=i){dspFehlt.add(vp);return null} return e.w[i]}
+function tastenRect(s){return tastenAuf(s).map(t=>({x0:Math.min(t[1],t[3]),y0:Math.min(t[2],t[4]),x1:Math.max(t[1],t[3]),y1:Math.max(t[2],t[4]),t}))}
+function kn(r,label,sz=14,aktiv=false){const w=r.x1-r.x0,h=r.y1-r.y0;
+  return `<rect x="${r.x0+2}" y="${r.y0+2}" width="${w-4}" height="${h-4}" rx="4" fill="${aktiv?"#bfe9ff":"url(#gknopf)"}" stroke="#9fc4e6" stroke-width="1.2"/>`+
+  txt(r.x0+w/2,r.y0+h/2+sz*.36,label,{s:sz,a:"middle",f:aktiv?"#0b1a2e":FARBE.text})}
+function zeilenBox(x,y,w,h,aktiv){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${aktiv?"url(#ghell)":"url(#gzeile)"}" stroke="#6fb8e6" stroke-width="1.2"/>`}
+function mehrzeilig(x,y,t,o={}){return t.split("\n").map((z,i)=>txt(x,y+i*(o.zh||15),z,{s:12,a:"middle",glow:1,...o})).join("")}
+function rahmenOhneTitel(){return `<rect width="320" height="240" fill="url(#gbg)"/><rect x="8" y="8" width="304" height="224" rx="3" fill="none" stroke="${FARBE.rahmen}" stroke-width="3" filter="url(#glow)"/>`}
+function fussLinie(y=172){return `<path d="M16 ${y} H304" stroke="${FARBE.cyan}" stroke-width="2" opacity=".6"/>`}
+const fmt=(v,div,st)=>v==null?"–":(v/div).toFixed(st);
+// Tasten der Seite nach Art sortiert: Plus/Minus-Paare je VP, Tastencodes, Seitenwechsel
+function tastenNach(s){const R=tastenRect(s);return {alle:R,
+  pm:vp=>R.filter(r=>r.t[6]==2&&r.t[7]==vp).sort((a,b)=>a.t[8]-b.t[8]), // [minus, plus]
+  code:(vp,w)=>R.find(r=>r.t[6]==5&&r.t[7]==vp&&(w===undefined||r.t[8]==w)),
+  ascii:c=>R.find(r=>r.t[6]==0&&r.t[8]==undefined&&false)}}
+
+// Icons
+function hebel(x,y,richtung){ // Siebträgerhebel der Brühgruppe, stilisiert
+  const pfeil=richtung>0?`<path d="M${x+28} ${y-30} a40 40 0 0 1 40 30" stroke="#cfeeff" stroke-width="3" fill="none"/><path d="M${x+62} ${y-6} l6 6 l4 -9" stroke="#cfeeff" stroke-width="3" fill="none"/>`
+    :`<path d="M${x+68} ${y-30} a40 40 0 0 1 -10 40" stroke="#cfeeff" stroke-width="3" fill="none"/><path d="M${x+52} ${y+6} l6 6 l6 -6" stroke="#cfeeff" stroke-width="3" fill="none"/>`;
+  return `<g stroke="#cfeeff" stroke-width="2.5" fill="none" filter="url(#glow)">
+  <path d="M${x} ${y+40} V${y-20} h22 v10 h-6 v50 h44 l10 10 H${x}Z"/><circle cx="${x+12}" cy="${y+44}" r="7"/><path d="M${x+12} ${y+44} L${x+50} ${y-12}" stroke-width="4"/>${pfeil}</g>`;
+}
+
+const SEITEN_DE={
+ 102:{typ:"alarm",icon:"warn",text:"Timeout Beladen\nNeustart"},
+ 106:{typ:"start1"},183:{typ:"start1"},
+ 109:{typ:"prio"},111:{typ:"prio"},
+ 110:{typ:"wert",titel:"Vorbrühen",label:"Sekunden Vorbrühen",vp:0x5C,div:10,st:1,suffix:"″"},
+ 114:{typ:"menue"},163:{typ:"menue"},
+ 115:{typ:"info",icon:"sperre",text:"Bildschirm für 10 Sekunden gesperrt,\num das Display zu reinigen",rahmen:1},
+ 123:{typ:"pid",titel:"PID - Kessel Kaffee",vps:[0x76,0x77,0x78]},
+ 124:{typ:"band",titel:"PID - Kessel Kaffee",vp:0x79},
+ 125:{typ:"pid",titel:"PID - Kessel Services"},126:{typ:"band",titel:"PID - Kessel Services"},
+ 180:{typ:"pid",titel:"PID Gruppe"},181:{typ:"band",titel:"PID Gruppe"},
+ 127:{typ:"raster",titel:"Sondenempfindlichkeit",z:["50K","150K","400K","1M"],hell:0},
+ 128:{typ:"raster",titel:"Sondenempfindlichkeit",z:["50K","150K","400K","1M"],hell:1},
+ 129:{typ:"raster",titel:"Sondenempfindlichkeit",z:["50K","150K","400K","1M"],hell:2},
+ 130:{typ:"raster",titel:"Sondenempfindlichkeit",z:["50K","150K","400K","1M"],hell:3},
+ 131:{typ:"raster",titel:"Ladezeitlimit",z:["60 Sek","90 Sek","120 Sek"],hell:0},
+ 132:{typ:"raster",titel:"Ladezeitlimit",z:["60 Sek","90 Sek","120 Sek"],hell:1},
+ 133:{typ:"raster",titel:"Ladezeitlimit",z:["60 Sek","90 Sek","120 Sek"],hell:2},
+ 134:{typ:"frage",titel:"Achtung!",text:"Bestätigen,\num die Maschine zurückzusetzen"},
+ 135:{typ:"frage",text:"Drücken, um Passwort einzugeben"},144:{typ:"frage",text:"Drücken, um Passwort einzugeben"},
+ 136:{typ:"frage",text:"Falsches Passwort,\nzur Eingabe drücken"},145:{typ:"frage",text:"Falsches Passwort,\nzur Eingabe drücken"},
+ 140:{typ:"frage",text:"Möchten Sie das aktuelle\nPasswort zurücksetzen?\nOK drücken, um neues\nPasswort einzugeben"},
+ 141:{typ:"frage",text:"Möchten Sie das aktuelle\nPasswort zurücksetzen?\nOK drücken, um neues\nPasswort einzugeben"},
+ 142:{typ:"info",text:"Neues Passwort gespeichert",rahmen:1},194:{typ:"info",text:"Neues Passwort gespeichert",rahmen:1},
+ 192:{typ:"info",text:"Drücken,\num Passwort einzugeben",rahmen:1},
+ 193:{typ:"info",text:"Drücken,\num das neue Passwort\neinzugeben",rahmen:1},
+ 195:{typ:"info",text:"Falsches Passwort,\nzur Eingabe drücken",rahmen:1},
+ 137:{typ:"leer"},190:{typ:"leer"},196:{typ:"leer"},197:{typ:"leer"},198:{typ:"leer"},199:{typ:"leer"},
+ 138:{typ:"tastatur",esc:1},143:{typ:"tastatur"},
+ 139:{typ:"liste2",titel:"Passwort",z:["Einstellungen Kennwort","Techniker Kennwort"]},
+ 146:{typ:"sprache",titel:"Language",hell:1},147:{typ:"sprache",titel:"Lingua",hell:0},148:{typ:"sprache",titel:"Sprache",hell:2},
+ 149:{typ:"led"},150:{typ:"licht"},
+ 151:{typ:"frage",titel:"Tarierung Sensor",text:"Bitte den Tank entleeren und\ntrocknen"},
+ 152:{typ:"info",text:"Tarierung Sensor Tank...",rahmen:1},153:{typ:"info",text:"Tarierung OK",rahmen:1},
+ 154:{typ:"wert",titel:"Wartung",label:"Anzahl der Bezüge",vp:0x27,div:1,st:0},
+ 155:{typ:"wert",titel:"Wasser Filter",label:"Anzahl Tagen",vp:0x28,div:1,st:0,fuss:"ZURÜCKSETZEN"},
+ 164:{typ:"spuelen"},185:{typ:"spuelen"},
+ 165:{typ:"info",titel:"Waschen",text:"Blindfilter in Filterhalter einsetzen\ndrücken Sie um fortzufahren"},
+ 166:{typ:"hebel",titel:"Waschen",text:"Heben Sie den\nHebel an Drücken\nSie START",richtung:-1,knoepfe:["ESC","START"]},
+ 167:{typ:"info",titel:"Waschen",text:"Waschen..."},187:{typ:"info",titel:"Waschen",text:"Waschen..."},
+ 168:{typ:"hebel",titel:"Waschen",text:"Ziehen Sie nach\nunten und heben\nSie den Hebel.\nZum Waschen",richtung:1},
+ 169:{typ:"hebel",titel:"Waschen",text:"Waschen abge-\nschlossen. Den\nHebel herunter-\nziehen und den\nBlindfilter heraus-\nnehmen",richtung:1,knoepfe:["OK"]},
+ 186:{typ:"info",titel:"Waschen",text:"Blindfilter in Filterhalter\neinsetzen"},
+ 188:{typ:"info",titel:"Waschen",text:"Komplettes Waschen.\nEntfernen Sie den Blindfilter.\nDrücken Sie, um zu beenden."},
+ 184:{typ:"gruppe"},
+};
+for(let s=157;s<=162;s++) SEITEN_DE[s]={typ:"datum",hell:s-157};
+for(let s=170;s<=176;s++) SEITEN_DE[s]={typ:"woche",tag:s-170};
+LISTEN[79]=LISTEN[20];
+LISTEN[82]=[["Auto on/off","Auto ON/OFF","Auto on off","OFF",70],["Password","Passwort","Password","OFF",39],["Group temp","Gruppentemperatur","Temperatura gruppo","",84]];
+LISTE_TITEL[79]="tech"; LISTE_TITEL[82]="einst";
+
+function seiteBaukasten(s,j,k,d){
+  const b=s%100, def=SEITEN_DE[100+b]; if(!def||!def.typ) return null;
+  const T_=tastenNach(s), R=T_.alle, titel=t=>rahmen(t);
+  switch(def.typ){
+  case "leer": return `<rect width="320" height="240" fill="#e9eef6"/>`;
+  case "alarm": return rahmen(tx("alarm",s))+icon(def.icon,160,86)+mehrzeilig(160,132,def.text,{s:13})+fussLinie(176)+R.map(r=>kn(r,"OK",18)).join("");
+  case "info": return (def.titel?rahmen(def.titel):rahmenOhneTitel())+(def.icon=="sperre"?`<g transform="translate(160,80)" stroke="#cfeeff" stroke-width="3" fill="none" filter="url(#glow)"><path d="M-14 -12 l20 -8 l10 20 l-20 8z"/><path d="M-4 4 l6 14"/></g>`:"")+
+      mehrzeilig(160,def.titel?120:118,def.text,{s:12});
+  case "frage": { // Meldung mit ESC/OK: rechte Taste OK, linke ESC
+    const kn2=R.slice().sort((a,b)=>a.x0-b.x0);
+    return (def.titel?rahmen(def.titel):rahmenOhneTitel())+mehrzeilig(160,def.titel?96:92,def.text,{s:12})+fussLinie(172)+
+      kn2.map((r,i)=>kn(r,kn2.length>1&&i==0?"ESC":"OK",13)).join("");
+  }
+  case "prio": {
+    const v=vpw(0x5A), namen=["Kaffee","Services","Kein"];
+    const felder=R.filter(r=>r.t[7]==0x5A).sort((a,b)=>a.x0-b.x0);
+    return rahmen("Priorität Kessel")+felder.map((r,i)=>{const cx=(r.x0+r.x1)/2;
+      return `<circle cx="${cx}" cy="86" r="14" fill="none" stroke="#dff6ff" stroke-width="3" filter="url(#glow)"/>`+(v==i?`<circle cx="${cx}" cy="86" r="8" fill="#dff6ff" filter="url(#glow)"/>`:"")+
+        txt(cx,128,namen[i],{s:12,a:"middle",glow:1})}).join("")+fussLinie(172)+R.filter(r=>r.t[7]==0).map(r=>kn(r,"OK",16)).join("");
+  }
+  case "wert": {
+    const [m,p]=T_.pm(def.vp), v=vpw(def.vp);
+    return rahmen(def.titel)+txt(40,80,def.label,{s:12,f:FARBE.cyan})+txt(150,142,fmt(v,def.div,def.st)+(def.suffix||""),{s:34,a:"middle",glow:1})+
+      (m?kn(m,"–",22):"")+(p?kn(p,"+",22):"")+(def.fuss?txt(18,224,def.fuss,{s:10}):"")+okEcke();
+  }
+  case "pid": {
+    const zeilen=[["P",1,10],["I",2,100],["D",1,10]];
+    const plusMinus=R.filter(r=>r.t[6]==2), vps=[...new Set(plusMinus.map(r=>r.t[7]))].sort((a,b)=>a-b);
+    return rahmen(def.titel)+zeilen.map((z,i)=>{const y=30+i*57, vp=vps[i]; const [m,p]=vp!=null?T_.pm(vp):[];
+      return zeilenBox(12,y,258,48)+txt(24,y+30,z[0],{s:13})+txt(96,y+33,vp!=null?fmt(vpw(vp),z[2],z[1]):"–",{s:22,a:"middle",glow:1})+(m?kn(m,"–",18):"")+(p?kn(p,"+",18):"")}).join("")+
+      txt(24,226,"Band",{s:9,f:FARBE.leise})+kn({x0:274,y0:28,x1:314,y1:104},"▲",14)+kn({x0:274,y0:118,x1:314,y1:192},"▼",14)+okEcke();
+  }
+  case "band": {
+    const pm=R.filter(r=>r.t[6]==2), vp=pm.length?pm[0].t[7]:null, [m,p]=vp!=null?T_.pm(vp):[];
+    return rahmen(def.titel)+zeilenBox(12,28,258,48)+txt(24,58,"Band",{s:12})+txt(96,61,vp!=null?fmt(vpw(vp),1,0):"–",{s:22,a:"middle",glow:1})+(m?kn(m,"–",18):"")+(p?kn(p,"+",18):"")+
+      kn({x0:274,y0:28,x1:314,y1:104},"▲",14)+kn({x0:274,y0:118,x1:314,y1:192},"▼",14)+okEcke();
+  }
+  case "raster": {
+    const pos=[[8,31,141,70],[159,31,305,70],[8,81,141,120],[159,81,305,120]];
+    return rahmen(def.titel)+def.z.map((z,i)=>{const [x0,y0,x1,y1]=pos[i];
+      return zeilenBox(x0,y0,x1-x0,y1-y0,i==def.hell)+txt(x0+12,y0+25,z,{s:13,f:i==def.hell?"#0b1a2e":FARBE.text})}).join("")+okEcke();
+  }
+  case "tastatur": {
+    const ziff=R.filter(r=>r.t[6]==0&&r.t[0]==s);
+    const lab=r=>{const c=TASTEN.find(t=>t===r.t); return null};
+    let o=rahmenOhneTitel()+`<rect x="16" y="10" width="220" height="34" rx="4" fill="#0e1628" stroke="#6fb8e6"/>`+
+      `<rect x="242" y="9" width="66" height="34" rx="4" fill="url(#gknopf)" stroke="#9fc4e6"/>`+txt(275,33,"←",{s:20,a:"middle"});
+    const rechteck=[[10,59,61,115],[70,58,121,114],[134,58,185,114],[196,58,247,114],[260,58,311,114],[8,124,59,180],[70,124,121,180],[134,124,185,180],[195,124,246,180],[260,124,311,180]];
+    rechteck.forEach((q,i)=>{o+=kn({x0:q[0],y0:q[1],x1:q[2],y1:q[3]},String((i+1)%10),24)});
+    o+=fussLinie(190)+(def.esc?kn({x0:173,y0:196,x1:241,y1:233},"ESC",13):"")+kn({x0:250,y0:196,x1:315,y1:233},"OK",13);
+    return o;
+  }
+  case "liste2": return rahmen(def.titel)+def.z.map((z,i)=>zeilenBox(9,31+i*49,274,39)+txt(22,56+i*49,z,{s:13,glow:1})).join("")+okEcke();
+  case "sprache": {
+    const flagge=[["#009246","#fff","#ce2b37"],["#012169","#fff","#c8102e"],["#000","#dd0000","#ffce00"]];
+    return rahmen(def.titel)+["Italiano","English","Deutsch"].map((z,i)=>{const y=28+i*50, f=flagge[i];
+      const fl=i==2?`<rect x="18" y="${y+12}" width="22" height="5" fill="${f[0]}"/><rect x="18" y="${y+17}" width="22" height="5" fill="${f[1]}"/><rect x="18" y="${y+22}" width="22" height="5" fill="${f[2]}"/>`
+        :`<rect x="18" y="${y+12}" width="7" height="15" fill="${f[0]}"/><rect x="25" y="${y+12}" width="8" height="15" fill="${f[1]}"/><rect x="33" y="${y+12}" width="7" height="15" fill="${f[2]}"/>`;
+      return zeilenBox(9,y,185,40,i==def.hell)+fl+txt(50,y+25,z,{s:13,f:i==def.hell?"#0b1a2e":FARBE.text})}).join("")+okEcke();
+  }
+  case "led": case "licht": {
+    const vpH=def.typ=="led"?0x21:0x29, v=vpw(vpH), [m,p]=T_.pm(vpH), y=def.typ=="led"?108:92;
+    let o=rahmen(def.typ=="led"?"Led Körper - RGB":"Lichter");
+    if(def.typ=="led"){o+=txt(16,46,"LED Farbe",{s:11})+["R","G","B"].map((c,i)=>{const vp=0x22+i, r=T_.pm(vp)[0]; const an=vpw(vp)==1;
+      return r?`<rect x="${r.x0+4}" y="${r.x1?r.y0+4:0}" width="${r.x1-r.x0-8}" height="${r.y1-r.y0-8}" rx="4" fill="${an?"#bfe9ff":"none"}" stroke="#9fc4e6"/>`+txt((r.x0+r.x1)/2,r.y0+30,c,{s:20,a:"middle",f:an?"#0b1a2e":FARBE.text}):""}).join("")+
+      `<path d="M16 72 H304" stroke="${FARBE.cyan}" stroke-width="2" opacity=".6"/>`+txt(16,96,"LED Leuchtdichte",{s:11})}
+    const anteil=v==null?0.2:Math.max(0,Math.min(1,(v-1)/4));
+    o+=`<rect x="16" y="${y+4}" width="176" height="36" rx="6" fill="#5a6c86"/><rect x="16" y="${y+4}" width="${Math.max(24,176*anteil)}" height="36" rx="6" fill="#e8f4ff"/>`+(m?kn(m,"–",20):"")+(p?kn(p,"+",20):"")+okEcke();
+    return o;
+  }
+  case "datum": {
+    const r=j.rtc||"2000-01-01 00:00:00", felder=[r.slice(8,10),r.slice(5,7),r.slice(0,4),r.slice(11,13),r.slice(14,16)];
+    const pos=[[15,66,52,110],[61,67,98,111],[108,67,158,111],[184,66,224,110],[240,66,290,110]];
+    const hell=[0,1,2,3,4,0][def.hell];
+    let o=rahmen("Datum und Uhrzeit")+`<rect x="12" y="30" width="154" height="158" rx="4" fill="none" stroke="#6fb8e6"/><rect x="170" y="30" width="138" height="158" rx="4" fill="none" stroke="#6fb8e6"/>`+
+      txt(18,46,"Datum",{s:10})+txt(176,46,"Uhrzeit",{s:10});
+    pos.forEach((q,i)=>{o+=`<rect x="${q[0]}" y="${q[1]}" width="${q[2]-q[0]}" height="${q[3]-q[1]}" rx="3" fill="${i==hell?"#bfe9ff":"#1c2f4a"}"/>`+txt((q[0]+q[2])/2,q[1]+28,felder[i],{s:15,a:"middle",f:i==hell?"#0b1a2e":FARBE.text})});
+    const pm=R.filter(r=>r.t[6]==2);
+    return o+kn({x0:40,y0:120,x1:90,y1:165},"–",22)+kn({x0:100,y0:120,x1:150,y1:165},"+",22)+pm.map(r=>kn(r,r.t[8]>0?"+":"–",22)).join("")+okEcke();
+  }
+  case "woche": {
+    const tage=["SON","MON","DIE","MIT","DON","FRI","SAM"], x=[10,54,97,141,183,226,271];
+    let o=rahmen("Auto ON/OFF")+tage.map((t,i)=>`<rect x="${x[i]}" y="24" width="39" height="39" rx="3" fill="${i==def.tag?"#bfe9ff":"#1c2f4a"}" stroke="#6fb8e6"/>`+txt(x[i]+19.5,48,t,{s:9,a:"middle",f:i==def.tag?"#0b1a2e":FARBE.text})).join("");
+    [[0x07,72,"ON"],[0x0B,134,"OFF"]].forEach(([vp,y,l])=>{const v=vpw(vp); const [m,p]=T_.pm(vp);
+      o+=txt(20,y+28,l,{s:12,f:FARBE.cyan})+`<rect x="70" y="${y+2}" width="62" height="40" rx="3" fill="#1c2f4a"/><rect x="138" y="${y+2}" width="62" height="40" rx="3" fill="#1c2f4a"/>`+
+        txt(101,y+30,v==null?"00":String(v).padStart(2,"0"),{s:18,a:"middle"})+txt(169,y+30,"00",{s:18,a:"middle"})+(m?kn(m,"–",20):"")+(p?kn(p,"+",20):"")});
+    return o+txt(14,222,"ZURÜCKSETZEN",{s:10})+okEcke();
+  }
+  case "spuelen": {
+    const kurz=T_.code(6,0), komplett=T_.code(6,1), esc=R.find(r=>r.t[7]==0);
+    return rahmen("Waschen")+txt(160,62,"Rückspülen der Brühgruppe",{s:12,a:"middle",glow:1})+(kurz?kn(kurz,"KURZ",15):"")+(komplett?kn(komplett,"COMPLET",15):"")+fussLinie(172)+(esc?kn(esc,"ESC",14):"");
+  }
+  case "hebel": {
+    const k=R.slice().sort((a,b)=>a.x0-b.x0).filter(r=>r.x1-r.x0<150);
+    return rahmen(def.titel)+hebel(30,110,def.richtung)+mehrzeilig(230,def.knoepfe&&def.knoepfe.length==2?60:56,def.text,{s:11,zh:13})+
+      (def.knoepfe?fussLinie(172)+k.map((r,i)=>kn(r,def.knoepfe[i]||"OK",13)).join(""):"");
+  }
+  case "gruppe": {
+    const pm=R.filter(r=>r.t[6]==2), vp=pm.length?pm[0].t[7]:null, [m,p]=vp!=null?T_.pm(vp):[];
+    return rahmen("Gruppentemperatur")+txt(18,48,"GRUPPEN",{s:10})+txt(76,48,"OFF",{s:13,f:FARBE.cyan})+`<path d="M16 60 H304" stroke="${FARBE.cyan}" stroke-width="2" opacity=".6"/>`+
+      txt(18,82,"Temperatur",{s:12,f:FARBE.cyan})+(vp!=null?txt(110,132,fmt(vpw(vp),1,0),{s:34,a:"middle",glow:1}):"")+(m?kn(m,"–",22):kn({x0:206,y0:104,x1:246,y1:142},"–",22))+(p?kn(p,"+",22):kn({x0:252,y0:104,x1:292,y1:142},"+",22))+okEcke();
+  }
+  case "start1": return seiteStart(s,j,k,null,true);
+  case "menue": return seiteMenue(s,j,k,d);
+  }
+  return null;
+}
+function seiteMenue(s,j,k,d){
+  const o=seiteStart(s,j,k,d).replace('<rect width="320" height="240" fill="url(#gbg)"/>','<rect width="320" height="240" fill="url(#gbg)"/><g opacity=".35">')+"</g>";
+  const knopf=(y,icon)=>`<rect x="4" y="${y}" width="66" height="44" rx="6" fill="#16304f" stroke="#6fb8e6" stroke-width="1.2"/>${icon}`;
+  const ic=(y,p)=>`<g transform="translate(37,${y+22})" stroke="#dff6ff" stroke-width="2.5" fill="none" filter="url(#glow)">${p}</g>`;
+  return o+`<rect x="0" y="0" width="76" height="240" fill="#0c1a2e" opacity=".92"/>`+
+    `<g fill="${FARBE.cyan}"><rect x="10" y="10" width="7" height="7" rx="2"/><rect x="10" y="20" width="7" height="7" rx="2"/><rect x="10" y="30" width="7" height="7" rx="2"/></g>`+
+    knopf(45,ic(45,`<path d="M-12 -8 h14 v10 h-14z M2 -4 h8 v10 h-8"/>`))+knopf(94,ic(94,`<circle r="8"/><path d="M0 -13 v4 M0 9 v4 M-13 0 h4 M9 0 h4 M-9 -9 l3 3 M6 6 l3 3 M-9 9 l3 -3 M6 -6 l3 -3"/>`))+
+    knopf(144,ic(144,`<path d="M-12 6 q6 -14 16 -6 q6 4 10 -2 M-6 10 h14"/>`))+knopf(193,ic(193,`<path d="M-8 -6 a11 11 0 1 0 16 0 M0 -13 v10"/>`));
+}
 function seiteSonst(s){
   return rahmen(seitenname(s))+txt(160,120,"Seite "+s,{s:14,a:"middle",f:FARBE.leise})+txt(160,140,"noch nicht nachgebaut",{s:10,a:"middle",w:400,f:FARBE.leise});
 }
 function zeigeDisplay(j,k,d){
   const s=j.seite; dspSeite=s;
   if(s<0){$("dsp").innerHTML=defs+`<rect width="320" height="240" fill="#000"/>`+txt(160,124,"keine Seite bekannt",{s:12,a:"middle",f:FARBE.leise});return}
-  const b=s%100; let inhalt;
+  const b=s%100; let inhalt; dspJ=j;
   if(b==0) inhalt=seiteStandby(s,j);
-  else if([1,5,6,78,83].includes(b)) inhalt=seiteStart(s,j,k,d);
+  else if([1,5,78].includes(b)) inhalt=seiteStart(s,j,k,d);
+  else if((inhalt=seiteBaukasten(s,j,k,d))) {}
   else if(ALARM_ICON[b]) inhalt=seiteAlarm(s,j);
   else if(LISTEN[b]) inhalt=seiteListe(s);
   else if([7,8,12,13].includes(b)) inhalt=seiteTemperatur(s,j);
   else if(b==90) inhalt=`<rect width="320" height="240" fill="url(#gbg)"/>${logo(160,100,1.2)}${txt(160,140,"BEZZERA",{s:15,a:"middle",glow:1})}${txt(40,226,"TFT 2.0",{s:14,f:FARBE.cyan})}${txt(200,226,"FW: "+(((j.vps.find(x=>x.vp==0x63)||{w:[0]}).w[0])/10).toFixed(1),{s:14,f:FARBE.orange})}`;
   else inhalt=seiteSonst(s);
   $("dsp").innerHTML=defs+inhalt;
+  // fehlende Werte der Seite einmal beim Display abfragen (Antwort landet in der VP-Tabelle)
+  for(const vp of dspFehlt){ if(dspGefragt.has(s+":"+vp)) continue; dspGefragt.add(s+":"+vp);
+    cmd(`d c6 a5 04 83 ${(vp>>8).toString(16).padStart(2,"0")} ${(vp&255).toString(16).padStart(2,"0")} 01`); }
+  dspFehlt.clear();
 }
+</script>
+
+<script>
+// ─── Berührung wie am Display: Tastentabelle aus 13.bin ────────────────────
+let letzterStatus=null;
+if(location.hash=="#flaechen") $("f_flaechen").checked=true;
+function tastenAuf(s){return (typeof TASTEN!=="undefined"?TASTEN:[]).filter(t=>t[0]==s)}
+function trifft(t,x,y){const x0=Math.min(t[1],t[3]),x1=Math.max(t[1],t[3]),y0=Math.min(t[2],t[4]),y1=Math.max(t[2],t[4]);return x>=x0&&x<=x1&&y>=y0&&y<=y1&&x1>x0}
+function protokoll(z){const l=$("log"); l.textContent+=z+"\n"; l.scrollTop=l.scrollHeight}
+async function vpWert(vp){
+  let e=letzterStatus&&letzterStatus.vps.find(v=>v.vp==vp);
+  if(!e){ // beim Display nachfragen, Antwort landet in der VP-Tabelle
+    await cmd(`d c6 a5 04 83 ${(vp>>8).toString(16).padStart(2,"0")} ${(vp&255).toString(16).padStart(2,"0")} 01`);
+    await new Promise(r=>setTimeout(r,250));
+    const j=await (await fetch("/api/status")).json(); e=j.vps.find(v=>v.vp==vp);
+  }
+  return e&&e.w.length?e.w[0]:0;
+}
+async function beruehre(x,y){
+  const s=dspSeite, t=tastenAuf(s).find(t=>trifft(t,x,y));
+  if(!t){protokoll(`Berührung (${x},${y}) auf Seite ${s}: keine Taste`);return}
+  const [,, , , ,folge,typ,vp]=t, hx="0x"+vp.toString(16);
+  if(typ==5){await cmd(`w ${hx} ${t[8]}`); protokoll(`Taste Seite ${s}: VP ${hx} = ${t[8]}`+(folge>=0?`, → Seite ${folge}`:""))}
+  else if(typ==2){
+    const [,,,,,,,,rich,schritt,min,max,kreis]=t; let v=await vpWert(vp)+rich*schritt;
+    if(v>max) v=kreis?min:max; if(v<min) v=kreis?max:min;
+    await cmd(`w ${hx} ${v}`); protokoll(`${rich>0?"+":"–"} Seite ${s}: VP ${hx} = ${v} [${min}..${max}]`);
+  }
+  else if(typ==1){
+    const v=prompt(`Wert für VP ${hx} (${t[8]}..${t[9]})`); if(v===null) return;
+    const n=Math.max(t[8],Math.min(t[9],parseInt(v,10)||0)); await cmd(`w ${hx} ${n}`); protokoll(`Eingabe Seite ${s}: VP ${hx} = ${n}`);
+  }
+  else protokoll(`Taste Seite ${s}`+(folge>=0?`: → Seite ${folge}`:": ohne Funktion"));
+  if(folge>=0) await cmd(`p ${folge}`);
+}
+$("dsp").addEventListener("click",ev=>{
+  const r=$("dsp").getBoundingClientRect();
+  beruehre(Math.round((ev.clientX-r.left)/r.width*320),Math.round((ev.clientY-r.top)/r.height*240));
+});
+$("dsp").style.cursor="pointer";
+const _zeige=zeigeDisplay;
+zeigeDisplay=function(j,k,d){
+  letzterStatus=j; _zeige(j,k,d);
+  if($("f_flaechen").checked){
+    $("dsp").innerHTML+=tastenAuf(j.seite).map(t=>{const x0=Math.min(t[1],t[3]),y0=Math.min(t[2],t[4]);
+      return `<rect x="${x0}" y="${y0}" width="${Math.abs(t[3]-t[1])}" height="${Math.abs(t[4]-t[2])}" fill="#ff9d4522" stroke="#ff9d45" stroke-width="1" stroke-dasharray="3 2" pointer-events="none"/>`}).join("");
+  }
+};
 </script>
 </body>
 </html>)HTML";

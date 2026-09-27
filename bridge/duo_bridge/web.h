@@ -19,12 +19,20 @@
 #include <Preferences.h>
 #include <WiFi.h>
 
+#include "tasten.h"
 #include "web_ui.h"
 
 static const int ETH_CS = 14, ETH_IRQ = 10, ETH_RST = 9;
 static const int ETH_SCK = 13, ETH_MISO = 12, ETH_MOSI = 11;
 
 static WebServer server(80);
+
+// Staendige Verbindungsversuche mit einem unerreichbaren Heim-WLAN lassen den
+// Funk die Kanaele wechseln; das eigene WLAN "duo-bridge" wird dann unsichtbar.
+// Deshalb: nach einigen Fehlversuchen aufhoeren und alle 5 min neu probieren.
+static volatile uint32_t heimWlanFehlschlaege = 0;
+static uint32_t heimWlanPause = 0;
+static bool heimWlanAn = false;
 
 static void netzEreignis(arduino_event_id_t e) {
   if (e == ARDUINO_EVENT_ETH_GOT_IP) {
@@ -39,6 +47,7 @@ static void netzEreignis(arduino_event_id_t e) {
       zuletzt = millis();
       Serial.println("# WLAN nicht verbunden (Name/Passwort pruefen, 'n ?' listet Netze)");
     }
+    heimWlanFehlschlaege++;
   } else if (e == ARDUINO_EVENT_ETH_DISCONNECTED) {
     Serial.println("# Ethernet getrennt");
   }
@@ -141,6 +150,7 @@ void webSetup() {
   String ssid = pref.getString("ssid", ""), pass = pref.getString("pass", "");
   pref.end();
   if (ssid.length()) {
+    heimWlanAn = true;
     WiFi.begin(ssid.c_str(), pass.c_str());
     Serial.printf("# verbinde mit WLAN %s ...\n", ssid.c_str());
   }
@@ -148,12 +158,27 @@ void webSetup() {
   MDNS.begin("duo");
   MDNS.addService("http", "tcp", 80);
   server.on("/", HTTP_GET, [] { server.send_P(200, "text/html; charset=utf-8", WEB_UI); });
+  server.on("/tasten.js", HTTP_GET, [] { server.send_P(200, "text/javascript; charset=utf-8", TASTEN_JS); });
   server.on("/api/status", HTTP_GET, statusJson);
   server.on("/api/cmd", HTTP_POST, befehlWeb);
   server.begin();
 }
 
-void webLoop() { server.handleClient(); }
+void webLoop() {
+  server.handleClient();
+  if (!heimWlanAn) return;
+  if (WiFi.status() == WL_CONNECTED) {
+    heimWlanFehlschlaege = 0;
+  } else if (heimWlanPause == 0 && heimWlanFehlschlaege >= 5) {
+    WiFi.disconnect();  // Versuche einstellen, Funk bleibt auf dem Kanal des eigenen WLANs
+    heimWlanPause = millis();
+    Serial.println("# Heim-WLAN nicht erreichbar, neuer Versuch in 5 min");
+  } else if (heimWlanPause && millis() - heimWlanPause > 300000) {
+    heimWlanPause = 0;
+    heimWlanFehlschlaege = 0;
+    WiFi.reconnect();
+  }
+}
 
 // USB-Befehl "n <ssid> <passwort>": Heim-WLAN speichern und verbinden.
 // "n -" loescht es. Leerzeichen im Namen: "n Mein\ WLAN geheim".
@@ -175,6 +200,7 @@ void heimWlan(char *s) {
   if (*s == '-') {
     pref.clear();
     pref.end();
+    heimWlanAn = false;
     WiFi.disconnect();
     Serial.println("# Heim-WLAN geloescht");
     return;
@@ -195,5 +221,8 @@ void heimWlan(char *s) {
   pref.putString("pass", pass);
   pref.end();
   Serial.printf("# Heim-WLAN %s gespeichert, verbinde ...\n", ssid.c_str());
+  heimWlanAn = true;
+  heimWlanFehlschlaege = 0;
+  heimWlanPause = 0;
   WiFi.begin(ssid.c_str(), pass.c_str());
 }

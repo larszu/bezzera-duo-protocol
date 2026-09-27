@@ -425,14 +425,50 @@ Kein Login: nur im eigenen Netz betreiben.
 - Die Touch-Register zeigen aber die letzte echte Berührung: x=286, y=234,
   genau auf „OK“. Der Touch-Controller arbeitet, der Fehler sitzt im Kontakt.
 
+### 2.9 Touch-Konfiguration aus dem Display-Flash (LibOP, nur lesen)
+
+Die Register `0x40`–`0x48` kopieren Flash-Bereiche in den Variablenspeicher
+(DWIN DGUS Development Guide V4.3). **Modus `0x41 = 0xA0` liest, `0x50`
+schreibt** den Flash. [`tools/libop_lesen.py`](tools/libop_lesen.py) kennt nur
+`0xA0`. Anders als das Handbuch sagt, sind an diesem Display auch die
+Bereiche unter `0x40` lesbar, darunter **13 (Touch-Konfiguration)** und 14.
+
+```bash
+python3 tools/libop_lesen.py suche                              # welche Bereiche Inhalt haben
+python3 tools/libop_lesen.py dump 13 --worte 32768 -o flash/lib13.bin
+python3 tools/touch13.py flash/lib13.bin --json docs/tasten.json --web bridge/duo_bridge/tasten.h
+```
+
+Ergebnis: **1070 Tasten auf 239 Seiten** in [`docs/tasten.json`](docs/tasten.json),
+je Taste Fläche, Folgeseite, Funktion und Wert. Tastencodes gehen nach VP
+`0x0000` (Navigation, Aktionen), „OK“ in Einstellungen nach `0x0002`,
+Einstellwerte ändert das Display selbst per ± (VPs `0x0007`, `0x000B`,
+`0x0020`–`0x0032`, `0x005A`–`0x005F`, `0x0070`–`0x007E`, mit Grenzen). Alle
+Tasten sind `FDxx`: Das Display meldet nichts von sich aus, das Mainboard
+fragt ab.
+
+Fallen beim Lesen:
+
+- höchstens **32 Worte je Rahmen**, größere Antworten bleiben aus;
+- ab VP `0x2000` liegt ein interner Puffer des Displays (Empfang), dort
+  keinen Zwischenspeicher anlegen; VP-Adressen über `0x3FFF` spiegeln;
+- ein Leseblock mit Flash-Adresse `0x1000` scheitert immer, versetzt lesen;
+- vereinzelt kippen Bytes auf der Leitung: jeden Block zweimal lesen;
+- im Flash selbst steht auf der englischen Seite 9 ein beschädigtes Byte
+  (`F3` statt `FE`); die Taste „Coffee“ der Kesselpriorität wirkt dort
+  vermutlich nicht. Deutsch (109) und Italienisch (209) sind in Ordnung.
+
+Der Flash-Auszug selbst (`flash/`) liegt nicht im Repo, nur die daraus
+gewonnene Tastentabelle.
+
 ## 3. Danach
 
-**Stand 2026-09-27:** Protokoll, Seiten, Temperaturen und die Bridge stehen
-(Abschnitt 1, 2.7, [`docs/seiten.md`](docs/seiten.md)). Es fehlen die
-Tastencodes: Welche Werte das Display bei welcher Taste in VP `0x0000`/`0x0001`
-legt. Wege dahin: Touch-Stecker reparieren und mitschneiden, den
-Touch-Controller am 6-poligen Flachkabel mitschneiden und vom ESP32 ersetzen
-lassen, oder die Touch-Konfiguration über LibOP (unten) lesen.
+**Stand 2026-09-28:** Protokoll, Seiten, Temperaturen, Bridge und die
+komplette Tastentabelle stehen (Abschnitt 1, 2.7–2.9). Die Weboberfläche
+bildet alle Seiten nach; ein Klick wirkt wie eine Berührung an dieser Stelle.
+Offen: der Test an der Maschine (wirkt ein eingespielter Tastencode wie ein
+echter Druck?) und der Dauerbetrieb (Passwortschutz, OTA, Watchdog,
+Versorgung aus der Maschine).
 
 Wenn die Karte der VP-Adressen steht (Ist-/Solltemperaturen, Chrono,
 Tastencodes, Seiten):

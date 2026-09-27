@@ -6,3 +6,5 @@ __pycache__/
 captures/seiten/
 captures/probe/
 captures/live.jpg
+# Flash-Auszuege des Displays (Werksprojekt), nicht veroeffentlichen
+flash/
