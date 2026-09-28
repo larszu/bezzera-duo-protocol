@@ -1,3 +1,5 @@
+<p align="right"><b>Deutsch</b> · <a href="README.en.md">English</a></p>
+
 <h1 align="center">☕ Bezzera Duo Protocol</h1>
 
 <p align="center">
@@ -547,6 +549,8 @@ Benutzer und Passwort des Mosquitto-Add-ons). Home Assistant findet das Gerät
 | Maschine | Schalter Ein/Standby |
 | Gewicht, Durchfluss, Bezug läuft, Letzter Bezug, Dauer, Bezüge | nur mit Waage |
 | Zielgewicht, Tara | Zahl und Knopf, nur mit Waage |
+| Bezug stoppen | Knopf, nur mit Stopp-Ausgang |
+| Waage | Diagnose |
 
 Themen: `duo/<id>/zustand` (JSON), `duo/<id>/verfuegbar`, `duo/<id>/ereignis`
 (`bezug_start`, `ziel_erreicht`, `bezug_fertig`), Befehle unter
@@ -710,6 +714,8 @@ entweder später aktualisiert, oder die Zahlen bedeuten nicht dasselbe.
 ---
 
 ## 📚 Quellen
+
+Alle Links nach Themen, auch zu Waagen und Grind by Weight: [`docs/links.md`](docs/links.md).
 
 - Bezzera: Bedienungsanleitung „Matrix Duo“ (IT/EN/FR/DE/ES/ZH, 2018 und 2020), mit Bildschirmfotos der Oberfläche in Originalauflösung —
   [Whole Latte Love](https://www.wholelattelove.com/cdn/shop/files/Bezzera_DUO_Matrix_Manual.pdf),
