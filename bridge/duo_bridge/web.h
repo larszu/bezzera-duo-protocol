@@ -124,7 +124,7 @@ String statusText(uint32_t seit) {
     j += '"';
   }
   j += "],\"emulation\":";
-  j += emulation ? "true" : "false";
+  j += emulation;
   j += "}";
   return j;
 }
