@@ -46,6 +46,7 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 | ✅ | VP `0x0000` = 5 after “OK” on „Bitte Tank füllen“ (please fill the tank) and stays there | `home.sr`, `tank.sr` |
 | ✅ | VP `0x0050` every ~300 ms, word 3 coffee boiler °C, word 4 service boiler °C | captures, matched with test values on the display |
 | ✅ | VP `0x0063` = mainboard firmware × 10 (21 → “FW: 2.1”) | `boot.sr`, boot screen |
+| 💡 | Dealer version table and reasons for incompatibilities: [`versionen.en.md`](versionen.en.md) | dealer information, conclusion |
 | ✅ | Word 2 becomes 1 after page 103, word 7 = 3, word 5 was 1 once for 1 s; words 0, 1, 6, 8 always 0 | `boot.sr` |
 | 💡 | Meaning of words 2, 5 and 7 | — |
 | 💡 | One word in VP `0x0050` carries the pump pressure, one the boiler pressure | the manual shows both gauges; the pump never ran |

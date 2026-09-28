@@ -31,7 +31,7 @@
 ## ✨ Overview
 
 The Bezzera Duo DE/MN and the identical Matrix have a 3.5" touch display
-(5963201.xx) connected to the mainboard (7661047.xx). This repo describes **what
+(5963169.xx, from version 2.2 5963201.xx) connected to the mainboard (7661047.xx). This repo describes **what
 runs over the four wires in between** and provides the tools to read it and to
 speak it yourself. The goal is the same as in the Reddit project by
 *Vivid-Ad-2039*: an ESP32 that reads and writes registers.
@@ -270,6 +270,45 @@ variable configuration (`14.bin`) from the display flash.
 All buttons are of type `FDxx`: **the display reports nothing on its own**;
 the mainboard polls. Pure page changes are handled locally by the display, without
 the mainboard knowing about them.
+
+### Firmware versions
+
+✅ **This machine:** the mainboard reports **FW 2.1** (VP `0x0063` = 21), the
+display project is called **“TFT 2.0”**; the two work together. Register
+`0x00` = `0x22` is DWIN's operating software, not Bezzera's version. According
+to the dealer list, the label `7661047PR` belongs to FW 1.2, not 2.1 — either
+the board was updated or the label only carries the base number (💡).
+
+💡 **Versions according to dealers** (1st-line, Avola, Espresso Machine Company; not checked on the machine):
+
+| Mainboard | Display | Change |
+|---|---|---|
+| 1.2 (`7661047PR`) | 1.1 (`5963169.01`) | first release |
+| 2.0 (`7661047.01PR`) | 2.0 (`5963169.02`) | Auto ON/OFF fixed, fill timeout 15 → 30 s, starts by itself after 5 s |
+| **2.1** (`7661047.02PR`) | **2.0** (`5963169.03`) | group heating corrected — **this machine** |
+| 2.2 (`7661047.03PR`) | 2.2 (`5963201.01`) | steam boiler neither filled nor heated during a shot |
+| 2.3 (`7661047.04PR`) | 2.2 | bug in the test procedure |
+| 2.4 (`7661047.05PR`) | 2.2 | pre-infusion of the German version made consistent |
+
+According to Avola, electronics 2.0 and later are compatible with displays 2.0
+and later, electronics 1.x and 3.x are not; a version 3.x is not described anywhere.
+
+💡 **Where incompatibilities come from** (concluded from the protocol): the
+display has no logic, but mainboard firmware and display project share an
+implicit contract that neither side checks:
+
+1. **Page numbers:** the mainboard switches pages itself (90, 101, 103, alarms); if the page is missing in the display or means something else there, it shows the wrong thing.
+2. **Key codes:** every key writes a fixed value (7 = coffee settings, 20 = menu); new functions need new codes and pages that an old display does not have.
+3. **Variable addresses:** temperatures and settings live at fixed VPs; if one version moves one, the other side reads wrong values.
+4. **Sequences:** from mainboard 2.0 the machine starts by itself after 5 s; display 2.0 adapts its page flow, a display 1.1 expects the old sequence.
+5. **Frame header `C6 A5`:** part of the display project; a stock DWIN display does not talk to this mainboard at all.
+
+The connection test at startup (write and read back VP `0x0063`) only checks,
+from everything captured, *whether* a display answers, not *which* one. A
+mismatched pair therefore probably boots and only then misbehaves. **The bridge
+was measured against mainboard 2.1 and display 2.0**; page numbers, codes and
+VPs may differ in other versions. Sources and part numbers:
+[`docs/versionen.en.md`](docs/versionen.en.md).
 
 ---
 
@@ -710,7 +749,8 @@ Tests: `python3 -m unittest discover -s tests`
 | `DMT32240M035_07WTZ4` | no datasheet for exactly this variant; `_07` and `Z4` probably customer-specific |
 
 1st-line lists `7661047PR` as mainboard „1.2“, while the display reports „FW: 2.1“ —
-either it was updated later, or the numbers do not mean the same thing.
+either it was updated later, or the label only carries the base number.
+All versions and where incompatibilities come from: [`docs/versionen.en.md`](docs/versionen.en.md).
 
 </details>
 

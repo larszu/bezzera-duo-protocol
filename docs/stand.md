@@ -46,6 +46,7 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 | ✅ | VP `0x0000` = 5 nach „OK“ auf „Bitte Tank füllen“ und bleibt stehen | `home.sr`, `tank.sr` |
 | ✅ | VP `0x0050` alle ~300 ms, Wort 3 Kaffeekessel °C, Wort 4 Servicekessel °C | Mitschnitte, mit Testwerten auf dem Display zugeordnet |
 | ✅ | VP `0x0063` = Firmware Mainboard × 10 (21 → „FW: 2.1“) | `boot.sr`, Startbild |
+| 💡 | Versionstabelle der Händler und Gründe für Inkompatibilitäten: [`versionen.md`](versionen.md) | Händlerangaben, Folgerung |
 | ✅ | Wort 2 wird nach Seite 103 zu 1, Wort 7 = 3, Wort 5 einmal 1 s lang 1; Wort 0, 1, 6, 8 immer 0 | `boot.sr` |
 | 💡 | Bedeutung von Wort 2, 5 und 7 | — |
 | 💡 | Ein Wort in VP `0x0050` trägt den Pumpendruck, eins den Kesseldruck | Handbuch zeigt beide Anzeigen; Pumpe lief nie |
