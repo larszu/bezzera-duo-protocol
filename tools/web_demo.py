@@ -98,7 +98,10 @@ class Demo:
         j = {"ms": int((time.time() - self.start) * 1000), "seite": self.seite,
              "rtc": time.strftime("%Y-%m-%d %H:%M:%S"),
              "display": {"rahmen": 1000, "still_ms": 50}, "mainboard": {"rahmen": 1000, "still_ms": 50},
-             "vps": [{"vp": 0x50, "alter_ms": 100, "w": w}, {"vp": 0, "alter_ms": 100, "w": [1 if self.an else 0]}],
+             "vps": [{"vp": 0x50, "alter_ms": 100, "w": w}, {"vp": 0, "alter_ms": 100, "w": [1 if self.an else 0]},
+                     {"vp": 0x63, "alter_ms": 5000, "w": [21]},  # Firmware 2.1
+                     {"vp": 0x76, "alter_ms": 900, "w": [45]}, {"vp": 0x77, "alter_ms": 900, "w": [25]},
+                     {"vp": 0x78, "alter_ms": 900, "w": [10]}],  # PID Kaffee 4.5 / 0.25 / 1.0
              "overrides": [], "ereignis_nr": nr, "ereignisse": self.ereignisse[ab:], "emulation": 0}
         return json.dumps(j).encode()
 

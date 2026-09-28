@@ -21,7 +21,7 @@
 <p align="center">
   <img src="docs/screenshots/hero.png" alt="Nachbau des Bezzera-Displays in der Weboberfläche: Startbildschirm, Einstellungen, PID-Kessel Kaffee, Alarm Bitte Tank füllen" width="860" />
   <br />
-  <sub><i>Der Display-Nachbau der Weboberfläche — gezeichnet nach den Bildschirmfotos im Bezzera-Handbuch und eigenen Fotos aller 300 Seiten, bedienbar mit den Tastenflächen aus dem Display-Flash.</i></sub>
+  <sub><i>Der Display-Nachbau der Weboberfläche — gezeichnet nach den Bildschirmfotos im Bezzera-Handbuch und eigenen Fotos aller 300 Seiten, bedienbar mit den Tastenflächen aus dem Display-Flash. Das Herstellerlogo ist bewusst durch einen neutralen Schriftzug ersetzt.</i></sub>
 </p>
 
 ---
@@ -52,7 +52,7 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/screenshots/weboberflaeche.png" alt="Weboberfläche der Bridge mit Display-Nachbau, Temperaturen, Steuerung, Variablen und Seitenkatalog" width="420" /><br />
+      <img src="docs/screenshots/weboberflaeche.png" alt="Weboberfläche der Bridge mit Display-Nachbau, Temperaturen, Ein/Aus und Verlauf" width="420" /><br />
       <b>Weboberfläche der Bridge</b>
     </td>
     <td width="50%" align="center">
