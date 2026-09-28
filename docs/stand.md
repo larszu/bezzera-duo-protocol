@@ -1,3 +1,5 @@
+<p align="right"><b>Deutsch</b> · <a href="stand.en.md">English</a></p>
+
 # Was ist sicher, was nicht
 
 Jede Aussage in diesem Repo gehört zu genau einer von drei Stufen:
