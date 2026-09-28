@@ -10,7 +10,7 @@
 //   duo/<id>/verfuegbar   online/offline (Last Will)
 //   duo/<id>/ereignis     bezug_start, ziel_erreicht, bezug_fertig
 //   duo/<id>/set/maschine ON/OFF    duo/<id>/set/ziel <g>
-//   duo/<id>/set/tara     beliebig  duo/<id>/set/aktion an|aus|tara|abbruch|frei
+//   duo/<id>/set/tara     beliebig  duo/<id>/set/aktion an|aus|tara|abbruch|stopp
 
 #include <mqtt_client.h>
 
@@ -125,6 +125,7 @@ static void haDiscovery() {
   haEntitaet("sensor", "bezuege", "Bezüge", "\"stat_cla\":\"total_increasing\",\"ic\":\"mdi:counter\",\"val_tpl\":\"{{ value_json.bezuege }}\"", cfg.waageArt);
   haEntitaet("number", "ziel", "Zielgewicht", "\"cmd_t\":\"~/set/ziel\",\"min\":5,\"max\":100,\"step\":0.5,\"unit_of_meas\":\"g\",\"ic\":\"mdi:scale\",\"val_tpl\":\"{{ value_json.ziel }}\"", cfg.waageArt);
   haEntitaet("button", "tara", "Tara", "\"cmd_t\":\"~/set/tara\",\"ic\":\"mdi:scale-balance\"", cfg.waageArt);
+  haEntitaet("button", "stopp", "Bezug stoppen", "\"cmd_t\":\"~/set/aktion\",\"payload_press\":\"stopp\",\"ic\":\"mdi:stop\"", cfg.stoppPin >= 0);
   haEntitaet("sensor", "waage", "Waage", "\"ent_cat\":\"diagnostic\",\"val_tpl\":\"{{ value_json.waage }}\"");
   mqttSenden(mqttBasis + "/verfuegbar", "online", true);
 }
@@ -287,8 +288,8 @@ static String zusatzJson() {
   j += cfg.stoppPin;
   j += ",\"stopp_high\":";
   j += cfg.stoppHigh ? "true" : "false";
-  j += ",\"stopp_halten\":";
-  j += cfg.stoppHaltenS;
+  j += ",\"stopp_puls\":";
+  j += cfg.stoppPulsMs;
   j += ",\"druck_p_wort\":";
   j += cfg.druckPWort;
   j += ",\"druck_p_teil\":";

@@ -12,7 +12,7 @@
 // GET  /api/zusatz        JSON: Maschine, Waage, Bezug, MQTT, Einstellungen
 // GET  /api/verlauf       ?sek=3600&max=720: VP 0x0050 je Sekunde (zusatz.h)
 // GET  /api/bezug         Kurve des laufenden bzw. letzten Bezugs
-// POST /api/aktion        an | aus | tara | abbruch | frei | ziel <g>
+// POST /api/aktion        an | aus | tara | abbruch | stopp | ziel <g>
 // POST /api/einstellungen feld=wert&... (URL-kodiert)
 // POST /api/waage         Gewicht in g von einer WLAN-Waage (auch GET ?g=)
 //
@@ -207,7 +207,7 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
       String k = urlDecode(paar.substring(0, g)), v = urlDecode(paar.substring(g + 1));
       v.trim();
       if (!setzeEinstellung(k, v)) continue;
-      if (k.startsWith("mqtt_") || k == "ha_prefix" || k.startsWith("druck_") || k.startsWith("waage_")) mqttNeuStart = true;
+      if (k.startsWith("mqtt_") || k == "ha_prefix" || k.startsWith("druck_") || k.startsWith("waage_") || k == "stopp_pin") mqttNeuStart = true;
       if (k == "stopp_pin" && cfg.stoppPin >= 0) pinMode(cfg.stoppPin, OUTPUT);
     }
     einstellungenSpeichern();

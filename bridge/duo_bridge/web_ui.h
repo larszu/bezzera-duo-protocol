@@ -95,7 +95,7 @@ button:disabled{opacity:.4;cursor:default}
       <div><div class="wert" id="bw_p" style="color:var(--akzent)">–</div><div class="einheit">bar</div></div>
     </div>
     <div class="form" style="margin-top:12px">Ziel <button onclick="zielAendern(-1)">−</button><input id="bw_ziel" style="width:70px" onchange="aktion('ziel '+v('bw_ziel'))"> g<button onclick="zielAendern(1)">+</button>
-      <button onclick="aktion('tara')">Tara</button><button onclick="aktion('abbruch')">Bezug abbrechen</button><button id="bw_frei" onclick="aktion('frei')" style="display:none">Stopp freigeben</button></div>
+      <button onclick="aktion('tara')">Tara</button><button onclick="aktion('abbruch')">Bezug abbrechen</button><button id="bw_stopp" onclick="aktion('stopp')" style="display:none">Stopp-Taste drücken</button></div>
     <div id="bw_meldung" class="einheit"></div>
     <canvas id="bw_kurve" width="600" height="220" style="height:220px;margin-top:8px"></canvas>
     <p class="hinweis"><span style="color:#e6edf7">■</span> Gewicht <span style="color:var(--ok)">■</span> Durchfluss g/s <span style="color:var(--akzent)">■</span> Druck bar (rechte Achse, sobald das Druckwort zugeordnet ist) · Waage: <span id="bw_waage">–</span></p>
@@ -138,9 +138,9 @@ button:disabled{opacity:.4;cursor:default}
     <div class="form">URL <input name="waage_url" class="breit" placeholder="http://waage.local/sensor/gewicht"></div>
     <div class="form">MQTT-Thema <input name="waage_topic" class="breit" placeholder="waage/gewicht"></div>
     <div class="form">Vorlauf <input name="vorlauf" style="width:60px"> g <label><input type="checkbox" name="lernen" style="width:auto"> aus jedem Bezug lernen</label></div>
-    <h3 class="hinweis" style="margin:10px 0 4px">Stopp-Ausgang (optional, Hardware)</h3>
+    <h3 class="hinweis" style="margin:10px 0 4px">Stopp-Taste am Tastenfeld (optional, Hardware)</h3>
     <div class="form">GPIO <select name="stopp_pin"><option value="-1">keiner, nur melden</option><option>1</option><option>2</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>47</option><option>48</option></select>
-      <label><input type="checkbox" name="stopp_high" style="width:auto"> aktiv high</label> halten <input name="stopp_halten" style="width:50px"> s</div>
+      <label><input type="checkbox" name="stopp_high" style="width:auto"> aktiv high</label> Tastendruck <input name="stopp_puls" style="width:60px"> ms</div>
     <h3 class="hinweis" style="margin:10px 0 4px">Druck (Wort in VP 0x0050)</h3>
     <div class="form">Pumpe <select name="druck_p_wort"></select> ÷ <input name="druck_p_teil" style="width:60px"></div>
     <div class="form">Servicekessel <select name="druck_k_wort"></select> ÷ <input name="druck_k_teil" style="width:60px"></div>
@@ -896,7 +896,7 @@ async function holeBezug(){
 
 function einstellungenFuellen(c,vp50){
   const f=$("einst");
-  for(const k of ["mqtt_uri","mqtt_user","ha_prefix","waage_art","waage_url","waage_topic","waage_ble","vorlauf","stopp_pin","stopp_halten","druck_p_teil","druck_k_teil"]) if(f[k]) f[k].value=c[k];
+  for(const k of ["mqtt_uri","mqtt_user","ha_prefix","waage_art","waage_url","waage_topic","waage_ble","vorlauf","stopp_pin","stopp_puls","druck_p_teil","druck_k_teil"]) if(f[k]) f[k].value=c[k];
   f.lernen.checked=c.lernen; f.stopp_high.checked=c.stopp_high;
   f.mqtt_pass.placeholder=c.mqtt_pass_gesetzt?"gesetzt (leer = unverändert, - = löschen)":"kein Passwort";
   for(const n of ["druck_p_wort","druck_k_wort"]){
@@ -924,7 +924,7 @@ async function holeZusatz(){
     $("bw_waage").textContent=zj.waage.status;
     $("bw_meldung").textContent=b.laeuft?(b.stopp_gesendet?"Ziel erreicht – Bezug stoppen!":"Bezug läuft"):zj.cfg.waage_art?"bereit: Bezug startet, sobald es in die Tasse tropft":"Waage ist aus (Einstellungen)";
     $("bw_meldung").className=b.laeuft&&b.stopp_gesendet?"alarm einheit":"einheit";
-    $("bw_frei").style.display=b.stopp_aktiv?"":"none";
+    $("bw_stopp").style.display=zj.cfg.stopp_pin>=0?"":"none";
     $("bw_liste").innerHTML=b.liste.map(x=>`<tr><td>${x.alter_s<3600?Math.round(x.alter_s/60)+" min":Math.round(x.alter_s/3600)+" h"}</td><td>${f1(x.g)} g</td><td>${f1(x.ziel)} g</td><td>${f1(x.dauer)} s</td><td>${x.gestoppt?"Stopp bei Ziel":""}</td></tr>`).join("");
     if(!einstGeladen&&!$("einst").contains(document.activeElement)){einstellungenFuellen(zj.cfg,letzterStatus&&letzterStatus.vps.find(x=>x.vp==0x50)); einstGeladen=true}
     if(b.laeuft||b.nr!=bezugNr) holeBezug();

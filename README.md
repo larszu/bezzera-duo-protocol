@@ -176,7 +176,8 @@ Belegung laut Deckelaufkleber: Relaisausgänge 1 Heizung Gruppe, 2 EV Wassernetz
 3 EV Tank, 4 EV Füllen (Dampfkessel), 5 EV Gruppe, 6 Pumpe, 7 Common · Fühler NTC
 Gruppe, NTC Kaffee, NTC Dampf, SSR Kaffee, SSR Dampf · **PRESS.** Drucksensor ·
 **CAP. SENS** kapazitiver Füllstand · Klemmblock Durchflussmesser, Microswitch
-(Hebel), S.LIV · LED FRONT/RETRO · KEYBOARD. Das Mainboard ist also der Master
+(Hebel, nur MN), S.LIV · LED FRONT/RETRO · **KEYBOARD** (graues Flachbandkabel
+zum Tastenfeld der DE). Das Mainboard ist also der Master
 und hält PID, Sollwerte, Passwörter und Chrono — ein Mainboard-Reset setzt die
 Passwörter auf 1901/1906.
 
@@ -241,7 +242,7 @@ Tastencode.
 | `0x0000` | Mainboard liest | 100 ms | Tastencode des Displays (Navigation, Aktionen) |
 | `0x0001` | Mainboard liest | 100 ms | zweiter Tastencode (selten) |
 | `0x0002` | Mainboard liest | auf Einstellseiten | „OK“ in Einstellungen |
-| `0x0050` | Mainboard schreibt | ~300 ms | 9 Worte Status: **Wort 3 Kaffeekessel °C, Wort 4 Servicekessel °C**; Wort 2 wird nach Seite 103 zu 1, Wort 7 = 3; Wort 0, 1, 5, 6, 8 bisher 0 (kalte Maschine) — dort werden die Drücke vermutet |
+| `0x0050` | Mainboard schreibt | ~300 ms | 9 Worte Status: **Wort 3 Kaffeekessel °C, Wort 4 Servicekessel °C**; Wort 2 wird nach Seite 103 zu 1, Wort 7 = 3, Wort 5 war einmal für 1 s auf 1; Wort 0, 1, 6, 8 bisher 0 (kalte Maschine, leerer Tank) — dort werden die Drücke vermutet |
 | `0x0063` | Mainboard schreibt | beim Start | Firmware-Version Mainboard × 10 (21 → „FW: 2.1“) |
 
 **Drücke:** Der Startbildschirm hat laut Handbuch zwei Druckanzeigen, links
@@ -486,13 +487,33 @@ Weboberfläche und liegen im NVS des ESP32, nie im Quelltext.
 | **Home Assistant** | MQTT mit Discovery, siehe unten | kompiliert, gegen einen Broker offen |
 | **Verlauf** | VP `0x0050` einmal je Sekunde in einem Ringpuffer, 24 h mit PSRAM (sonst 30 min); Kurve 10 min bis 24 h | mit Simulation geprüft |
 | **Druckkurven** | sobald bekannt ist, welches Wort in VP `0x0050` den Druck trägt: „Rohworte zeigen“ im Verlauf, Pumpe laufen lassen, steigendes Wort unter Einstellungen eintragen | Wort noch unbekannt |
-| **Brew by Weight** | Bluetooth- oder WLAN-Waage, Bezug wird erkannt, Kurve aus Gewicht, Durchfluss und Druck, Stopp bei Ziel minus gelerntem Vorlauf | Protokolle aus Quellen, mit echter Waage offen |
+| **Brew by Weight** | Bluetooth- oder WLAN-Waage, Bezug wird erkannt, Kurve aus Gewicht, Durchfluss und Druck, Stopp bei Ziel minus gelerntem Vorlauf über die Stopp-Taste des Tastenfelds | Protokolle aus Quellen, mit echter Waage offen; Anschluss am Tastenfeld noch zu messen |
 | **Bezüge zählen, Alarme melden** | Zähler im NVS, Alarmseiten (Tank, Wartung, Filter …) als Zustand und Alarm | mit Simulation geprüft |
 
 <p align="center">
   <img src="docs/screenshots/zusatz_rohworte.png" alt="Verlauf mit allen neun Rohworten von VP 0x0050; in der Simulation steigt Wort 1 bei laufender Pumpe" width="800" /><br />
   <sub>Druckwort suchen: „Rohworte zeigen“ im Verlauf. Hier in der Simulation steigt Wort 1 bei laufender Pumpe.</sub>
 </p>
+
+### Abgleich mit den Messungen
+
+Alle Mitschnitte in [`captures/`](captures/) stammen von der kalten Maschine mit
+leerem Tank (Temperaturen 22–36 °C, Seite 103 „Bitte Tank füllen“). Ein Bezug
+ist noch nie auf der Leitung gewesen. Daraus folgt:
+
+| Annahme der Zusatzfunktionen | gemessen / belegt | offen |
+|---|---|---|
+| Ein = VP `0x0000` → 1 | Das Mainboard schreibt beim Einschalten selbst VP `0x0000` = 1 (`boot.sr`); Taste „Für Start drücken“ schreibt 1 (Flash, DE und IT) | ob das Mainboard auf eine von außen gesetzte 1 reagiert |
+| Standby = VP `0x0000` → 0 | Taste „Standby“ im Seitenmenü schreibt 0 (Flash, alle drei Sprachen) | nie mitgeschnitten |
+| Zustand aus dem Tastenwert | Das Display meldet VP `0x0000` alle 100 ms (`boot.sr`, `home.sr`, `tank.sr`); nach „OK“ blieb er auf 5 stehen | — |
+| Alarme aus der Seite | Seite 103 schaltet das Mainboard selbst (Register `0x03`, `boot.sr`) | andere Alarme |
+| Druckwort in VP `0x0050` | Wort 0, 1, 6, 8 immer 0 — die Pumpe lief nie | welches Wort bei laufender Pumpe steigt |
+| Ausgabezähler auf Seite x06 | Foto der Seite 106: nur Zeiger Pumpendruck und große Zahl; Handbuch 5.4.4 | ob das Mainboard beim Bezug dorthin schaltet, welche VP die Zeit trägt |
+| Stopp über das Tastenfeld | Handbuch 5.4; Stecker KEYBOARD am Mainboard (Foto) | Belegung des Flachbandkabels |
+
+Den Zustand „an/Standby“ liest die Bridge deshalb am Tastenwert, nicht an der
+Seite: Seitenwechsel per Touch macht das Display ohne Meldung ans Mainboard.
+Der nächste Mitschnitt sollte ein ganzer Bezug mit vollem Tank sein.
 
 ### Home Assistant
 
@@ -546,7 +567,8 @@ automation:
 | WLAN: URL abfragen | alles mit HTTP-Schnittstelle, z. B. ESPHome mit HX711 (`http://waage.local/sensor/gewicht`) | Antwort als Zahl oder JSON mit `value`, `weight` oder `gewicht`, etwa 8 Abfragen je Sekunde |
 | WLAN: Waage meldet selbst | `POST http://duo.local/api/waage` mit dem Gewicht in g, oder ein MQTT-Thema | Tara für WLAN-Waagen macht die Bridge selbst |
 
-**Ablauf:** Tasse auf die Waage, Bezug wie gewohnt am Hebel starten. Die Bridge
+**Ablauf:** Tasse auf die Waage, Bezug mit der Dauerausgabe-Taste starten
+(Portionstasten gehen auch, dann stoppt zusätzlich die Volumetrik). Die Bridge
 erkennt den Bezug an den ersten Tropfen (gleichmäßig steigendes Gewicht, kein
 Sprung) oder, sobald das Druckwort bekannt ist, am Pumpendruck. Die Zeit zählt
 ab da. Erreicht Gewicht + Vorlauf das Ziel, kommt die Meldung „Ziel erreicht –
@@ -554,16 +576,36 @@ Bezug stoppen!“ in der Weboberfläche und als Ereignis `ziel_erreicht` in Home
 Assistant. Nach dem Bezug lernt die Bridge den Vorlauf (was nach dem Stopp noch
 nachtropft) mit halber Schrittweite nach.
 
-**Selbst stoppen kann die Bridge über die Displayleitung nicht:** Bezug und
-Pumpe schaltet der Hebel über den Microswitch am Mainboard (Klemme 4 am
-5-poligen Block), das Display hat dafür keine Taste. Wer automatisch stoppen
-will, braucht Hardware: Unter „Stopp-Ausgang“ einen freien GPIO wählen (1, 2,
-38–42, 47, 48). Er schaltet bei Ziel für die eingestellte Haltezeit, zum
-Beispiel ein Optokoppler- oder Relaismodul, das den Microswitch-Kreis
-unterbricht. **Das ist ungetestet:** vorher die Klemme am stromlosen Mainboard
-durchmessen (Kleinspannung? welcher Pegel?), nie auf der 230-V-Seite
-eingreifen. Bleibt der Hebel nach der Haltezeit oben, läuft die Pumpe weiter —
-Haltezeit länger wählen als man zum Hebelsenken braucht.
+**Stoppen über das Tastenfeld.** Die DE hat ein Tastenfeld mit fünf Tasten:
+vier Portionen (volumetrisch über den Durchflussmesser) und die Taste
+Dauerausgabe/Programmierung/Stop. Laut Handbuch (5.4) beendet ein erneuter
+Druck auf die Dauerausgabe-Taste die Ausgabe, das Mainboard stoppt die Pumpe
+dann selbst. Das Tastenfeld hängt über das graue Flachbandkabel direkt am
+Stecker **KEYBOARD** des Mainboards, nicht an der Displayleitung. Die Tasten
+selbst kommen über die Displayleitung also nicht an; die Bridge muss die Taste
+elektrisch „drücken“:
+
+- Unter „Stopp-Taste am Tastenfeld“ einen freien GPIO wählen (1, 2, 38–42, 47, 48).
+  Bei Ziel schaltet er für die eingestellte Dauer (Standard 300 ms), also ein
+  kurzer Tastendruck. Home Assistant bekommt dazu den Knopf „Bezug stoppen“.
+- Am GPIO ein **Optokoppler** (z. B. PC817 mit 330 Ω vor der LED), dessen
+  Ausgang parallel zu den beiden Kontakten der Dauerausgabe-Taste liegt. Der
+  Optokoppler trennt ESP32 und Mainboard galvanisch; die Taste selbst funktioniert
+  weiter.
+- **Noch offen, vor dem Anschließen messen:** Belegung des Flachbandkabels
+  (Einzeltasten gegen eine gemeinsame Leitung oder Matrix), Pegel und Polarität
+  an der Taste. Maschine dafür ausschalten und am stromlosen Kabel mit dem
+  Durchgangsprüfer die Kontakte der Taste suchen. Das Tastenfeld arbeitet mit
+  Kleinspannung vom Mainboard; nie auf der 230-V-Seite eingreifen.
+
+Ohne diesen Anschluss meldet die Bridge „Ziel erreicht – Bezug stoppen!“ in der
+Weboberfläche und als Ereignis in Home Assistant, gedrückt wird von Hand.
+
+Zusätzlich ungeklärt: Laut Handbuch (5.4.4) zeigt das Display während der
+Ausgabe einen Bildschirm mit Pumpendruck und Ausgabedauer. Das Mainboard
+schickt beides also über die Displayleitung. Ein Mitschnitt während eines
+Bezugs zeigt, welche Seite und welche Worte das sind — dann erkennt die Bridge
+den Bezug direkt am Mainboard statt an der Waage.
 
 ---
 
@@ -599,8 +641,9 @@ Tests: `python3 -m unittest discover -s tests`
    (5-V-Budget prüfen) und feste Verkabelung statt Breadboard.
 4. **Mehr als das Display an der Maschine prüfen:** Ein/Aus, Druckwort in VP
    `0x0050` finden (Rohworte im Verlauf), Home Assistant gegen den Broker,
-   Brew by Weight mit einer echten Waage; für den automatischen Stopp den
-   Microswitch-Kreis durchmessen.
+   Brew by Weight mit einer echten Waage; einen Bezug mitschneiden (Seite und
+   Worte für Pumpendruck und Ausgabedauer); für den automatischen Stopp die
+   Dauerausgabe-Taste im Flachbandkabel des Tastenfelds durchmessen.
 5. **Variablen-Konfiguration (`14.bin`)** ebenfalls aus dem Flash lesen: Sie sagt,
    welche VP an welcher Stelle angezeigt wird — damit auch die Sollwerte auf den
    Kaffee- und Tee-Seiten.
