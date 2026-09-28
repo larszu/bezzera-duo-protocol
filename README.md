@@ -271,6 +271,45 @@ Alle Tasten sind vom Typ `FDxx`: **Das Display meldet nichts von sich aus**,
 das Mainboard fragt ab. Reine Seitenwechsel erledigt das Display lokal, ohne
 dass das Mainboard davon erfährt.
 
+### Firmware-Versionen
+
+✅ **Diese Maschine:** Mainboard meldet **FW 2.1** (VP `0x0063` = 21), das
+Display-Projekt heißt **„TFT 2.0“**; beide arbeiten zusammen. Register `0x00`
+= `0x22` ist DWINs Betriebssoftware, nicht Bezzeras Version. Der Aufkleber
+`7661047PR` passt laut Händlerliste zu FW 1.2, nicht zu 2.1 — entweder wurde
+das Board aktualisiert, oder der Aufkleber trägt nur die Grundnummer (💡).
+
+💡 **Versionen laut Händlern** (1st-line, Avola, Espresso Machine Company; nicht an der Maschine geprüft):
+
+| Mainboard | Display | Änderung |
+|---|---|---|
+| 1.2 (`7661047PR`) | 1.1 (`5963169.01`) | erste Ausgabe |
+| 2.0 (`7661047.01PR`) | 2.0 (`5963169.02`) | Auto ON/OFF repariert, Füll-Timeout 15 → 30 s, startet nach 5 s von selbst |
+| **2.1** (`7661047.02PR`) | **2.0** (`5963169.03`) | Gruppenheizung korrigiert — **diese Maschine** |
+| 2.2 (`7661047.03PR`) | 2.2 (`5963201.01`) | Dampfkessel beim Bezug weder gefüllt noch geheizt |
+| 2.3 (`7661047.04PR`) | 2.2 | Fehler im Prüfablauf |
+| 2.4 (`7661047.05PR`) | 2.2 | Vorbrühen der deutschen Fassung vereinheitlicht |
+
+Laut Avola ist Elektronik ab 2.0 mit Displays ab 2.0 kompatibel, Elektronik
+1.x und 3.x nicht; eine Version 3.x ist nirgends beschrieben.
+
+💡 **Woher Inkompatibilitäten kommen** (aus dem Protokoll gefolgert): Das
+Display hat keine Logik, aber Mainboard-Firmware und Display-Projekt teilen
+einen stillen Vertrag, den keine Seite prüft:
+
+1. **Seitennummern:** Das Mainboard schaltet Seiten selbst (90, 101, 103, Alarme); fehlt die Seite im Display oder bedeutet dort etwas anderes, zeigt es Falsches.
+2. **Tastencodes:** Jede Taste schreibt einen festen Wert (7 = Kaffee-Einstellungen, 20 = Menü); neue Funktionen brauchen neue Codes und Seiten, die ein altes Display nicht hat.
+3. **Variablenadressen:** Temperaturen und Einstellungen liegen auf festen VPs; verschiebt eine Version eine, liest die Gegenseite falsche Werte.
+4. **Abläufe:** Ab Mainboard 2.0 startet die Maschine nach 5 s von selbst; Display 2.0 passt seine Seitenfolge an, ein Display 1.1 erwartet den alten Ablauf.
+5. **Rahmenkopf `C6 A5`:** steckt im Display-Projekt; ein DWIN-Display ab Werk spricht gar nicht mit diesem Mainboard.
+
+Der Verbindungstest beim Start (VP `0x0063` schreiben und zurücklesen) prüft
+nach allem, was mitgeschnitten ist, nur *ob* ein Display antwortet, nicht
+*welches*. Eine unpassende Kombination startet deshalb vermutlich und verhält
+sich erst dann falsch. **Die Bridge ist gegen Mainboard 2.1 und Display 2.0
+gemessen**; bei anderen Versionen können Seiten, Codes und VPs abweichen.
+Quellen und Teilenummern: [`docs/versionen.md`](docs/versionen.md).
+
 ---
 
 ## 🖥️ Seiten und Tasten

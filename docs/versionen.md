@@ -26,7 +26,7 @@ und Ersatzteilhändlern:
 |---|---|---|---|---|
 | 1.2 | 7661047PR | 1.1 | 5963169.01 | erste Ausgabe |
 | 2.0 | 7661047.01PR | 2.0 | 5963169.02 | Auto ON/OFF repariert, Füll-Timeout Kessel 15 → 30 s, Maschine startet nach 5 s von selbst (ohne Druck auf den Standby-Bildschirm) |
-| 2.1 | 7661047.02PR | 2.0 | 5963169.03 | Heizung der Gruppe korrigiert |
+| **2.1** | 7661047.02PR | **2.0** | 5963169.03 | Heizung der Gruppe korrigiert — **diese Maschine** |
 | 2.2 | 7661047.03PR | 2.2 | 5963201.01 | Dampfkessel wird während des Bezugs nicht gefüllt und nicht geheizt, Fehler im Standby behoben |
 | 2.3 | 7661047.04PR | 2.2 | 5963201.01 | Fehler im Prüfablauf behoben |
 | 2.4 | 7661047.05PR | 2.2 | 5963201.01 | Vorbrühen der deutschen Fassung: beim Bezug 1 s, beim Einlernen 2 s — vereinheitlicht |
@@ -46,7 +46,7 @@ teilen sich aber einen **stillen Vertrag**, der nirgends geprüft wird:
 3. **Variablenadressen.** Temperaturen, Sollwerte und Einstellungen liegen auf festen VPs (`0x0050`, `0x005A`–`0x005F`, `0x0070`–`0x007E` …). Verschiebt eine Version eine VP, liest oder zeigt die andere Seite den falschen Wert.
 4. **Abläufe.** Mainboard 2.0 startet nach 5 s von selbst statt auf den Standby-Druck zu warten; das Display-Projekt 2.0 passt seine Seitenfolge dazu. Ein Display 1.1 an einem Mainboard 2.x erwartet einen anderen Ablauf.
 5. **Kopf `C6 A5` statt `5A A5`.** Ein DWIN-Display „ab Werk“ spricht mit diesem Mainboard gar nicht; der Rahmenkopf steckt in der Konfiguration des Display-Projekts. Ob ältere Versionen einen anderen Kopf oder eine andere Baudrate nutzen, ist unbekannt.
-6. **Verbindungstest VP `0x0063`.** Das Mainboard schreibt seine Version dorthin und liest sie zurück. Nach allem, was mitgeschnitten ist, prüft es damit nur, ob überhaupt ein Display antwortet, nicht dessen Version.
+6. **Verbindungstest VP `0x0063`.** Das Mainboard schreibt seine Version dorthin und liest sie zurück. Nach allem, was mitgeschnitten ist, prüft es damit nur, ob überhaupt ein Display antwortet, nicht dessen Version. Eine unpassende Kombination startet deshalb vermutlich und verhält sich erst dann falsch.
 
 Die Displays 2.0 und 2.2 unterscheiden sich vermutlich in Seiten und Tasten
 für die neuen Funktionen (etwa Dampfkessel während des Bezugs). Wer die

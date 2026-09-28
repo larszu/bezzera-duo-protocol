@@ -26,7 +26,7 @@ and spare parts dealers:
 |---|---|---|---|---|
 | 1.2 | 7661047PR | 1.1 | 5963169.01 | first release |
 | 2.0 | 7661047.01PR | 2.0 | 5963169.02 | Auto ON/OFF fixed, boiler fill timeout 15 → 30 s, machine starts by itself after 5 s (no press on the standby screen) |
-| 2.1 | 7661047.02PR | 2.0 | 5963169.03 | group heating corrected |
+| **2.1** | 7661047.02PR | **2.0** | 5963169.03 | group heating corrected — **this machine** |
 | 2.2 | 7661047.03PR | 2.2 | 5963201.01 | steam boiler not filled or heated during a shot, stand-by bugs fixed |
 | 2.3 | 7661047.04PR | 2.2 | 5963201.01 | bug in the test procedure fixed |
 | 2.4 | 7661047.05PR | 2.2 | 5963201.01 | German version pre-infusion: 1 s during brewing, 2 s during auto-learn — made consistent |
@@ -46,7 +46,7 @@ project share an **implicit contract** that nothing checks:
 3. **Variable addresses.** Temperatures, setpoints and settings live at fixed VPs (`0x0050`, `0x005A`–`0x005F`, `0x0070`–`0x007E` …). If one version moves a VP, the other side reads or shows the wrong value.
 4. **Sequences.** Mainboard 2.0 starts by itself after 5 s instead of waiting for the standby press; display project 2.0 adapts its page flow. A display 1.1 on a mainboard 2.x expects a different sequence.
 5. **Header `C6 A5` instead of `5A A5`.** A stock DWIN display does not talk to this mainboard at all; the frame header is part of the display project's configuration. Whether older versions used a different header or baud rate is unknown.
-6. **Connection test VP `0x0063`.** The mainboard writes its version there and reads it back. From everything captured, it only checks that a display answers, not its version.
+6. **Connection test VP `0x0063`.** The mainboard writes its version there and reads it back. From everything captured, it only checks that a display answers, not its version. A mismatched pair therefore probably boots and only then misbehaves.
 
 Displays 2.0 and 2.2 probably differ in pages and keys for the new functions
 (such as the steam boiler during a shot). Reading the touch configuration of a
