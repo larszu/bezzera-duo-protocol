@@ -914,7 +914,7 @@ async function holeZusatz(){
     $("bw_waage").textContent=zj.waage.status;
     $("bw_meldung").textContent=b.laeuft?(b.stopp_gesendet?"Ziel erreicht – Bezug stoppen!":"Bezug läuft"):zj.cfg.waage_art?"bereit: Bezug startet, sobald es in die Tasse tropft":"Waage ist aus (Einstellungen)";
     $("bw_meldung").className=b.laeuft&&b.stopp_gesendet?"alarm einheit":"einheit";
-    $("bw_stopp").style.display=zj.cfg.stopp_pin>=0?"":"none";
+    $("bw_stopp").style.display=zj.cfg.stopp_pin>=0&&b.laeuft?"":"none";  // nur waehrend eines Bezugs, sonst startet der Druck einen
     $("bw_liste").innerHTML=b.liste.map(x=>`<tr><td>${x.alter_s<3600?Math.round(x.alter_s/60)+" min":Math.round(x.alter_s/3600)+" h"}</td><td>${f1(x.g)} g</td><td>${f1(x.ziel)} g</td><td>${f1(x.dauer)} s</td><td>${x.gestoppt?"Stopp bei Ziel":""}</td></tr>`).join("");
     if(!einstGeladen&&!$("einst").contains(document.activeElement)){einstellungenFuellen(zj.cfg,letzterStatus&&letzterStatus.vps.find(x=>x.vp==0x50)); einstGeladen=true}
     if(b.laeuft||b.nr!=bezugNr) holeBezug();

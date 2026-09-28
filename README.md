@@ -588,10 +588,18 @@ elektrisch „drücken“:
 - Unter „Stopp-Taste am Tastenfeld“ einen freien GPIO wählen (1, 2, 38–42, 47, 48).
   Bei Ziel schaltet er für die eingestellte Dauer (Standard 300 ms), also ein
   kurzer Tastendruck. Home Assistant bekommt dazu den Knopf „Bezug stoppen“.
-- Am GPIO ein **Optokoppler** (z. B. PC817 mit 330 Ω vor der LED), dessen
-  Ausgang parallel zu den beiden Kontakten der Dauerausgabe-Taste liegt. Der
-  Optokoppler trennt ESP32 und Mainboard galvanisch; die Taste selbst funktioniert
-  weiter.
+  Weil dieselbe Taste auch **startet**, drückt die Bridge nur, solange ein Bezug
+  läuft und noch mindestens 0,5 g/s fließen. Hat die Volumetrik schon selbst
+  gestoppt, bleibt es bei der Meldung. Für Brew by Weight deshalb mit der
+  Dauerausgabe-Taste starten, nicht mit einer Portionstaste.
+- Am GPIO ein **PhotoMOS-Relais** (Halbleiterrelais mit MOSFET-Ausgang, z. B.
+  Toshiba TLP222A oder Panasonic AQY212), dessen Ausgang parallel zu den beiden
+  Kontakten der Dauerausgabe-Taste liegt. Es trennt ESP32 und Tastenfeld
+  galvanisch und schaltet in beide Richtungen; das ist wichtig, falls das
+  Tastenfeld eine Matrix ist, deren Polarität beim Abfragen wechselt. Ein
+  einfacher Optokoppler (PC817) geht nur, wenn die Polarität fest ist. Die LED
+  des Relais bekommt einen Vorwiderstand nach Datenblatt (bei 3,3 V z. B.
+  330 Ω für etwa 6 mA). Die Taste selbst funktioniert weiter.
 - **Noch offen, vor dem Anschließen messen:** Belegung des Flachbandkabels
   (Einzeltasten gegen eine gemeinsame Leitung oder Matrix), Pegel und Polarität
   an der Taste. Maschine dafür ausschalten und am stromlosen Kabel mit dem
