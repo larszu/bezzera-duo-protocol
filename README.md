@@ -34,12 +34,15 @@ vier Adern dazwischen läuft**, und liefert die Werkzeuge, um es zu lesen und
 selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 *Vivid-Ad-2039*: ein ESP32, der Register liest und schreibt.
 
-✔ Protokoll gemessen: DWIN **Mini DGUS**, Rahmenkopf `C6 A5`, 115200 Baud, TTL  
-✔ **Alle 300 Seiten** fotografiert und katalogisiert (drei Sprachen)  
-✔ **Alle 1070 Tasten** mit Fläche, Folgeseite und Wert — gelesen aus dem Display-Flash  
-✔ ESP32-Bridge: durchreichen, mitschneiden, einschleusen, Display emulieren  
-✔ Weboberfläche mit Display-Nachbau, Live-Werten und Temperaturverlauf  
-✔ Mehr als das Display: Ein/Aus aus der Ferne, Home Assistant, Brew by Weight, Verlauf über 24 h  
+✅ Protokoll gemessen: DWIN **Mini DGUS**, Rahmenkopf `C6 A5`, 115200 Baud, TTL  
+✅ **Alle 300 Seiten** fotografiert und katalogisiert (drei Sprachen)  
+✅ **Alle 1070 Tasten** mit Fläche, Folgeseite und Wert — gelesen aus dem Display-Flash  
+✅ ESP32-Bridge: durchreichen und mitschneiden an der Maschine  
+🧪 ESP32-Bridge: Tastendrücke einschleusen, Display emulieren  
+✅ Weboberfläche mit Display-Nachbau und Live-Werten, am echten Display gelaufen  
+🧪 Mehr als das Display: Ein/Aus aus der Ferne, Home Assistant, Brew by Weight, Verlauf über 24 h  
+
+✅ getestet · 🧪 gebaut, noch nicht an der Maschine getestet · 💡 Idee/Vermutung — Details unter [Stand](#-stand)
 
 > ⚠️ In der Maschine liegen **230 V**. Netzstecker ziehen, bevor du etwas
 > anklemmst. Mit laufender Maschine nur an bereits verlegte Messleitungen gehen.
@@ -94,24 +97,35 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 
 ## 📊 Stand
 
+Alles im Repo ist einer von drei Stufen zugeordnet. Die vollständige Liste mit
+Beleg je Aussage steht in [`docs/stand.md`](docs/stand.md).
+
+| | Stufe | heißt |
+|---|---|---|
+| ✅ | **getestet** | an der echten Maschine oder am echten Display beobachtet, gemessen, gelesen oder ausprobiert |
+| 🧪 | **gebaut, ungetestet** | umgesetzt und kompiliert, teils in der Simulation geprüft, nie an der Maschine ausprobiert |
+| 💡 | **Idee / Vermutung** | aus Handbuch, Fotos, Datenblättern oder Analogie abgeleitet, nicht bestätigt |
+
 | Thema | Stand |
 |---|---|
-| Protokoll, Pegel, Adern | ✅ gemessen (Logic Analyzer, 2026-09-27) |
-| Einschaltablauf, Temperaturen, Firmware-Version | ✅ zugeordnet |
-| Seitenkatalog (0–299) | ✅ fotografiert, [`docs/seiten.md`](docs/seiten.md) |
-| Tastentabelle (1070 Tasten) | ✅ aus dem Flash, [`docs/tasten.json`](docs/tasten.json) |
-| Weboberfläche mit Display-Nachbau | ✅ alle Seiten, Klick = Berührung |
-| Bridge durchreichen / mitschneiden | ✅ an der Maschine getestet |
-| Display-Emulation (ESP32 antwortet) | 🟡 antwortet Byte für Byte richtig; Start der Maschine noch nicht durchgespielt |
-| Hybridmodus (Display antwortet, ESP32 ersetzt Werte) | 🟡 kompiliert, noch nicht an der Maschine getestet |
-| Tastendruck von außen wirkt wie ein echter | ⏳ offen |
-| Ein/Aus, Home Assistant, Brew by Weight, Verlauf | 🟡 kompiliert, Oberfläche mit Simulation geprüft; an der Maschine und mit echter Waage noch nicht getestet |
-| Dauerbetrieb (Passwort, OTA, Watchdog, Versorgung) | ⏳ offen |
+| Protokoll, Pegel, Adern, Einschaltablauf, Temperaturen, Firmware-Version | ✅ gemessen (Logic Analyzer, 2026-09-27) |
+| Seitenkatalog (0–299), Tastentabelle (1070 Tasten) | ✅ fotografiert bzw. aus dem Flash gelesen |
+| Bridge durchreichen / mitschneiden | ✅ an der Maschine |
+| Weboberfläche mit Display-Nachbau | ✅ am echten Display gelaufen (Live-Werte, Seiten, Werte aus dem Display gelesen) · 💡 ob ein Klick an der Maschine wirkt |
+| Display-Emulation, Hybridmodus | 🧪 |
+| Tastendruck von außen wirkt wie ein echter | 💡 Grundannahme aller Fernsteuerung, noch nie ausprobiert |
+| Ein/Aus, Home Assistant, Verlauf, Brew by Weight | 🧪 in der Simulation geprüft, nicht an der Maschine, mit keiner echten Waage |
+| Druckwort, Seite x06 als Ausgabezähler, Stopp über die Dauerausgabe-Taste | 💡 |
+| Dauerbetrieb (Passwort, OTA, Watchdog, Versorgung) | 💡 nicht gebaut |
+
+Alle Mitschnitte stammen von der kalten Maschine mit leerem Tank; ein Bezug war
+noch nie auf der Leitung.
 
 ---
 
 ## 🗂️ Inhalt
 
+- [📊 Stand](#-stand) — was getestet ✅, gebaut 🧪 oder nur vermutet 💡 ist ([vollständig](docs/stand.md))
 - [🔌 Hardware](#-hardware) — Display, Mainboard, Stecker und Adern ([Details](docs/bauteile.md))
 - [📡 Das Protokoll](#-das-protokoll) — Mini DGUS, was gemessen wurde
 - [🖥️ Seiten und Tasten](#️-seiten-und-tasten) — Katalog und Touch-Konfiguration aus dem Flash
@@ -483,12 +497,12 @@ Weboberfläche und liegen im NVS des ESP32, nie im Quelltext.
 
 | Funktion | wie | Stand |
 |---|---|---|
-| **Ein/Aus aus der Ferne** | schreibt VP `0x0000` = 1 und Seite x01 („Für Start drücken“) bzw. VP `0x0000` = 0 und Seite x00 („Standby“ im Seitenmenü), genau wie diese Tasten laut Touch-Konfiguration | aus der Tastentabelle abgeleitet, an der Maschine offen |
-| **Home Assistant** | MQTT mit Discovery, siehe unten | kompiliert, gegen einen Broker offen |
-| **Verlauf** | VP `0x0050` einmal je Sekunde in einem Ringpuffer, 24 h mit PSRAM (sonst 30 min); Kurve 10 min bis 24 h | mit Simulation geprüft |
-| **Druckkurven** | sobald bekannt ist, welches Wort in VP `0x0050` den Druck trägt: „Rohworte zeigen“ im Verlauf, Pumpe laufen lassen, steigendes Wort unter Einstellungen eintragen | Wort noch unbekannt |
-| **Brew by Weight** | Bluetooth- oder WLAN-Waage, Bezug wird erkannt, Kurve aus Gewicht, Durchfluss und Druck, Stopp bei Ziel minus gelerntem Vorlauf über die Stopp-Taste des Tastenfelds | Protokolle aus Quellen, mit echter Waage offen; Anschluss am Tastenfeld noch zu messen |
-| **Bezüge zählen, Alarme melden** | Zähler im NVS, Alarmseiten (Tank, Wartung, Filter …) als Zustand und Alarm | mit Simulation geprüft |
+| **Ein/Aus aus der Ferne** | schreibt VP `0x0000` = 1 und Seite x01 („Für Start drücken“) bzw. VP `0x0000` = 0 und Seite x00 („Standby“ im Seitenmenü), genau wie diese Tasten laut Touch-Konfiguration | 🧪 gebaut · 💡 Wirkung an der Maschine |
+| **Home Assistant** | MQTT mit Discovery, siehe unten | 🧪 |
+| **Verlauf** | VP `0x0050` einmal je Sekunde in einem Ringpuffer, 24 h mit PSRAM (sonst 30 min); Kurve 10 min bis 24 h | 🧪 Simulation |
+| **Druckkurven** | sobald bekannt ist, welches Wort in VP `0x0050` den Druck trägt: „Rohworte zeigen“ im Verlauf, Pumpe laufen lassen, steigendes Wort unter Einstellungen eintragen | 🧪 gebaut · 💡 Druckwort |
+| **Brew by Weight** | Bluetooth- oder WLAN-Waage, Bezug wird erkannt, Kurve aus Gewicht, Durchfluss und Druck, Stopp bei Ziel minus gelerntem Vorlauf über die Stopp-Taste des Tastenfelds | 🧪 gebaut · 💡 Stopp über das Tastenfeld |
+| **Bezüge zählen, Alarme melden** | Zähler im NVS, Alarmseiten (Tank, Wartung, Filter …) als Zustand und Alarm | 🧪 Simulation |
 
 <p align="center">
   <img src="docs/screenshots/zusatz_rohworte.png" alt="Verlauf mit allen neun Rohworten von VP 0x0050; in der Simulation steigt Wort 1 bei laufender Pumpe" width="800" /><br />
@@ -496,6 +510,8 @@ Weboberfläche und liegen im NVS des ESP32, nie im Quelltext.
 </p>
 
 ### Abgleich mit den Messungen
+
+Stufen wie in [`docs/stand.md`](docs/stand.md): ✅ getestet · 🧪 gebaut, ungetestet · 💡 Idee / Vermutung.
 
 Alle Mitschnitte in [`captures/`](captures/) stammen von der kalten Maschine mit
 leerem Tank (Temperaturen 22–36 °C, Seite 103 „Bitte Tank füllen“). Ein Bezug
