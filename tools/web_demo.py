@@ -24,7 +24,7 @@ class Demo:
         self.ereignisse: list[str] = []
         self.cfg = {"mqtt_uri": "", "mqtt_user": "", "mqtt_pass_gesetzt": False, "ha_prefix": "homeassistant",
                     "waage_art": 1, "waage_url": "", "waage_topic": "", "waage_ble": "", "ziel": 36.0,
-                    "vorlauf": 2.0, "lernen": True, "stopp_pin": -1, "stopp_high": True, "stopp_halten": 15,
+                    "vorlauf": 2.0, "lernen": True, "stopp_pin": -1, "stopp_high": True, "stopp_puls": 300,
                     "druck_p_wort": -1, "druck_p_teil": 10, "druck_k_wort": -1, "druck_k_teil": 10}
         self.verlauf: list[tuple[float, list[int]]] = []
         self.bezug: list[list] = []

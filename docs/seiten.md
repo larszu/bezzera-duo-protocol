@@ -36,7 +36,7 @@ Beim Einschalten zeigt das Mainboard Seite 90 (Startbild mit „TFT 2.0“ und
 | 2 | Alarm: Loading time out, restart loading |
 | 3 | Alarm: Please fill water tank |
 | 4 | Alarm: NTC failure |
-| 5, 6 | Startbildschirm, Varianten (6 mit nur einem Zeiger) |
+| 5, 6 | Startbildschirm, Varianten. 6 hat nur den Zeiger Pumpendruck 0–10 bar und eine große Zahl in der Mitte: vermutlich der Ausgabezähler (Pumpendruck und Ausgabedauer während des Bezugs, Handbuch 5.4.4) |
 | 7 | Coffee settings: Boiler an/aus, Priority, Temperatur, Group, Wetting |
 | 8 | Tea settings: Temperatur |
 | 9, 11 | Boiler priority: Coffee / Service / None |

@@ -18,7 +18,7 @@ struct Einstellungen {
   bool lernen = true;
   int8_t stoppPin = -1;
   bool stoppHigh = true;
-  uint16_t stoppHaltenS = 15;
+  uint16_t stoppPulsMs = 300;  // so lange "drueckt" der Ausgang die Taste
   int8_t druckPWort = -1, druckKWort = -1;  // Wort in VP 0x0050, -1 = noch unbekannt
   uint16_t druckPTeiler = 10, druckKTeiler = 10;
 };
@@ -49,7 +49,7 @@ static void einstellungenLaden() {
   cfg.lernen = p.getBool("lernen", true);
   cfg.stoppPin = p.getChar("stopp_pin", -1);
   cfg.stoppHigh = p.getBool("stopp_high", true);
-  cfg.stoppHaltenS = p.getUShort("stopp_halten", 15);
+  cfg.stoppPulsMs = p.getUShort("stopp_puls", 300);
   cfg.druckPWort = p.getChar("druck_p_wort", -1);
   cfg.druckKWort = p.getChar("druck_k_wort", -1);
   cfg.druckPTeiler = p.getUShort("druck_p_teil", 10);
@@ -75,7 +75,7 @@ static void einstellungenSpeichern() {
   p.putBool("lernen", cfg.lernen);
   p.putChar("stopp_pin", cfg.stoppPin);
   p.putBool("stopp_high", cfg.stoppHigh);
-  p.putUShort("stopp_halten", cfg.stoppHaltenS);
+  p.putUShort("stopp_puls", cfg.stoppPulsMs);
   p.putChar("druck_p_wort", cfg.druckPWort);
   p.putChar("druck_k_wort", cfg.druckKWort);
   p.putUShort("druck_p_teil", cfg.druckPTeiler);
@@ -104,7 +104,7 @@ static bool setzeEinstellung(const String &k, const String &v) {
   else if (k == "lernen") cfg.lernen = v == "1" || v == "on" || v == "true";
   else if (k == "stopp_pin") cfg.stoppPin = stoppPinErlaubt(v.toInt()) ? v.toInt() : -1;
   else if (k == "stopp_high") cfg.stoppHigh = v == "1" || v == "on" || v == "true";
-  else if (k == "stopp_halten") cfg.stoppHaltenS = constrain(v.toInt(), 1, 120);
+  else if (k == "stopp_puls") cfg.stoppPulsMs = constrain(v.toInt(), 50, 3000);
   else if (k == "druck_p_wort") cfg.druckPWort = constrain(v.toInt(), -1, 8);
   else if (k == "druck_k_wort") cfg.druckKWort = constrain(v.toInt(), -1, 8);
   else if (k == "druck_p_teil") cfg.druckPTeiler = max(1L, v.toInt());
@@ -160,17 +160,39 @@ static const char *alarmText(int b) {
   return nullptr;
 }
 
+// Tastenwert VP 0x0000, wie ihn das Display dem Mainboard alle 100 ms meldet
+// (Antworten auf 0x83). Gemessen: 1 nach dem Einschalten (schreibt das
+// Mainboard selbst), 5 nach "OK"; laut Flash 0 nach "Standby". Zuverlaessiger
+// als die Seite: Seitenwechsel per Touch macht das Display ohne Meldung.
+static int32_t tastenwert() {
+  for (size_t i = 0; i < vpAnzahl; i++)
+    if (vpTabelle[i].vp == 0 && vpTabelle[i].len >= 2 && millis() - vpTabelle[i].ms < 3000)
+      return (vpTabelle[i].d[0] << 8) | vpTabelle[i].d[1];
+  return -1;
+}
+
+static bool imStandby() {
+  int32_t t = tastenwert();
+  return t >= 0 ? t == 0 : leitung.seite >= 0 && leitung.seite % 100 == 0;
+}
+
+// Ausgabezaehler: Seite x06 zeigt nur den Pumpendruck-Zeiger und in der Mitte
+// eine grosse Zahl. Laut Handbuch (5.4.4) erscheint waehrend der Ausgabe ein
+// Bildschirm mit Pumpendruck und Ausgabedauer. Vermutung: das ist x06, und das
+// Mainboard schaltet ihn wie die Alarmseiten selbst. Noch nicht mitgeschnitten.
+static bool ausgabeSeite() { return mainboardLebt() && leitung.seite >= 0 && leitung.seite % 100 == 6; }
+
 // Kurzer Zustand fuer Weboberflaeche und Home Assistant.
 static String maschinenStatus() {
   if (!mainboardLebt()) return "keine Verbindung";
-  if (leitung.seite < 0) return "unbekannt";
-  int b = leitung.seite % 100;
-  if (b == 0) return "Standby";
+  int b = leitung.seite >= 0 ? leitung.seite % 100 : -1;
   if (b == 90) return "startet";
-  if (const char *a = alarmText(b)) return String("Alarm: ") + a;
-  return "an";
+  if (const char *a = b >= 0 ? alarmText(b) : nullptr) return String("Alarm: ") + a;
+  if (imStandby()) return "Standby";
+  if (b == 6) return "Ausgabe";
+  return leitung.seite >= 0 || tastenwert() >= 0 ? "an" : "unbekannt";
 }
-static bool maschineAn() { return mainboardLebt() && leitung.seite >= 0 && leitung.seite % 100 != 0; }
+static bool maschineAn() { return mainboardLebt() && !imStandby() && (leitung.seite >= 0 || tastenwert() >= 0); }
 static const char *aktuellerAlarm() { return mainboardLebt() && leitung.seite >= 0 ? alarmText(leitung.seite % 100) : nullptr; }
 
 // Ein/Aus wie die Tasten am Display (Touch-Konfiguration 13.bin):
@@ -279,9 +301,12 @@ static volatile bool waageTaraBle = false;  // die Waage-Task schickt Tara an di
 
 // ─── Brew by Weight ────────────────────────────────────────────────────────
 // Bezug erkennt die Bridge selbst: Das Gewicht steigt gleichmaessig (erste
-// Tropfen) oder, sobald das Druckwort bekannt ist, der Pumpendruck steigt.
+// Tropfen), der Pumpendruck steigt (sobald das Druckwort bekannt ist) oder
+// das Mainboard zeigt den Ausgabezaehler (Seite x06, Vermutung).
 // Ziel erreicht (Gewicht + Vorlauf >= Ziel) heisst: Meldung an Web und Home
-// Assistant und, wenn eingerichtet, der Stopp-Ausgang schaltet. Der Vorlauf
+// Assistant und, wenn eingerichtet, "drueckt" der Stopp-Ausgang kurz die Taste
+// Dauerausgabe/Stop am Tastenfeld der DE; das Mainboard beendet die Ausgabe
+// dann selbst (Handbuch 5.4). Der Vorlauf
 // (was nach dem Stopp noch nachtropft) lernt sich aus jedem Bezug.
 
 struct BezugPunkt {
@@ -390,7 +415,7 @@ static void bezugPunkt() {
                            (int16_t)(isnan(p) ? INT16_MIN : lroundf(p * 10)), (int16_t)(isnan(t) ? INT16_MIN : t)};
 }
 
-// Laeuft in loop(): neue Waagenwerte uebernehmen, Bezug fuehren, Stopp halten.
+// Laeuft in loop(): neue Waagenwerte uebernehmen, Bezug fuehren, Stopp-Tastendruck beenden.
 static void bezugLoop() {
   static uint32_t gesehenNr = 0;
   uint32_t nr, ms;
@@ -399,10 +424,7 @@ static void bezugLoop() {
   nr = waageNr; ms = waageMs; roh = waageRoh;
   portEXIT_CRITICAL(&waageMux);
 
-  if (stoppAktiv && millis() - stoppSeitMs > cfg.stoppHaltenS * 1000UL) {
-    stoppAusgang(false);
-    ereignis("- Stopp-Ausgang frei");
-  }
+  if (stoppAktiv && millis() - stoppSeitMs > cfg.stoppPulsMs) stoppAusgang(false);
   float p = druckPumpe();
   if (nr == gesehenNr) {
     // ohne neue Waagenwerte: Bezug nach 5 s ohne Waage beenden
@@ -419,7 +441,7 @@ static void bezugLoop() {
     else if (millis() - bezugRuhigSeit > 1500) bezugBasis = g;  // ruhig: neue Nulllinie (Tasse steht)
     float d1 = g - waageVor(500), d2 = waageVor(500) - waageVor(1000);
     bool tropft = g - bezugBasis > 0.5f && d1 > 0.15f && d2 > 0.15f && d1 + d2 < 12;  // gleichmaessig, kein Sprung
-    bool druck = !isnan(p) && p >= 2.0f;
+    bool druck = (!isnan(p) && p >= 2.0f) || ausgabeSeite();
     if (tropft || druck) bezugStarten(tropft && !druck ? 1000 : 0);
     else return;
   }
@@ -435,7 +457,7 @@ static void bezugLoop() {
   }
   // Ende: 3 s kein Durchfluss (und kein Pumpendruck, falls bekannt)
   static uint32_t stillSeit = 0;
-  bool still = dauer > 5000 && fabsf(fluss) < 0.15f && (isnan(p) || p < 0.5f);
+  bool still = dauer > 5000 && fabsf(fluss) < 0.15f && (isnan(p) || p < 0.5f) && !ausgabeSeite();
   if (!still) stillSeit = 0;
   else if (!stillSeit) stillSeit = millis();
   if (bezugG < -5) bezugBeenden(true);  // Tasse weggenommen
@@ -453,12 +475,17 @@ static void waageTara() {
   waageHistN = 0;
 }
 
-// Aktionen fuer Web, USB und MQTT: "an", "aus", "tara", "abbruch", "frei", "ziel <g>"
+// Aktionen fuer Web, USB und MQTT: "an", "aus", "tara", "abbruch", "stopp", "ziel <g>"
 static bool aktion(const String &a) {
   if (a == "an" || a == "aus") maschineSchalten(a == "an");
   else if (a == "tara") waageTara();
   else if (a == "abbruch") { if (bezugZustand == BZ_LAEUFT) bezugBeenden(true); }
-  else if (a == "frei") { stoppAusgang(false); ereignis("- Stopp-Ausgang frei (von Hand)"); }
+  else if (a == "stopp") {  // Stopp-Taste von Hand, z. B. aus Home Assistant
+    if (cfg.stoppPin < 0) return false;
+    stoppSeitMs = millis();
+    stoppAusgang(true);
+    ereignis("- Stopp-Taste gedrueckt (von Hand)");
+  }
   else if (a.startsWith("ziel ")) {
     cfg.ziel = constrain(zahlAus(a.substring(5), cfg.ziel), 0.0f, 200.0f);
     einstellungenSpeichern();
