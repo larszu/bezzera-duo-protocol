@@ -111,5 +111,96 @@ class Stats(unittest.TestCase):
         self.assertIn("ascii-hex sum8", out.getvalue())
 
 
+class Dgus(unittest.TestCase):
+    """Rahmen im Format der DWIN-M-Serie ("Mini DGUS"), wie sie ADVi3++ fuer
+    das DMT48270M043 im Wanhao i3 Plus sendet und empfaengt."""
+
+    def rahmen(self, zeilen):
+        return list(ds.dgus_rahmen(ds.nur_frames(ds.lese_log(zeilen))))
+
+    def test_seitenwechsel_ueber_register_03(self):
+        r = self.rahmen(["0 A 5a a5 04 80 03 00 05"])
+        self.assertEqual(len(r), 1)
+        self.assertEqual(ds.dgus_beschreibung(r[0])[0], "Register schreiben PIC_ID (Seite) = Seite 5")
+
+    def test_vp_schreiben_und_tastendruck(self):
+        r = self.rahmen([
+            "10 A 5a a5 05 82 10 00 03 a7",        # Mainboard: VP 0x1000 = 935
+            "20 B 5a a5 06 83 20 00 01 00 02",     # Display: Taste an VP 0x2000, Code 2
+        ])
+        text0, vp0, d0 = ds.dgus_beschreibung(r[0])
+        self.assertEqual((vp0, d0), (0x1000, b"\x03\xa7"))
+        self.assertIn("03A7(935)", text0)
+        text1, vp1, _ = ds.dgus_beschreibung(r[1])
+        self.assertEqual(vp1, 0x2000)
+        self.assertIn("meldet 0002(2)", text1)
+
+    def test_lese_anfrage_ist_keine_variable(self):
+        r = self.rahmen(["0 A 5a a5 04 83 10 00 02"])
+        text, vp, _ = ds.dgus_beschreibung(r[0])
+        self.assertIsNone(vp)
+        self.assertEqual(text, "VP lesen 0x1000, 2 Wort")
+
+    def test_rahmen_ueber_zwei_snifferzeilen_und_mehrere_in_einer(self):
+        r = self.rahmen([
+            "0 A 5a a5 05 82 10",
+            "1 A 00 00 01 5a a5 04 80 03 00 02 ff",   # Rest, dann ganzer Rahmen, dann Muell
+        ])
+        self.assertEqual([x.cmd for x in r], [0x82, 0x80])
+        self.assertEqual(r[0].nutz, b"\x10\x00\x00\x01")
+
+    def test_crc_wird_erkannt_und_abgeschnitten(self):
+        koerper = bytes.fromhex("82100003a7")
+        crc = ds._crc16_modbus(koerper).to_bytes(2, "little")
+        roh = b"\x5a\xa5" + bytes([len(koerper) + 2]) + koerper + crc
+        r = self.rahmen(["0 A " + roh.hex(" ")])
+        self.assertTrue(r[0].crc)
+        self.assertEqual(r[0].nutz, b"\x10\x00\x03\xa7")
+
+    def test_dgus2_quittung(self):
+        r = self.rahmen(["0 B 5a a5 03 82 4f 4b"])
+        self.assertEqual(ds.dgus_beschreibung(r[0])[0], "Quittung OK")
+
+    def test_aenderungen_mit_markierung(self):
+        log = [
+            "0 A 5a a5 05 82 10 00 03 a7",
+            "100 A 5a a5 05 82 10 00 03 a7",   # unveraendert: bei --changes still
+            "# bruehtemp 93.5 -> 94.0",
+            "200 A 5a a5 05 82 10 00 03 ac",
+        ]
+        out = io.StringIO()
+        vps = ds.cmd_dgus(list(ds.lese_log(log)), nur_aenderungen=True, out=out)
+        zeilen = out.getvalue().splitlines()
+        self.assertEqual(vps[0x1000], b"\x03\xac")
+        self.assertEqual(sum("VP schreiben 0x1000" in z for z in zeilen), 2)
+        i = zeilen.index("-- bruehtemp 93.5 -> 94.0")
+        self.assertIn("03AC(940)", zeilen[i + 1])
+
+    def test_markierung_bleibt_hinter_frames_mit_gleicher_zeit(self):
+        # Zwei Rahmen in EINER Snifferzeile, danach die Markierung. Frueher
+        # wurde nach Zeit einsortiert und die Markierung landete davor.
+        log = ["150 A 5a a5 05 82 10 00 03 a2 5a a5 05 82 10 02 04 e2", "# danach", "151 A 5a a5 05 82 10 00 03 a7"]
+        out = io.StringIO()
+        ds.cmd_dgus(list(ds.lese_log(log)), out=out)
+        zeilen = out.getvalue().splitlines()
+        i = zeilen.index("-- danach")
+        self.assertIn("0x1002", zeilen[i - 1])
+        self.assertIn("03A7", zeilen[i + 1])
+
+    def test_eigener_kopf_wird_erkannt(self):
+        # Bezzera Duo: Kopf C6 A5 statt 5A A5 (R3 in CONFIG.txt umgestellt).
+        log = ["0 B c6 a5 04 80 03 00 5a c6 a5 04 83 00 00 01", "3 A c6 a5 06 83 00 00 01 00 01"]
+        out = io.StringIO()
+        vps = ds.cmd_dgus(list(ds.lese_log(log)), out=out)
+        self.assertIn("Rahmenkopf C6 A5", out.getvalue())
+        self.assertIn("Seite 90", out.getvalue())
+        self.assertEqual(vps[0x0000], b"\x00\x01")
+
+    def test_stats_verweist_auf_dgus(self):
+        out = io.StringIO()
+        ds.cmd_stats([ds.Frame(0, "A", bytes.fromhex("5aa50480030005"))], out=out)
+        self.assertIn("`dgus` benutzen", out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="960" viewBox="0 0 1200 960" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <pattern id="loch" width="20" height="20" patternUnits="userSpaceOnUse">
+      <rect x="7" y="7" width="6" height="6" rx="1" fill="#3a3a3a"/>
+    </pattern>
+    <filter id="schatten" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity=".25"/></filter>
+  </defs>
+  <rect width="1200" height="960" fill="#f3efe8"/>
+  <text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#222">Bezzera Duo · ESP32-Bridge auf dem Breadboard</text>
+  <text x="600" y="66" text-anchor="middle" font-size="15" fill="#555">Netzstecker der Maschine gezogen · Tank leer · ESP32 per USB am Mac · 5V-Pin des ESP32 bleibt frei</text>
+
+  <!-- Breadboard -->
+  <g filter="url(#schatten)">
+    <rect x="230" y="100" width="740" height="330" rx="10" fill="#fbfbf7" stroke="#d6d3c8"/>
+  </g>
+  <!-- GND-Schiene oben -->
+  <rect x="250" y="112" width="700" height="34" rx="4" fill="#eef2fb"/>
+  <line x1="255" y1="116" x2="945" y2="116" stroke="#2f6fdc" stroke-width="3"/>
+  <text x="600" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="#2f6fdc">blaue Schiene oben = GND</text>
+  <rect x="380" y="120" width="560" height="22" fill="url(#loch)"/>
+  <!-- Reihen -->
+  <rect x="250" y="160" width="700" height="250" fill="url(#loch)"/>
+  <line x1="250" y1="285" x2="950" y2="285" stroke="#d6d3c8" stroke-width="6"/>
+  <g font-size="11" fill="#999" text-anchor="middle">
+    <text x="330" y="156">A</text><text x="530" y="156">B</text><text x="670" y="156">C</text><text x="770" y="156">D</text><text x="870" y="156">E</text>
+  </g>
+  <!-- markierte Reihen (senkrechte Streifen = verbundene Löcher) -->
+  <g opacity=".22">
+    <rect x="320" y="162" width="20" height="120" fill="#e4572e"/>
+    <rect x="520" y="162" width="20" height="120" fill="#2e9e44"/>
+    <rect x="660" y="162" width="20" height="120" fill="#888"/>
+    <rect x="760" y="162" width="20" height="120" fill="#e0b400"/>
+    <rect x="860" y="162" width="20" height="120" fill="#e0b400"/>
+  </g>
+
+  <!-- Maschine-Kabel links -->
+  <g filter="url(#schatten)"><rect x="30" y="170" width="120" height="170" rx="8" fill="#2d2d2d"/></g>
+  <text x="90" y="160" text-anchor="middle" font-size="16" font-weight="700" fill="#222">MASCHINE</text>
+  <!-- Display-Kabel rechts -->
+  <g filter="url(#schatten)"><rect x="1050" y="170" width="120" height="170" rx="8" fill="#2d2d2d"/></g>
+  <text x="1110" y="160" text-anchor="middle" font-size="16" font-weight="700" fill="#222">DISPLAY</text>
+
+  <!-- ESP32 unten -->
+  <g filter="url(#schatten)">
+    <rect x="330" y="560" width="540" height="180" rx="10" fill="#1d4f91"/>
+    <rect x="520" y="590" width="160" height="110" rx="6" fill="#c9ccd2"/>
+    <text x="600" y="640" text-anchor="middle" font-size="15" font-weight="700" fill="#333">ESP32-S3</text>
+    <text x="600" y="660" text-anchor="middle" font-size="12" fill="#333">Waveshare ETH</text>
+    <rect x="570" y="728" width="60" height="22" rx="4" fill="#9aa0a8"/>
+    <text x="600" y="780" text-anchor="middle" font-size="13" fill="#444">USB-C → Mac</text>
+  </g>
+  <!-- ESP32-Pins -->
+  <g font-size="13" font-weight="700" fill="#fff" text-anchor="middle">
+    <circle cx="370" cy="580" r="7" fill="#e8c14a"/><text x="370" y="604">GND</text>
+    <circle cx="430" cy="580" r="7" fill="#e8c14a"/><text x="430" y="604">15</text>
+    <circle cx="490" cy="580" r="7" fill="#e8c14a"/><text x="490" y="604">16</text>
+    <circle cx="730" cy="580" r="7" fill="#e8c14a"/><text x="730" y="604">17</text>
+    <circle cx="790" cy="580" r="7" fill="#e8c14a"/><text x="790" y="604">18</text>
+    <circle cx="840" cy="580" r="7" fill="#e8c14a"/><text x="840" y="604">5V</text>
+  </g>
+  <text x="840" y="628" text-anchor="middle" font-size="11" fill="#ffd2d2">frei!</text>
+
+  <!-- Hilfsfunktion Kabel: dicke Linie mit dunklem Rand -->
+  <!-- braun: Maschine → GND-Schiene -->
+  <path d="M150 190 C200 190 250 128 390 128" stroke="#3b2414" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M150 190 C200 190 250 128 390 128" stroke="#8b5a2b" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <!-- braun: Display → GND-Schiene -->
+  <path d="M1050 190 C1000 190 960 128 930 128" stroke="#3b2414" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M1050 190 C1000 190 960 128 930 128" stroke="#8b5a2b" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <!-- GND-Schiene → ESP GND (schwarzes Brückenkabel) -->
+  <path d="M410 128 C410 300 370 450 370 572" stroke="#111" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+  <!-- weiß Maschine → 10k → Reihe A -->
+  <path d="M150 230 C200 230 230 190 270 190" stroke="#777" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M150 230 C200 230 230 190 270 190" stroke="#fdfdfd" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <!-- 10k Widerstand von x=270 bis Reihe A (x=330) -->
+  <line x1="270" y1="190" x2="330" y2="190" stroke="#999" stroke-width="2"/>
+  <rect x="282" y="183" width="38" height="14" rx="6" fill="#d9bc8c" stroke="#a88a58"/>
+  <rect x="288" y="183" width="4" height="14" fill="#6b3b12"/><rect x="296" y="183" width="4" height="14" fill="#111"/><rect x="304" y="183" width="4" height="14" fill="#f08a00"/>
+  <text x="296" y="214" text-anchor="middle" font-size="12" font-weight="700" fill="#b03a1a">10 kΩ</text>
+  <!-- 20k von Reihe A zur GND-Schiene -->
+  <line x1="330" y1="230" x2="330" y2="136" stroke="#999" stroke-width="2"/>
+  <rect x="323" y="160" width="14" height="38" rx="6" fill="#d9bc8c" stroke="#a88a58"/>
+  <rect x="323" y="166" width="14" height="4" fill="#d11"/><rect x="323" y="174" width="14" height="4" fill="#111"/><rect x="323" y="182" width="14" height="4" fill="#f08a00"/>
+  <text x="344" y="178" font-size="12" font-weight="700" fill="#b03a1a">20 kΩ</text>
+  <!-- Reihe A → GPIO17 -->
+  <path d="M330 262 C330 420 730 440 730 572" stroke="#e4572e" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+  <!-- grün Maschine → Reihe B ← grün Display -->
+  <path d="M150 270 C250 270 400 200 530 200" stroke="#0f4d1c" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M150 270 C250 270 400 200 530 200" stroke="#2e9e44" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M1050 270 C900 270 700 240 530 240" stroke="#0f4d1c" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M1050 270 C900 270 700 240 530 240" stroke="#2e9e44" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+  <!-- weiß Display → Reihe C → GPIO18 -->
+  <path d="M1050 230 C900 230 800 190 670 190" stroke="#777" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M1050 230 C900 230 800 190 670 190" stroke="#fdfdfd" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M670 262 C670 420 790 450 790 572" stroke="#999" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+  <!-- gelb Display → Reihe E → GPIO15 -->
+  <path d="M1050 310 C1000 310 930 180 870 180" stroke="#7a6200" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M1050 310 C1000 310 930 180 870 180" stroke="#f2cc0c" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M870 262 C870 480 430 440 430 572" stroke="#f2cc0c" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+  <!-- gelb Maschine → Reihe D → GPIO16 -->
+  <path d="M150 310 C300 330 650 200 770 200" stroke="#7a6200" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M150 310 C300 330 650 200 770 200" stroke="#f2cc0c" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M770 262 C770 470 490 430 490 572" stroke="#c9a400" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="10 5"/>
+
+  <!-- Aderbeschriftung in den Steckerkaesten -->
+  <g font-size="13" font-weight="700" text-anchor="end">
+    <text x="140" y="195" fill="#c8915a">braun ●</text><text x="140" y="235" fill="#fff">weiß ●</text><text x="140" y="275" fill="#4cd06a">grün ●</text><text x="140" y="315" fill="#f2cc0c">gelb ●</text>
+  </g>
+  <g font-size="13" font-weight="700">
+    <text x="1060" y="195" fill="#c8915a">● braun</text><text x="1060" y="235" fill="#fff">● weiß</text><text x="1060" y="275" fill="#4cd06a">● grün</text><text x="1060" y="315" fill="#f2cc0c">● gelb</text>
+  </g>
+  <!-- Legende -->
+  <g font-size="13" fill="#222">
+    <text x="30" y="850" font-weight="700" font-size="15">Verbindungen</text>
+    <text x="30" y="874">Reihe A: Maschine weiß → 10 kΩ → A, A → 20 kΩ → GND, A → GPIO17</text>
+    <text x="30" y="894">Reihe B: Maschine grün + Display grün (+5 V), NICHT zum ESP32</text>
+    <text x="30" y="914">Reihe C: Display weiß → GPIO18   ·   Reihe D: Maschine gelb → GPIO16   ·   Reihe E: Display gelb → GPIO15</text>
+  </g>
+  <g font-size="13" fill="#222">
+    <text x="900" y="850" font-weight="700" font-size="15">GND-Schiene</text>
+    <text x="900" y="874">Maschine braun</text>
+    <text x="900" y="894">Display braun</text>
+    <text x="900" y="914">ESP32 GND</text>
+  </g>
+  <text x="600" y="945" text-anchor="middle" font-size="12" fill="#777">Widerstandsfarben: 10 kΩ braun-schwarz-orange · 20 kΩ rot-schwarz-orange (22 kΩ rot-rot-orange geht auch)</text>
+</svg>
