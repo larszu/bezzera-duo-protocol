@@ -364,6 +364,12 @@ static float flussBerechnen() {
   return k >= 3 && nenner > 1e-9 ? (float)((k * sxy - sx * sy) / nenner) : 0;
 }
 
+// Die Dauerausgabe-Taste startet UND stoppt. Gedrueckt wird deshalb nur,
+// solange nachweislich etwas fliesst; sonst wuerde der Druck einen Bezug
+// starten (z. B. wenn die Volumetrik gerade selbst gestoppt hat).
+static const float FLUSS_MIN_STOPP = 0.5f;  // g/s
+static bool fliesst() { return bezugZustand == BZ_LAEUFT && fluss >= FLUSS_MIN_STOPP; }
+
 static void stoppAusgang(bool an) {
   stoppAktiv = an;
   if (cfg.stoppPin >= 0) digitalWrite(cfg.stoppPin, an == cfg.stoppHigh ? HIGH : LOW);
@@ -450,9 +456,13 @@ static void bezugLoop() {
   uint32_t dauer = millis() - bezugStartMs;
   if (!stoppGesendet && cfg.ziel > 0 && bezugG + cfg.vorlauf >= cfg.ziel) {
     stoppGesendet = true;
-    stoppSeitMs = millis();
-    stoppAusgang(true);
-    ereignis("- Ziel erreicht: %.1f g + Vorlauf %.1f g, Stopp%s", bezugG, cfg.vorlauf, cfg.stoppPin >= 0 ? "-Ausgang an" : "-Meldung");
+    bool druecken = cfg.stoppPin >= 0 && fliesst();
+    if (druecken) {
+      stoppSeitMs = millis();
+      stoppAusgang(true);
+    }
+    ereignis("- Ziel erreicht: %.1f g + Vorlauf %.1f g, %s", bezugG, cfg.vorlauf,
+             druecken ? "Stopp-Taste gedrueckt" : cfg.stoppPin >= 0 ? "kein Druck, es fliesst nichts mehr" : "Meldung");
     mqttEreignis("ziel_erreicht");
   }
   // Ende: 3 s kein Durchfluss (und kein Pumpendruck, falls bekannt)
@@ -481,7 +491,7 @@ static bool aktion(const String &a) {
   else if (a == "tara") waageTara();
   else if (a == "abbruch") { if (bezugZustand == BZ_LAEUFT) bezugBeenden(true); }
   else if (a == "stopp") {  // Stopp-Taste von Hand, z. B. aus Home Assistant
-    if (cfg.stoppPin < 0) return false;
+    if (cfg.stoppPin < 0 || !fliesst()) return false;  // sonst startet der Druck einen Bezug
     stoppSeitMs = millis();
     stoppAusgang(true);
     ereignis("- Stopp-Taste gedrueckt (von Hand)");
