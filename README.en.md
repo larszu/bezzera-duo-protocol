@@ -31,7 +31,7 @@
 ## ✨ Overview
 
 The Bezzera Duo DE/MN and the identical Matrix have a 3.5" touch display
-(5963201.xx) connected to the mainboard (7661047.xx). This repo describes **what
+(5963169.xx, from version 2.2 5963201.xx) connected to the mainboard (7661047.xx). This repo describes **what
 runs over the four wires in between** and provides the tools to read it and to
 speak it yourself. The goal is the same as in the Reddit project by
 *Vivid-Ad-2039*: an ESP32 that reads and writes registers.
@@ -710,7 +710,8 @@ Tests: `python3 -m unittest discover -s tests`
 | `DMT32240M035_07WTZ4` | no datasheet for exactly this variant; `_07` and `Z4` probably customer-specific |
 
 1st-line lists `7661047PR` as mainboard „1.2“, while the display reports „FW: 2.1“ —
-either it was updated later, or the numbers do not mean the same thing.
+either it was updated later, or the label only carries the base number.
+All versions and where incompatibilities come from: [`docs/versionen.en.md`](docs/versionen.en.md).
 
 </details>
 
