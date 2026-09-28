@@ -85,7 +85,7 @@ button:hover{background:#244170}
     <div class="form">VP <input id="f_vp" value="0x0050"> Worte <input id="f_w" class="breit" value="10 11 12 13 14 15 16 17 18"><button onclick="cmd('w '+v('f_vp')+' '+v('f_w'))">schreiben</button></div>
     <div class="form">Roh <select id="f_ziel"><option value="d">→ Display</option><option value="m">→ Mainboard</option></select>
       <input id="f_roh" class="breit" value="c6 a5 03 81 03 02"><button onclick="cmd(v('f_ziel')+' '+v('f_roh'))">senden</button></div>
-    <p class="hinweis">Tastendruck: Die nächsten n Antworten des Displays auf „VP lesen“ werden überschrieben, das Mainboard sieht den Wert wie einen Druck. Welche Werte welche Taste sind, ist noch nicht vollständig bekannt.</p>
+    <p class="hinweis">Tastendruck: Die nächsten n Antworten des Displays auf „VP lesen“ werden überschrieben, das Mainboard sieht den Wert wie einen Druck. Welche Taste welchen Wert schickt, steht in der Tastentabelle aus dem Display-Flash (docs/tasten.json); ein Klick auf das Display oben nutzt sie direkt.</p>
   </section>
 
   <section>
@@ -180,18 +180,20 @@ setInterval(hole,700); hole(); addEventListener("resize",zeichne);
 
 <script>
 // ─── Display-Nachbau (320×240 wie das DMT32240) ────────────────────────────
-const FARBE={bg1:"#0c1424",bg2:"#05080f",rahmen:"#cfeeff",cyan:"#46d2ff",orange:"#ff9d45",text:"#f2f8ff",leise:"#7f93b3"};
+// Farben nach den Bildschirmfotos im Bezzera-Handbuch (Matrix/Duo, 320x240):
+// schwarzer Grund, tuerkise Linien und Schrift, graue Knoepfe.
+const FARBE={bg1:"#000",bg2:"#000",rahmen:"#4fb8bf",cyan:"#5cc8cf",hell:"#9fe6ea",orange:"#ff9d45",rot:"#e3161b",text:"#f2f6f7",leise:"#8a9699"};
 const DE=1, sprachIndex=s=>Math.min(2,Math.floor(Math.max(0,s)/100));
 const T={ // [EN, DE, IT]
  start:["press to start","Für Start drücken","premere per accendere"],
  alarm:["Alarm","Alarm","Allarme"],
- 2:["Loading time out","Timeout Beladen","Timeout carico"],
+ 2:["Loading time out\nrestart loading","Timeout Beladen\nNeustart","Timeout carico\nSpegnere e riaccendere"],
  3:["Please fill water tank","Bitte Tank füllen","Riempire serbatoio"],
  4:["NTC failure","Fehler Sonde NTC","Errore sonda NTC"],
  56:["Necessary maintenance","Wartung erforderlich","Necessaria manutenzione"],
- 77:["No volumetric signal","Kein volumetrisches Signal","Nessun segnale volumetrico"],
+ 77:["No volumetric signal!\nDosage OFF","Kein volumetrisches Signal\nVolumetrische Dosierung OFF","Nessun segnale volumetrico\nDosaggio OFF"],
  89:["Change water filter","Wasserfilter wechseln","Sostituire filtro acqua"],
- 91:["Washing process interrupted","Unterbrochener Waschvorgang","Processo di lavaggio interrotto"],
+ 91:["Attention!\nWashing process interrupted","Achtung!\nUnterbrochener Waschvorgang","Attenzione!\nProcesso di lavaggio interrotto"],
  einst:["Settings","Einstellungen","Impostazioni"], tech:["Technician menu","Technisches Menü","Menu tecnico"],
  kaffee:["Coffee settings","Einstellungen Kaffee","Impostazioni caffè"], tee:["Tea settings","Tee Einstellungen","Impostazioni The"],
  temp:["Temperature","Temperatur","Temperatura"], kessel:["BOILER","KESSEL","CALDAIA"], prio:["PRIORITY","PRIORITÄT","PRIORITA'"],
@@ -217,14 +219,20 @@ function geh(s){cmd("p "+s)}
 function taste(name){const e=$("log"); e.textContent+=`Taste „${name}“ auf Seite ${dspSeite}: Code noch unbekannt, nichts gesendet\n`; e.scrollTop=e.scrollHeight}
 
 const defs=`<defs>
-<linearGradient id="gbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${FARBE.bg1}"/><stop offset="1" stop-color="${FARBE.bg2}"/></linearGradient>
-<linearGradient id="gzeile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a4b73"/><stop offset=".5" stop-color="#132a47"/><stop offset="1" stop-color="#0b1a2e"/></linearGradient>
-<linearGradient id="gknopf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6f8c"/><stop offset="1" stop-color="#26344a"/></linearGradient>
-<linearGradient id="ghell" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e8f6ff"/><stop offset=".6" stop-color="#7fd0ff"/><stop offset="1" stop-color="#1c3a5c"/></linearGradient>
-<radialGradient id="gglow"><stop offset="0" stop-color="#bff0ff" stop-opacity=".9"/><stop offset=".45" stop-color="#46d2ff" stop-opacity=".35"/><stop offset="1" stop-color="#46d2ff" stop-opacity="0"/></radialGradient>
-<filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<linearGradient id="gbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#000"/></linearGradient>
+<linearGradient id="gtitel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3f8c91"/><stop offset=".55" stop-color="#16393c"/><stop offset="1" stop-color="#000"/></linearGradient>
+<linearGradient id="gzeile" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2b4447"/><stop offset=".55" stop-color="#101a1b"/><stop offset="1" stop-color="#000"/></linearGradient>
+<linearGradient id="ghell" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#cdf3f5"/><stop offset=".45" stop-color="#4c9da2"/><stop offset="1" stop-color="#000"/></linearGradient>
+<linearGradient id="gknopf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5e656a"/><stop offset=".5" stop-color="#2d3236"/><stop offset="1" stop-color="#1a1d20"/></linearGradient>
+<linearGradient id="gok" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b7176"/><stop offset="1" stop-color="#23272b"/></linearGradient>
+<linearGradient id="gleiste" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe6ea"/><stop offset="1" stop-color="#1b4a4e"/></linearGradient>
+<linearGradient id="gtrenn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5cc8cf" stop-opacity="0"/><stop offset=".5" stop-color="#bff0f2"/><stop offset="1" stop-color="#5cc8cf" stop-opacity="0"/></linearGradient>
+<linearGradient id="gheiz" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e3161b"/><stop offset=".5" stop-color="#ff9d2a"/><stop offset="1" stop-color="#ff9d2a" stop-opacity="0"/></linearGradient>
+<radialGradient id="gscheibe"><stop offset="0" stop-color="#2f5b5f"/><stop offset=".7" stop-color="#0c1718"/><stop offset="1" stop-color="#000"/></radialGradient>
+<radialGradient id="gglow"><stop offset="0" stop-color="#2f5b5f"/><stop offset="1" stop-color="#000"/></radialGradient>
+<filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation=".6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>`;
-const txt=(x,y,t,o={})=>`<text x="${x}" y="${y}" fill="${o.f||FARBE.text}" font-size="${o.s||12}" font-weight="${o.w||700}" text-anchor="${o.a||"start"}" font-family="Arial Rounded MT Bold,Arial,sans-serif" ${o.glow?'filter="url(#glow)"':""}>${t}</text>`;
+const txt=(x,y,t,o={})=>`<text x="${x}" y="${y}" fill="${o.f||FARBE.text}" font-size="${o.s||12}" font-weight="${o.w||400}" text-anchor="${o.a||"start"}" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" ${o.glow?'filter="url(#glow)"':""}>${t}</text>`;
 const klick=()=>"";  // Klicks wertet die Tastentabelle aus (beruehre())
 
 function rahmen(titel){
@@ -359,7 +367,6 @@ function hebel(x,y,richtung){ // Siebträgerhebel der Brühgruppe, stilisiert
 }
 
 const SEITEN_DE={
- 102:{typ:"alarm",icon:"warn",text:"Timeout Beladen\nNeustart"},
  106:{typ:"start1"},183:{typ:"start1"},
  109:{typ:"prio"},111:{typ:"prio"},
  110:{typ:"wert",titel:"Vorbrühen",label:"Sekunden Vorbrühen",vp:0x5C,div:10,st:1,suffix:"″"},
@@ -416,11 +423,11 @@ function seiteBaukasten(s,j,k,d){
   switch(def.typ){
   case "leer": return `<rect width="320" height="240" fill="#e9eef6"/>`;
   case "alarm": return rahmen(tx("alarm",s))+icon(def.icon,160,86)+mehrzeilig(160,132,def.text,{s:13})+fussLinie(176)+R.map(r=>kn(r,"OK",18)).join("");
-  case "info": return (def.titel?rahmen(def.titel):rahmenOhneTitel())+(def.icon=="sperre"?`<g transform="translate(160,80)" stroke="#cfeeff" stroke-width="3" fill="none" filter="url(#glow)"><path d="M-14 -12 l20 -8 l10 20 l-20 8z"/><path d="M-4 4 l6 14"/></g>`:"")+
+  case "info": return dialog(def.titel||"")+(def.icon=="sperre"?SYM.tuch(160,80,1.8):"")+
       mehrzeilig(160,def.titel?120:118,def.text,{s:12});
   case "frage": { // Meldung mit ESC/OK: rechte Taste OK, linke ESC
     const kn2=R.slice().sort((a,b)=>a.x0-b.x0);
-    return (def.titel?rahmen(def.titel):rahmenOhneTitel())+mehrzeilig(160,def.titel?96:92,def.text,{s:12})+fussLinie(172)+
+    return dialog(def.titel||"")+mehrzeilig(160,def.titel?96:92,def.text,{s:12})+fussLinie(172)+
       kn2.map((r,i)=>kn(r,kn2.length>1&&i==0?"ESC":"OK",13)).join("");
   }
   case "prio": {
@@ -464,11 +471,11 @@ function seiteBaukasten(s,j,k,d){
   }
   case "liste2": return rahmen(def.titel)+def.z.map((z,i)=>zeilenBox(9,31+i*49,274,39)+txt(22,56+i*49,z,{s:13,glow:1})).join("")+okEcke();
   case "sprache": {
-    const flagge=[["#009246","#fff","#ce2b37"],["#012169","#fff","#c8102e"],["#000","#dd0000","#ffce00"]];
-    return rahmen(def.titel)+["Italiano","English","Deutsch"].map((z,i)=>{const y=28+i*50, f=flagge[i];
-      const fl=i==2?`<rect x="18" y="${y+12}" width="22" height="5" fill="${f[0]}"/><rect x="18" y="${y+17}" width="22" height="5" fill="${f[1]}"/><rect x="18" y="${y+22}" width="22" height="5" fill="${f[2]}"/>`
-        :`<rect x="18" y="${y+12}" width="7" height="15" fill="${f[0]}"/><rect x="25" y="${y+12}" width="8" height="15" fill="${f[1]}"/><rect x="33" y="${y+12}" width="7" height="15" fill="${f[2]}"/>`;
-      return zeilenBox(9,y,185,40,i==def.hell)+fl+txt(50,y+25,z,{s:13,f:i==def.hell?"#0b1a2e":FARBE.text})}).join("")+okEcke();
+    const flagge=(x,y,i)=>i==0?`<rect x="${x}" y="${y}" width="8" height="16" fill="#009246"/><rect x="${x+8}" y="${y}" width="8" height="16" fill="#fff"/><rect x="${x+16}" y="${y}" width="8" height="16" fill="#ce2b37"/>`
+      :i==1?`<rect x="${x}" y="${y}" width="24" height="16" fill="#012169"/><path d="M${x} ${y} L${x+24} ${y+16} M${x+24} ${y} L${x} ${y+16}" stroke="#fff" stroke-width="3.2"/><path d="M${x} ${y} L${x+24} ${y+16} M${x+24} ${y} L${x} ${y+16}" stroke="#c8102e" stroke-width="1.2"/><path d="M${x+12} ${y} V${y+16} M${x} ${y+8} H${x+24}" stroke="#fff" stroke-width="5"/><path d="M${x+12} ${y} V${y+16} M${x} ${y+8} H${x+24}" stroke="#c8102e" stroke-width="2.6"/>`
+      :`<rect x="${x}" y="${y}" width="24" height="5.4" fill="#000"/><rect x="${x}" y="${y+5.3}" width="24" height="5.4" fill="#dd0000"/><rect x="${x}" y="${y+10.6}" width="24" height="5.4" fill="#ffce00"/>`;
+    return rahmen(def.titel)+["Italiano","English","Deutsch"].map((z,i)=>{const y=28+i*50;
+      return zeilenBox(8,y,196,40,i==def.hell)+flagge(16,y+12,i)+txt(48,y+26,z,{s:15,f:i==def.hell?"#0b1a1c":FARBE.text})}).join("")+okEcke();
   }
   case "led": case "licht": {
     const vpH=def.typ=="led"?0x21:0x29, v=vpw(vpH), [m,p]=T_.pm(vpH), y=def.typ=="led"?108:92;
@@ -500,11 +507,11 @@ function seiteBaukasten(s,j,k,d){
   }
   case "spuelen": {
     const kurz=T_.code(6,0), komplett=T_.code(6,1), esc=R.find(r=>r.t[7]==0);
-    return rahmen("Waschen")+txt(160,62,"Rückspülen der Brühgruppe",{s:12,a:"middle",glow:1})+(kurz?kn(kurz,"KURZ",15):"")+(komplett?kn(komplett,"COMPLET",15):"")+fussLinie(172)+(esc?kn(esc,"ESC",14):"");
+    return dialog("Waschen")+txt(160,62,"Rückspülen der Brühgruppe",{s:12,a:"middle",glow:1})+(kurz?kn(kurz,"KURZ",15):"")+(komplett?kn(komplett,"COMPLET",15):"")+fussLinie(172)+(esc?kn(esc,"ESC",14):"");
   }
   case "hebel": {
     const k=R.slice().sort((a,b)=>a.x0-b.x0).filter(r=>r.x1-r.x0<150);
-    return rahmen(def.titel)+hebel(30,110,def.richtung)+mehrzeilig(230,def.knoepfe&&def.knoepfe.length==2?60:56,def.text,{s:11,zh:13})+
+    return dialog(def.titel)+hebel(24,120,def.richtung)+mehrzeilig(230,def.knoepfe&&def.knoepfe.length==2?60:56,def.text,{s:11,zh:13})+
       (def.knoepfe?fussLinie(172)+k.map((r,i)=>kn(r,def.knoepfe[i]||"OK",13)).join(""):"");
   }
   case "gruppe": {
@@ -549,6 +556,199 @@ function zeigeDisplay(j,k,d){
 }
 </script>
 
+
+<script>
+// ─── Stil nach dem Handbuch: Rahmen, Knöpfe, Symbole, Startbildschirm ──────
+// Überschreibt die gleichnamigen Funktionen des ersten Nachbaus. Vorlage sind
+// die Bildschirmfotos (320×240) im Bezzera-Handbuch „Matrix Duo“ (2018/2020).
+const TK=FARBE.cyan;
+T.start=["press to start","Für Start drücken","premere per accendere"];
+T.dal=["Dal 1901","Dal 1901","Dal 1901"];
+
+// Symbole, alle in Türkis, Mittelpunkt x/y, Größe ~ s
+const SYM={
+ tasse:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})" fill="none" stroke="${TK}" stroke-width="2.2"><path d="M-9 -6 H7 V2 Q7 9 -1 9 Q-9 9 -9 2 Z"/><path d="M7 -3 Q13 -3 13 1 Q13 5 7 4"/><path d="M-11 11 H9" stroke-width="1.5"/></g>`,
+ dampf:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})" fill="none" stroke="${TK}" stroke-width="2"><path d="M-8 9 Q-12 5 -8 1 Q-10 -4 -4 -5 Q-2 -10 3 -7 Q9 -8 8 -2 Q13 1 9 6 Q8 10 3 9 Z"/><path d="M-6 -10 Q-9 -14 -5 -16"/></g>`,
+ wasser:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})" fill="${TK}"><text x="-9" y="-2" font-size="8" fill="${TK}" font-family="Arial">1</text><path d="M-2 -8 q-3 4 0 5 q3 -1 0 -5z"/><path d="M4 -10 q-3 4 0 5 q3 -1 0 -5z"/><path d="M-6 3 q2 -2 4 0 t4 0 t4 0 M-6 7 q2 -2 4 0 t4 0 t4 0" fill="none" stroke="${TK}" stroke-width="1.4"/></g>`,
+ zahnrad:(x,y,s=1)=>{let z="";for(let i=0;i<8;i++){z+=`<rect x="-2.6" y="-13" width="5.2" height="6" rx="1" transform="rotate(${i*45})"/>`}return `<g transform="translate(${x},${y}) scale(${s})" fill="${TK}">${z}<circle r="9"/><circle r="3.6" fill="#000"/></g>`},
+ dusche:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})"><path d="M-12 -12 Q-4 -16 0 -8" fill="none" stroke="${TK}" stroke-width="3"/><path d="M-4 -8 L6 -12 L10 -2 L0 2 Z" fill="${TK}"/><g stroke="${TK}" stroke-width="1.6">${[[2,5],[6,3],[10,1],[4,9],[8,7],[12,5],[6,13],[10,11],[14,9]].map(([a,b])=>`<path d="M${a} ${b} l1.5 1.5"/>`).join("")}</g></g>`,
+ power:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})" fill="none" stroke="${TK}" stroke-width="3" stroke-linecap="round"><path d="M-5 -9 A11 11 0 1 0 5 -9" stroke-dasharray="40 3 3 3 3 3"/><path d="M0 -14 V-2"/></g>`,
+ tuch:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})"><path d="M-12 -4 L2 -13 L12 1 L-2 11 Z" fill="${TK}"/><path d="M2 -13 L5 -6 L12 1" fill="#2d6f73"/><path d="M-4 2 q-2 -6 2 -7 q1 -4 4 -2 q2 -3 4 0 q3 -1 3 2 l1 7 q0 5 -6 6 q-6 0 -8 -6z" fill="#dff7f8" stroke="#000" stroke-width=".8"/></g>`,
+ schluessel:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s}) rotate(45)" fill="${TK}"><path d="M-2.5 -4 H2.5 V13 Q2.5 16 0 16 Q-2.5 16 -2.5 13 Z"/><path d="M-7 -10 A8 8 0 1 0 7 -10 L3 -10 L3 -4 L-3 -4 L-3 -10 Z"/></g>`,
+ sprache:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})" fill="none" stroke="${TK}" stroke-width="1.6"><rect x="-11" y="-9" width="12" height="9" rx="2" fill="${TK}"/><text x="-8" y="-2" font-size="7" fill="#000" stroke="none" font-weight="700" font-family="Arial">A</text><rect x="-2" y="-3" width="13" height="10" rx="2" fill="#000"/><path d="M1 7 l-2 4 l5 -4"/><text x="1.5" y="5" font-size="7" fill="${TK}" stroke="none" font-family="Arial">あ</text></g>`,
+ winkel:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})" fill="${TK}"><path d="M-10 10 V-10 L10 10 Z"/><path d="M-6 6 V-1 L1 6 Z" fill="#000"/></g>`,
+ birne:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})"><circle cy="-3" r="9" fill="${TK}"/><circle cx="-3" cy="-5" r="1.4" fill="#000"/><circle cx="3" cy="-5" r="1.4" fill="#000"/><circle cy="0" r="1.4" fill="#000"/><rect x="-4.5" y="6" width="9" height="2" fill="${TK}"/><rect x="-4" y="9" width="8" height="2" fill="${TK}"/></g>`,
+ tank:(x,y,s=1,f=TK)=>`<g transform="translate(${x},${y}) scale(${s})"><path d="M-11 -9 V8 H11 V-9" fill="none" stroke="${f}" stroke-width="2.4"/><path d="M-11 -3 H-7 M7 -3 H11" stroke="${f}" stroke-width="2"/><path d="M0 -7 q-5 6 0 9 q5 -3 0 -9z" fill="${f}"/></g>`,
+ tropfen:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})" fill="${TK}"><path d="M-4 -11 q-6 7 0 10 q6 -3 0 -10z"/><path d="M4 -1 q-6 7 0 10 q6 -3 0 -10z"/></g>`,
+ hahn:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})" fill="none" stroke="${TK}" stroke-width="2.4"><path d="M-8 8 V-6 H6 V-1"/><path d="M6 3 q-2 3 0 4 q2 -1 0 -4z" fill="${TK}" stroke="none"/></g>`,
+ kalender:(x,y,s=1,uhr=false)=>`<g transform="translate(${x},${y}) scale(${s})"><rect x="-10" y="-8" width="20" height="18" rx="2" fill="${TK}"/><rect x="-8" y="-3" width="16" height="11" fill="#000"/>${[-6,-1,4].map(a=>`<rect x="${a}" y="-1" width="3" height="3" fill="${TK}"/><rect x="${a}" y="4" width="3" height="3" fill="${TK}"/>`).join("")}<rect x="-6" y="-11" width="2" height="5" fill="${TK}"/><rect x="4" y="-11" width="2" height="5" fill="${TK}"/>${uhr?`<circle cx="8" cy="8" r="6" fill="#000" stroke="${TK}" stroke-width="2"/><path d="M8 5 V8 H10" stroke="${TK}" stroke-width="1.5" fill="none"/>`:`<path d="M3 6 l3 3 l6 -7" stroke="#fff" stroke-width="2" fill="none"/>`}</g>`,
+ filter:(x,y,s=1,f=TK)=>`<g transform="translate(${x},${y}) scale(${s})" fill="${f}">${Array.from({length:10},(_,i)=>`<circle cx="${(10*Math.cos(i*Math.PI/5)).toFixed(1)}" cy="${(10*Math.sin(i*Math.PI/5)).toFixed(1)}" r="1.8"/>`).join("")}<text x="0" y="4" font-size="11" text-anchor="middle" font-weight="700" font-family="Arial">S</text></g>`,
+ warn:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})"><path d="M0 -16 L18 14 H-18 Z" fill="none" stroke="${FARBE.rot}" stroke-width="3.2" stroke-linejoin="round"/><path d="M0 -4 V5" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cy="9.5" r="1.7" fill="#fff"/></g>`,
+ thermo:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})"><rect x="-2.5" y="-11" width="5" height="14" rx="2.5" fill="none" stroke="${TK}" stroke-width="1.8"/><circle cy="6" r="4.5" fill="${TK}"/></g>`,
+ key:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s}) rotate(-35)"><circle cx="-6" r="5" fill="none" stroke="${TK}" stroke-width="3"/><path d="M-1 0 H12 M8 0 V4 M11 0 V3" stroke="${TK}" stroke-width="3"/></g>`,
+};
+
+function schlange(x,y,sk,farbe){ // Bezzera-„Biscione“, vereinfachte Kontur
+  return `<g transform="translate(${x},${y}) scale(${sk})" fill="none" stroke="${farbe}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M-4 -26 q10 -6 14 2 q-4 6 -12 5 q-12 -2 -12 8 q0 9 13 8 q13 -1 13 9 q0 10 -13 9 q-12 -1 -12 7 q0 7 10 7"/>
+  <path d="M-4 -26 l-6 -4 M-4 -26 l-10 1 M-13 -32 l6 12 M-18 -26 l12 0"/><circle cx="6" cy="-24" r="1.2" fill="${farbe}"/></g>`;
+}
+function kopfLogo(x,y,f="#fff"){return schlange(x+6,y+12,.38,f)+txt(x+16,y+11,"BEZZERA",{s:13,w:800,f})+txt(x+27,y+22,"Dal 1901",{s:8,w:700,f})}
+function menueQuadrate(){return `<g fill="${TK}"><rect x="2" y="3" width="8" height="8"/><rect x="2" y="13" width="8" height="8"/><rect x="2" y="23" width="8" height="8"/></g>`}
+function uhr(r){
+  const hm=r?r.slice(11,16):"--:--", dat=r?r.slice(8,10)+"/"+r.slice(5,7)+"/"+r.slice(0,4):"";
+  return `<rect x="0" y="198" width="4" height="42" fill="url(#gleiste)"/>`+txt(8,219,hm,{s:19,w:300,f:TK})+txt(8,231,dat,{s:8,f:TK});
+}
+// Seite mit Titel oben links, türkisem Rahmen und OK-Reiter unten rechts
+function rahmen(titel){
+  return `<rect width="320" height="240" fill="#000"/>`+txt(6,15,titel,{s:13,f:FARBE.text})+
+   `<path d="M2 20 H317 V196 M2 20 V237 H230" fill="none" stroke="${FARBE.rahmen}" stroke-width="1.6"/>`;
+}
+function okEcke(){
+  return `<path d="M230 237 L250 196 H317" fill="none" stroke="${FARBE.rahmen}" stroke-width="1.6"/>`+
+   `<path d="M236 238 L254 200 H318 V238 Z" fill="url(#gok)"/>`+txt(283,231,"OK",{s:28,w:700,a:"middle",f:"#d5f4f6"});
+}
+// Dialogfenster (Alarm, Rückfragen): voller Rahmen, Titelbalken
+function dialog(titel){
+  return `<rect width="320" height="240" fill="#000"/><rect x="2" y="2" width="316" height="236" fill="none" stroke="${FARBE.rahmen}" stroke-width="3"/>`+
+   (titel?`<rect x="3.5" y="3.5" width="313" height="30" fill="url(#gtitel)"/>`+txt(12,26,titel,{s:20,f:FARBE.text}):"");
+}
+function rahmenOhneTitel(){return dialog("")}
+function fussLinie(y=172){return `<rect x="8" y="${y}" width="304" height="2" fill="url(#gtrenn)"/>`}
+function knopf(x,y,w,h,t,js,s=14){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="url(#gknopf)" stroke="#50585d"/>`+txt(x+w/2,y+h/2+s*.36,t,{s,a:"middle",w:700,f:"#e9f7f8"})}
+function kn(r,label,sz=14,aktiv=false){const w=r.x1-r.x0,h=r.y1-r.y0, x=r.x0+2,y=r.y0+2;
+  if(label=="–"||label=="+"){ // ± wie im Handbuch: dunkles Feld, dicke helle Zeichen
+    const cx=x+(w-4)/2, cy=y+(h-4)/2, l=Math.min(w,h)*.22;
+    return `<rect x="${x}" y="${y}" width="${w-4}" height="${h-4}" rx="3" fill="url(#gknopf)" stroke="#50585d"/><path d="M${cx-l} ${cy} H${cx+l}${label=="+"?` M${cx} ${cy-l} V${cy+l}`:""}" stroke="#dff5f7" stroke-width="${Math.max(3,l*.45)}"/>`;
+  }
+  return `<rect x="${x}" y="${y}" width="${w-4}" height="${h-4}" rx="3" fill="${aktiv?"#bfe9ec":"url(#gknopf)"}" stroke="#50585d"/>`+
+    txt(r.x0+w/2,r.y0+h/2+sz*.36,label,{s:sz,a:"middle",w:700,f:aktiv?"#0b1a1c":"#e9f7f8"});
+}
+function zeilenBox(x,y,w,h,aktiv){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${aktiv?"url(#ghell)":"url(#gzeile)"}" stroke="${FARBE.rahmen}" stroke-width=".8"/>`}
+function mehrzeilig(x,y,t,o={}){return t.split("\n").map((z,i)=>txt(x,y+i*(o.zh||19),z,{s:15,a:"middle",f:FARBE.text,...o})).join("")}
+function schalter(x,y,text,an){ // „| OFF“ mit Unterstrich: grün = aktiv
+  return `<rect x="${x-6}" y="${y-13}" width="1.5" height="15" fill="#bfe9ec"/>`+txt(x,y,text,{s:15,f:FARBE.text})+`<rect x="${x}" y="${y+5}" width="${text.length*9}" height="2.5" fill="${an?"#39d353":"#777"}"/>`;
+}
+function scrollleiste(stufe,stufen){
+  const th=Math.max(20,120/stufen), ty=70+(120-th)*(stufen>1?stufe/(stufen-1):0);
+  return `<rect x="274" y="22" width="41" height="170" rx="3" fill="#0d1516" stroke="#2c4a4c"/>`+
+   `<rect x="276" y="24" width="37" height="42" rx="3" fill="url(#gknopf)"/><path d="M285 52 L294.5 38 L304 52" fill="none" stroke="${TK}" stroke-width="3"/>`+
+   `<rect x="276" y="146" width="37" height="44" rx="3" fill="url(#gknopf)"/><path d="M285 160 L294.5 174 L304 160" fill="none" stroke="${TK}" stroke-width="3"/>`+
+   `<rect x="279" y="${Math.min(ty,120)}" width="31" height="16" rx="3" fill="#9aa3a6"/>`;
+}
+
+// Startbildschirm: links Pumpendruck 0–10 bar, rechts Druck Servicekessel
+// 0–2,5 bar, in der Mitte Temperaturen; rechts der Wasserstand.
+function seiteStart(s,j,k,d,einZeiger=false){
+  const cx=158, cy=120, R=84, rad=a=>a*Math.PI/180, P=(a,r)=>[cx+Math.cos(rad(a))*r, cy+Math.sin(rad(a))*r];
+  const bogen=(a0,a1,r,sweep)=>{const [x0,y0]=P(a0,r),[x1,y1]=P(a1,r);return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 ${sweep} ${x1.toFixed(1)} ${y1.toFixed(1)}`};
+  let o=`<rect width="320" height="240" fill="#000"/><circle cx="${cx}" cy="${cy}" r="${R-8}" fill="url(#gscheibe)"/>`;
+  // linker Bogen: Pumpendruck, 0 unten (95°) bis 10 oben (265°)
+  const LA=v=>95+v/10*170;
+  o+=`<path d="${bogen(95,265,R,1)}" stroke="${TK}" stroke-width="15" fill="none"/>`;
+  for(let v=0;v<=10;v+=.5){const [x0,y0]=P(LA(v),R-7.5),[x1,y1]=P(LA(v),R+(v%1?-3:7.5));o+=`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} L${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="#000" stroke-width="${v%1?1:1.6}"/>`}
+  ["1.0","2.0","3.0","4.0","5.0","6.0","7.0","8.0","9.0","10"].forEach((t,i)=>{const [x,y]=P(i==9?LA(9.55):LA(i+1),R+17);o+=txt(x.toFixed(1),(y+3).toFixed(1),t,{s:i==9||i==4?13:8,a:"middle",f:"#dfe7e8"})});
+  o+=`<path d="${bogen(LA(6),LA(9.8),R-11,1)}" stroke="#e3161b" stroke-width="2.5" fill="none" stroke-opacity=".9"/><path d="${bogen(LA(4.5),LA(6.2),R-11,1)}" stroke="#ff9d2a" stroke-width="2.5" fill="none" stroke-opacity=".6"/>`;
+  if(!einZeiger){
+    const RA=v=>85-v/2.5*170;
+    o+=`<path d="${bogen(RA(2.5),RA(0),R,1)}" stroke="${TK}" stroke-width="15" fill="none"/>`;
+    for(let v=0;v<=2.5;v+=.125){const g=Math.abs(v*2-Math.round(v*2))<1e-6;const [x0,y0]=P(RA(v),R-7.5),[x1,y1]=P(RA(v),R+(g?7.5:-3));o+=`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} L${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="#000" stroke-width="${g?1.6:1}"/>`}
+    ["0.5","1","1.5","2","2.5"].forEach((t,i)=>{const [x,y]=P(i==4?RA(2.38):RA((i+1)/2),R+16);o+=txt(x.toFixed(1),(y+3).toFixed(1),t,{s:i==4?13:9,a:"middle",f:"#dfe7e8"})});
+    o+=`<path d="${bogen(RA(2.45),RA(1.3),R-11,1)}" stroke="#e3161b" stroke-width="2.5" fill="none" stroke-opacity=".9"/><path d="${bogen(RA(1.35),RA(0.9),R-11,1)}" stroke="#ff9d2a" stroke-width="2.5" fill="none" stroke-opacity=".6"/>`;
+  }
+  // Trennstriche oben und unten, Zeiger auf 0
+  o+=`<path d="M${cx} ${cy-R-9} V${cy-R+9} M${cx} ${cy+R-9} V${cy+R+9}" stroke="#000" stroke-width="3"/>`;
+  const zeiger=a=>{const [x0,y0]=P(a,R-8),[x1,y1]=P(a,R+8);return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} L${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="#fff" stroke-width="4"/>`};
+  o+=zeiger(LA(0.15)); if(!einZeiger) o+=zeiger(85-0.15/2.5*170);
+  o+=txt(cx,cy+R+13,"0",{s:12,a:"middle",f:"#dfe7e8"})+txt(cx+6,cy+R+13,"bar",{s:8,f:"#dfe7e8"});
+  // Mitte
+  if(einZeiger){
+    o+=SYM.tasse(cx,cy-30,1)+txt(cx,cy+12,k??"–",{s:30,a:"middle",f:"#fff"});
+  }else{
+    o+=SYM.tasse(cx-26,cy-28,1)+SYM.dampf(cx+20,cy-26,.95)+SYM.wasser(cx+40,cy-28,.9);
+    o+=txt(cx-24,cy+12,k??"–",{s:24,a:"middle",f:"#fff"})+txt(cx+2,cy-2,"°C",{s:9,a:"middle",f:"#fff"})+txt(cx+28,cy+12,d??"–",{s:24,a:"middle",f:"#fff"});
+    o+=`<rect x="${cx-44}" y="${cy+18}" width="34" height="3" fill="#7a8285"/><rect x="${cx+10}" y="${cy+18}" width="34" height="3" fill="#7a8285"/>`;
+    // Wasserstand, rechts angeschnitten
+    const wx=304, wy=120, wr=34;
+    const seg=(a0,a1,voll)=>{const q=a=>[wx+Math.cos(rad(a))*wr, wy+Math.sin(rad(a))*wr];const [x0,y0]=q(a0),[x1,y1]=q(a1);
+      return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${wr} ${wr} 0 0 0 ${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="${TK}" stroke-width="7" fill="none" ${voll?"":`stroke-opacity=".25"`}/>`};
+    o+=`<circle cx="${wx}" cy="${wy}" r="${wr-6}" fill="#0c1718"/>`+seg(248,215,false)+seg(211,178,true)+seg(174,141,true)+seg(137,104,true);
+    o+=txt(wx-12,wy-2,"water",{s:8,a:"middle",f:TK})+txt(wx-12,wy+8,"level",{s:8,a:"middle",f:TK});
+    o+=`<g transform="translate(${wx-26},${wy-38}) rotate(-58)">`+txt(0,0,"max",{s:9,f:"#cfd8d9"})+`</g><g transform="translate(${wx-38},${wy+36}) rotate(58)">`+txt(0,0,"min",{s:9,f:"#cfd8d9"})+`</g>`;
+  }
+  return o+menueQuadrate()+kopfLogo(14,2)+uhr(j.rtc);
+}
+function seiteStandby(s,j){
+  return `<rect width="320" height="240" fill="#000"/>`+kopfLogo(4,0)+`<rect x="0" y="30" width="170" height="1.5" fill="url(#gtrenn)"/>`+
+   schlange(160,92,1.25,FARBE.rot)+txt(160,160,"BEZZERA",{s:13,w:800,a:"middle",f:"#fff"})+txt(160,173,"Dal 1901",{s:9,w:700,a:"middle",f:"#fff"})+
+   txt(190,207,tx("start",s),{s:12,a:"middle",f:"#d9dfe0"})+
+   `<path d="M272 108 H318 V148 H266 V114 Z" fill="#2c3b3d"/>`+SYM.schluessel(292,128,.9)+uhr(j.rtc);
+}
+function seiteMenue(s,j,k,d){
+  const bild=seiteStart(s,j,k,d).replace('<rect width="320" height="240" fill="#000"/>','<rect width="320" height="240" fill="#000"/><g opacity=".38">')+"</g>";
+  const kachel=(y,icon)=>`<path d="M6 ${y} H66 L72 ${y+6} V${y+43} H12 L6 ${y+37} Z" fill="#162224" stroke="#355a5d"/>${icon}`;
+  return bild+`<rect x="0" y="0" width="78" height="240" fill="#000" opacity=".85"/><rect x="74" y="36" width="3" height="204" fill="url(#gleiste)"/>`+
+    menueQuadrate()+kopfLogo(14,2)+kachel(45,SYM.tuch(39,68,.95))+kachel(94,SYM.zahnrad(39,117,1))+kachel(144,SYM.dusche(39,167,1))+kachel(193,SYM.power(39,216,1));
+}
+function seiteAlarm(s,j){
+  const b=s%100, ic={2:"warn",3:"tank",4:"warn",56:"schluessel",77:"warn",89:"filter",91:"warn"}[b];
+  const symbol=ic=="warn"?SYM.warn(160,70,1.1):ic=="tank"?SYM.tank(160,72,1.6,FARBE.orange):ic=="filter"?SYM.filter(160,72,1.4,FARBE.orange):`<g>${SYM.schluessel(160,72,1.3).replaceAll(TK,FARBE.orange)}</g>`;
+  const R=tastenRect(s);
+  return dialog(tx("alarm",s))+symbol+mehrzeilig(160,126,tx(b,s),{s:16})+fussLinie(178)+R.map(r=>kn(r,"OK",18)).join("");
+}
+// Menülisten: Symbol, Text, Wert/Schalter; Scrollleiste; OK-Reiter
+const LISTEN_SYM={Sprache:"sprache",Language:"sprache",Lingua:"sprache",Einheiten:"winkel",Units:"winkel","Unità":"winkel"};
+function zeilenSymbol(z){
+  const t=z[0].toLowerCase();
+  if(t.startsWith("language")) return SYM.sprache(24,0,.9);
+  if(t.startsWith("units")) return SYM.winkel(24,0,.8);
+  if(t.startsWith("led")||t.startsWith("lights")) return SYM.birne(24,0,.9);
+  if(t.startsWith("sensor")) return SYM.tank(24,0,.8);
+  if(t.startsWith("maint")) return SYM.schluessel(24,0,.7);
+  if(t.startsWith("water filter")) return SYM.filter(24,0,.8);
+  if(t.startsWith("water source")) return SYM.tropfen(24,0,.8);
+  if(t.startsWith("date")) return SYM.kalender(24,0,.8);
+  if(t.startsWith("auto")) return SYM.kalender(24,0,.8,true);
+  if(t.startsWith("password")) return SYM.key(24,0,.8);
+  if(t.startsWith("group temp")) return SYM.thermo(24,0,1);
+  return "";
+}
+function seiteListe(s){
+  const b=s%100, L=LISTEN[b], i=sprachIndex(s), tech=LISTE_TITEL[b]=="tech";
+  let o=rahmen(tx(LISTE_TITEL[b],s));
+  L.forEach((z,n)=>{const y=27+n*50, sym=tech?"":zeilenSymbol(z);
+    o+=zeilenBox(8,y,258,40)+(sym?`<g transform="translate(0,${y+20})">${sym}</g>`:"")+txt(tech?16:44,y+26,z[i],{s:15,f:FARBE.text});
+    const w=z[3];
+    if(w=="OFF"||w=="ON") o+=schalter(222,y+26,w,w=="ON");
+    else if(w=="°C | °F") o+=txt(206,y+26,"°C",{s:15,f:FARBE.text})+`<rect x="206" y="${y+31}" width="22" height="2.5" fill="#39d353"/>`+schalter(236,y+26,"°F",false);
+    else if(w=="E61 | BZ") o+=txt(196,y+26,"E61",{s:15,f:FARBE.text})+`<rect x="196" y="${y+31}" width="28" height="2.5" fill="#39d353"/>`+schalter(234,y+26,"BZ",false);
+    else if(w) o+=txt(258,y+26,w,{s:15,a:"end",f:FARBE.text});
+    if(!tech&&z[0].toLowerCase().startsWith("water source")) o+=SYM.tank(214,y+19,.7)+`<rect x="206" y="${y+31}" width="18" height="2.5" fill="#39d353"/>`+SYM.hahn(248,y+20,.8);
+  });
+  const erste=[16,20].includes(b), stufe={16:0,17:1,18:2,19:3,20:0,21:1,22:2,79:0,82:0}[b]||0, stufen=[16,17,18,19].includes(b)?4:3;
+  return o+scrollleiste(stufe,stufen)+okEcke();
+}
+function seiteTemperatur(s,j){
+  const b=s%100, kaffee=b==7||b==12;
+  let o=rahmen(tx(kaffee?"kaffee":"tee",s))+txt(10,48,tx("kessel",s),{s:12,f:FARBE.text})+txt(70,48,"OFF",{s:15,f:TK})+`<rect x="70" y="53" width="30" height="3" fill="#777"/>`+
+    txt(134,48,tx("prio",s)+":",{s:12,f:FARBE.text})+txt(208,48,["coffee","Kaffee","caffè"][sprachIndex(s)],{s:15,f:TK})+`<rect x="8" y="62" width="300" height="2" fill="url(#gtrenn)"/>`+txt(12,88,tx("temp",s),{s:16,f:TK});
+  if(b==7||b==8) o+=txt(66,136,"–",{s:50,w:200,a:"middle",f:"#8fd8dc"})+txt(128,104,"°C",{s:22,w:200,f:"#8fd8dc"});
+  o+=tastenRect(s).filter(r=>r.t[6]==5&&r.t[7]==0x15).map(r=>kn(r,r.t[8]==2?"+":"–")).join("");
+  if(kaffee) o+=`<rect x="4" y="202" width="2" height="18" fill="#bfe9ec"/>`+txt(10,217,"CRONO",{s:12,f:FARBE.text})+txt(62,217,"OFF",{s:12,f:TK})+`<rect x="62" y="221" width="22" height="2" fill="#777"/>`+
+    `<rect x="142" y="202" width="2" height="18" fill="#bfe9ec"/>`+txt(150,217,tx("vorb",s),{s:12,f:FARBE.text});
+  return o+okEcke();
+}
+// Spülablauf: Brühgruppe von der Seite mit Hebel und Pfeil
+function hebel(x,y,richtung){
+  return `<g transform="translate(${x},${y})" fill="none" stroke="${TK}" stroke-width="1.8">
+   <rect x="0" y="-28" width="20" height="52" rx="2"/><rect x="4" y="-36" width="12" height="8"/><rect x="7" y="-42" width="6" height="6"/>
+   <path d="M20 -10 H48 V20 H20"/><path d="M48 6 H62 L66 12 H48"/>
+   <circle cx="10" cy="30" r="7"/><circle cx="10" cy="30" r="2" fill="${TK}"/>
+   <path d="M12 26 L36 ${richtung>0?-18:-22}" stroke-width="5"/>
+   ${richtung>0?`<path d="M30 -30 A34 34 0 0 1 58 -4" stroke-width="2"/><path d="M52 -8 l6 4 l1 -7" stroke-width="2"/>`
+     :`<path d="M52 -8 A34 34 0 0 0 26 -32" stroke-width="2"/><path d="M31 -34 l-6 2 l3 6" stroke-width="2"/>`}</g>`;
+}
+</script>
 <script>
 // ─── Berührung wie am Display: Tastentabelle aus 13.bin ────────────────────
 let letzterStatus=null;
