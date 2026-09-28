@@ -283,11 +283,6 @@ function uhr(r,x=12,y=222){
   const hm=r.slice(11,16), dat=r.slice(8,10)+"/"+r.slice(5,7)+"/"+r.slice(0,4);
   return txt(x,y-10,hm,{s:22,f:"#dff6ff",glow:1})+txt(x,y+4,dat,{s:9,f:"#bfe9ff"});
 }
-function logo(x,y,sk=1){ // stilisierte Schlange + Schriftzug, wie auf dem Standby
-  return `<g transform="translate(${x},${y}) scale(${sk})" fill="none" stroke="${FARBE.orange}" stroke-width="3" stroke-linecap="round" filter="url(#glow)">
-  <path d="M-12 -34 q8 -6 16 0 q8 6 16 0 M-14 -22 q14 -8 28 0 q-14 8 -28 0 M-12 -8 q12 -8 24 0 q-12 8 -24 0 M-8 6 q8 -6 16 0 q-8 6 -16 0 M-4 16 q4 6 0 12"/>
-  <circle cx="-14" cy="-36" r="2.5" fill="${FARBE.orange}"/></g>`;
-}
 function icon(name,x,y){
   const o=`fill="none" stroke="${FARBE.orange}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"`;
   if(name==="tank") return `<g transform="translate(${x},${y})" ${o}><path d="M-16 -14 V10 H16 V-14 M-16 -6 H-8 M8 -6 H16"/><path d="M0 -8 q-6 8 0 12 q6 -4 0 -12z" fill="${FARBE.orange}"/></g>`;
@@ -314,8 +309,8 @@ function wasserstand(){
 }
 
 function seiteStandby(s,j){
-  return `<rect width="320" height="240" fill="url(#gbg)"/>${logo(160,92,1.2)}
-  ${txt(160,128,"BEZZERA",{s:15,a:"middle",glow:1})}${txt(160,140,"Duo MN",{s:9,a:"middle"})}
+  return `<rect width="320" height="240" fill="url(#gbg)"/>${SYM.tasse(160,96,3)}
+  ${txt(160,140,"Duo",{s:15,a:"middle",glow:1})}
   ${txt(160,166,tx("start",s),{s:12,a:"middle",glow:1})}${klick(60,40,200,140,"taste('Start')")}
   <rect x="262" y="96" width="34" height="30" fill="#33465f" stroke="${FARBE.rahmen}" stroke-width="1.5"/>
   <path d="M270 119 l12 -12 m-2 -4 a6 6 0 1 1 6 6" stroke="${FARBE.cyan}" stroke-width="3" fill="none" stroke-linecap="round"/>
@@ -339,7 +334,7 @@ function seiteStart(s,j,k,d,einZeiger=false){
   :`<g stroke="#dff6ff" stroke-width="2" fill="none"><path d="M${cx-30} ${cy-26} h16 v6 q-8 8 -16 0 z"/><path d="M${cx+18} ${cy-28} q-6 6 0 12 m6 -12 q-6 6 0 12"/></g>
   ${txt(cx-22,cy+10,k??"–",{s:26,a:"middle",glow:1})}${txt(cx+26,cy+10,d??"–",{s:26,a:"middle",glow:1})}`}
   <g fill="${FARBE.cyan}"><rect x="10" y="10" width="7" height="7" rx="2"/><rect x="10" y="20" width="7" height="7" rx="2"/><rect x="10" y="30" width="7" height="7" rx="2"/></g>
-  ${klick(6,6,16,36,`geh(${lang(s)+14})`)}${logo(40,30,.45)}${txt(52,20,"BEZZERA",{s:12})}${txt(56,31,"Duo MN",{s:8})}
+  ${klick(6,6,16,36,`geh(${lang(s)+14})`)}${txt(28,22,"Duo",{s:12})}
   ${einZeiger?"":wasserstand()}
   ${uhr(j.rtc)}`;
 }
@@ -578,7 +573,7 @@ function zeigeDisplay(j,k,d){
   else if(ALARM_ICON[b]) inhalt=seiteAlarm(s,j);
   else if(LISTEN[b]) inhalt=seiteListe(s);
   else if([7,8,12,13].includes(b)) inhalt=seiteTemperatur(s,j);
-  else if(b==90) inhalt=`<rect width="320" height="240" fill="url(#gbg)"/>${logo(160,100,1.2)}${txt(160,140,"BEZZERA",{s:15,a:"middle",glow:1})}${txt(40,226,"TFT 2.0",{s:14,f:FARBE.cyan})}${txt(200,226,"FW: "+(((j.vps.find(x=>x.vp==0x63)||{w:[0]}).w[0])/10).toFixed(1),{s:14,f:FARBE.orange})}`;
+  else if(b==90) inhalt=`<rect width="320" height="240" fill="url(#gbg)"/>${SYM.tasse(160,96,3)}${txt(160,140,"Duo",{s:15,a:"middle",glow:1})}${txt(40,226,"TFT 2.0",{s:14,f:FARBE.cyan})}${txt(200,226,"FW: "+(((j.vps.find(x=>x.vp==0x63)||{w:[0]}).w[0])/10).toFixed(1),{s:14,f:FARBE.orange})}`;
   else inhalt=seiteSonst(s);
   $("dsp").innerHTML=defs+inhalt;
   // fehlende Werte der Seite einmal beim Display abfragen (Antwort landet in der VP-Tabelle)
@@ -595,7 +590,6 @@ function zeigeDisplay(j,k,d){
 // die Bildschirmfotos (320×240) im Bezzera-Handbuch „Matrix Duo“ (2018/2020).
 const TK=FARBE.cyan;
 T.start=["press to start","Für Start drücken","premere per accendere"];
-T.dal=["Dal 1901","Dal 1901","Dal 1901"];
 
 // Symbole, alle in Türkis, Mittelpunkt x/y, Größe ~ s
 const SYM={
@@ -620,12 +614,8 @@ const SYM={
  key:(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s}) rotate(-35)"><circle cx="-6" r="5" fill="none" stroke="${TK}" stroke-width="3"/><path d="M-1 0 H12 M8 0 V4 M11 0 V3" stroke="${TK}" stroke-width="3"/></g>`,
 };
 
-function schlange(x,y,sk,farbe){ // Bezzera-„Biscione“, vereinfachte Kontur
-  return `<g transform="translate(${x},${y}) scale(${sk})" fill="none" stroke="${farbe}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M-4 -26 q10 -6 14 2 q-4 6 -12 5 q-12 -2 -12 8 q0 9 13 8 q13 -1 13 9 q0 10 -13 9 q-12 -1 -12 7 q0 7 10 7"/>
-  <path d="M-4 -26 l-6 -4 M-4 -26 l-10 1 M-13 -32 l6 12 M-18 -26 l12 0"/><circle cx="6" cy="-24" r="1.2" fill="${farbe}"/></g>`;
-}
-function kopfLogo(x,y,f="#fff"){return schlange(x+6,y+12,.38,f)+txt(x+16,y+11,"BEZZERA",{s:13,w:800,f})+txt(x+27,y+22,"Dal 1901",{s:8,w:700,f})}
+// Kopfzeile: neutraler Schriftzug statt Herstellerlogo
+function kopfLogo(x,y,f="#fff"){return txt(x+2,y+17,"Duo",{s:15,w:800,f})}
 function menueQuadrate(){return `<g fill="${TK}"><rect x="2" y="3" width="8" height="8"/><rect x="2" y="13" width="8" height="8"/><rect x="2" y="23" width="8" height="8"/></g>`}
 function uhr(r){
   const hm=r?r.slice(11,16):"--:--", dat=r?r.slice(8,10)+"/"+r.slice(5,7)+"/"+r.slice(0,4):"";
@@ -712,7 +702,7 @@ function seiteStart(s,j,k,d,einZeiger=false){
 }
 function seiteStandby(s,j){
   return `<rect width="320" height="240" fill="#000"/>`+kopfLogo(4,0)+`<rect x="0" y="30" width="170" height="1.5" fill="url(#gtrenn)"/>`+
-   schlange(160,92,1.25,FARBE.rot)+txt(160,160,"BEZZERA",{s:13,w:800,a:"middle",f:"#fff"})+txt(160,173,"Dal 1901",{s:9,w:700,a:"middle",f:"#fff"})+
+   SYM.tasse(160,100,3.2)+txt(160,160,"Duo",{s:15,w:800,a:"middle",f:"#fff"})+
    txt(190,207,tx("start",s),{s:12,a:"middle",f:"#d9dfe0"})+
    `<path d="M272 108 H318 V148 H266 V114 Z" fill="#2c3b3d"/>`+SYM.schluessel(292,128,.9)+uhr(j.rtc);
 }
