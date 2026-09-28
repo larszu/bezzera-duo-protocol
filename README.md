@@ -39,6 +39,7 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 ✔ **Alle 1070 Tasten** mit Fläche, Folgeseite und Wert — gelesen aus dem Display-Flash  
 ✔ ESP32-Bridge: durchreichen, mitschneiden, einschleusen, Display emulieren  
 ✔ Weboberfläche mit Display-Nachbau, Live-Werten und Temperaturverlauf  
+✔ Mehr als das Display: Ein/Aus aus der Ferne, Home Assistant, Brew by Weight, Verlauf über 24 h  
 
 > ⚠️ In der Maschine liegen **230 V**. Netzstecker ziehen, bevor du etwas
 > anklemmst. Mit laufender Maschine nur an bereits verlegte Messleitungen gehen.
@@ -77,6 +78,12 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
   </tr>
   <tr>
     <td colspan="2" align="center">
+      <img src="docs/screenshots/zusatz_maschine_verlauf.png" alt="Weboberfläche: Kesseltemperaturen, Ein/Aus der Maschine und Verlauf über eine Stunde mit Pumpendruck" width="800" /><br />
+      <b>Ein/Aus und Verlauf über 24 h (Simulation mit <code>web_lokal.py --demo</code>)</b>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
       <img src="docs/breadboard_hybrid.png" alt="Steckplan der ESP32-Bridge zwischen Mainboard und Display auf dem Breadboard" width="700" /><br />
       <b>Steckplan der Bridge mit Lochpositionen</b>
     </td>
@@ -98,6 +105,7 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 | Display-Emulation (ESP32 antwortet) | 🟡 antwortet Byte für Byte richtig; Start der Maschine noch nicht durchgespielt |
 | Hybridmodus (Display antwortet, ESP32 ersetzt Werte) | 🟡 kompiliert, noch nicht an der Maschine getestet |
 | Tastendruck von außen wirkt wie ein echter | ⏳ offen |
+| Ein/Aus, Home Assistant, Brew by Weight, Verlauf | 🟡 kompiliert, Oberfläche mit Simulation geprüft; an der Maschine und mit echter Waage noch nicht getestet |
 | Dauerbetrieb (Passwort, OTA, Watchdog, Versorgung) | ⏳ offen |
 
 ---
@@ -109,6 +117,7 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 - [🖥️ Seiten und Tasten](#️-seiten-und-tasten) — Katalog und Touch-Konfiguration aus dem Flash
 - [🧪 Messen und mitschneiden](#-messen-und-mitschneiden) — Pegel, Logic Analyzer, Sniffer
 - [🌉 ESP32-Bridge](#-esp32-bridge) — Verkabelung, Modi, Befehle, Weboberfläche
+- [☕ Mehr als das Display](#-mehr-als-das-display) — Ein/Aus, Home Assistant, Brew by Weight, Verlauf
 - [🧰 Werkzeuge](#-werkzeuge) — alle Skripte auf einen Blick
 - [🧭 Nächste Schritte](#-nächste-schritte)
 - [📚 Quellen](#-quellen)
@@ -369,9 +378,14 @@ schneidet mit, schiebt eigene Rahmen ein oder beantwortet das Mainboard selbst.
 
 ```bash
 arduino-cli core install esp32:esp32
-arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc bridge/duo_bridge
-arduino-cli upload  --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc -p /dev/cu.usbmodem… bridge/duo_bridge
+FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs,PSRAM=opi
+arduino-cli compile --fqbn $FQBN bridge/duo_bridge
+arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge
 ```
+
+Mit Bluetooth passt die Firmware nicht mehr in die Standardpartition (1,2 MB),
+deshalb `min_spiffs` (1,9 MB). `PSRAM=opi` für den ESP32-S3R8 des Waveshare-Boards:
+Der Verlauf reicht damit 24 h statt 30 min. Ohne PSRAM läuft alles andere gleich.
 
 ### Verkabelung
 
@@ -436,25 +450,120 @@ kamen auch ohne Display gültige Rahmen. Ein „Startbyte“ des Displays gibt e
 | `e [0\|1\|2]` | Modus: durchreichen, Emulation, Hybrid |
 | `n <ssid> <passwort>` | Heim-WLAN speichern (nur 2,4 GHz); `n ?` listet Netze, `n -` löscht |
 | `j [seit]` | Zustand als JSON-Zeile `#J {…}` |
+| `z <pfad> [rumpf]` | Zusatz-API wie im Web, z. B. `z /api/aktion an`; Antwort als Zeile `#Z …` |
 | `M <hex …>` / `D <hex …>` | Test: Rahmen behandeln, als käme er vom Mainboard / Display |
 | `x` / `?` | Mitschnitt-Ausgabe an/aus / Zustand |
 
 ### Weboberfläche
 
 - **Am Rechner, ohne WLAN:** `python3 tools/web_lokal.py` → http://localhost:8080,
-  spricht per USB mit dem ESP32.
+  spricht per USB mit dem ESP32. Mit `--demo` ganz ohne ESP32: simulierte
+  Maschine und Waage.
 - **Eigenes WLAN** `duo-bridge` → http://192.168.4.1, im Heimnetz http://duo.local
   oder per Ethernet (W5500).
 
 Sie zeigt den **Nachbau des Displays** (320 × 240, SVG, alle Seitentypen) mit
 Live-Werten; ein Klick wirkt wie eine Berührung an dieser Stelle — Wert
-schreiben, ± mit den Grenzen aus dem Flash, Seite wechseln. Dazu
-Temperaturverlauf, alle VPs, Ereignisprotokoll und Seitenkatalog. Die Lampe
+schreiben, ± mit den Grenzen aus dem Flash, Seite wechseln. Dazu Ein/Aus,
+Verlauf, Brew by Weight, Einstellungen, alle VPs, Ereignisprotokoll und Seitenkatalog. Die Lampe
 „Mainboard“ leuchtet nur bei gültigen Rahmen; Störbytes stehen im Protokoll.
 
 > 🔒 Kein Login, und das Passwort des eigenen WLANs steht hier öffentlich —
 > nur zum Testen im eigenen Netz betreiben. Für den Dauerbetrieb kommt ein
 > eigenes Passwort auf dem ESP32 (siehe [Nächste Schritte](#-nächste-schritte)).
+
+---
+
+## ☕ Mehr als das Display
+
+Alles läuft im ESP32 selbst, auch ohne offene Weboberfläche. Einstellungen
+(MQTT, Waage, Stopp-Ausgang, Druckwort) stehen im Kasten „Einstellungen“ der
+Weboberfläche und liegen im NVS des ESP32, nie im Quelltext.
+
+| Funktion | wie | Stand |
+|---|---|---|
+| **Ein/Aus aus der Ferne** | schreibt VP `0x0000` = 1 und Seite x01 („Für Start drücken“) bzw. VP `0x0000` = 0 und Seite x00 („Standby“ im Seitenmenü), genau wie diese Tasten laut Touch-Konfiguration | aus der Tastentabelle abgeleitet, an der Maschine offen |
+| **Home Assistant** | MQTT mit Discovery, siehe unten | kompiliert, gegen einen Broker offen |
+| **Verlauf** | VP `0x0050` einmal je Sekunde in einem Ringpuffer, 24 h mit PSRAM (sonst 30 min); Kurve 10 min bis 24 h | mit Simulation geprüft |
+| **Druckkurven** | sobald bekannt ist, welches Wort in VP `0x0050` den Druck trägt: „Rohworte zeigen“ im Verlauf, Pumpe laufen lassen, steigendes Wort unter Einstellungen eintragen | Wort noch unbekannt |
+| **Brew by Weight** | Bluetooth- oder WLAN-Waage, Bezug wird erkannt, Kurve aus Gewicht, Durchfluss und Druck, Stopp bei Ziel minus gelerntem Vorlauf | Protokolle aus Quellen, mit echter Waage offen |
+| **Bezüge zählen, Alarme melden** | Zähler im NVS, Alarmseiten (Tank, Wartung, Filter …) als Zustand und Alarm | mit Simulation geprüft |
+
+<p align="center">
+  <img src="docs/screenshots/zusatz_rohworte.png" alt="Verlauf mit allen neun Rohworten von VP 0x0050; in der Simulation steigt Wort 1 bei laufender Pumpe" width="800" /><br />
+  <sub>Druckwort suchen: „Rohworte zeigen“ im Verlauf. Hier in der Simulation steigt Wort 1 bei laufender Pumpe.</sub>
+</p>
+
+### Home Assistant
+
+<img src="docs/screenshots/zusatz_einstellungen.png" alt="Einstellungen: MQTT-Broker, Waage, Vorlauf, Stopp-Ausgang und Druckwort" width="280" align="right" />
+
+Unter Einstellungen den Broker eintragen (z. B. `mqtt://homeassistant.local:1883`,
+Benutzer und Passwort des Mosquitto-Add-ons). Home Assistant findet das Gerät
+**Bezzera Duo** dann von selbst:
+
+| Entität | Art |
+|---|---|
+| Kaffeekessel, Servicekessel | Temperatur °C |
+| Pumpendruck, Druck Servicekessel | Druck bar, erst sobald das Druckwort eingetragen ist |
+| Zustand, Alarm (mit Text) | „Standby“, „an“, „Alarm: Tank füllen“ … |
+| Maschine | Schalter Ein/Standby |
+| Gewicht, Durchfluss, Bezug läuft, Letzter Bezug, Dauer, Bezüge | nur mit Waage |
+| Zielgewicht, Tara | Zahl und Knopf, nur mit Waage |
+
+Themen: `duo/<id>/zustand` (JSON), `duo/<id>/verfuegbar`, `duo/<id>/ereignis`
+(`bezug_start`, `ziel_erreicht`, `bezug_fertig`), Befehle unter
+`duo/<id>/set/maschine|ziel|tara|aktion`. `<id>` sind die letzten sechs Stellen
+der MAC, die Weboberfläche zeigt das Basisthema an. Zeitpläne und
+Benachrichtigungen („Maschine heiß“, „Tank leer“) laufen als Automationen in
+Home Assistant, zum Beispiel:
+
+```yaml
+automation:
+  - alias: Espresso vorheizen
+    triggers: [{trigger: time, at: "06:30:00"}]
+    conditions: [{condition: time, weekday: [mon, tue, wed, thu, fri]}]
+    actions: [{action: switch.turn_on, target: {entity_id: switch.bezzera_duo_maschine}}]
+  - alias: Espresso bereit
+    triggers: [{trigger: numeric_state, entity_id: sensor.bezzera_duo_kaffeekessel, above: 92}]
+    actions: [{action: notify.notify, data: {message: "Die Duo ist heiß."}}]
+```
+
+### Brew by Weight
+
+<br clear="right" />
+
+<p align="center">
+  <img src="docs/screenshots/zusatz_brew_by_weight.png" alt="Brew by Weight: laufender Bezug mit Gewicht, Durchfluss, Zeit und Druck, Kurve mit Ziellinie und Liste der letzten Bezüge" width="800" /><br />
+  <sub>Laufender Bezug in der Simulation: Gewicht (weiß) mit Ziellinie, Durchfluss (grün), Pumpendruck (blau), darunter die letzten Bezüge.</sub>
+</p>
+
+**Waagen**, Auswahl unter Einstellungen:
+
+| Art | Waagen | Hinweis |
+|---|---|---|
+| Bluetooth | Acaia (Lunar, Pearl, Pyxis, Cinco), BOOKOO Themis, Felicita Arc/Incline, Decent Scale / Half Decent | die erste gefundene, oder feste Adresse eintragen. Protokolle nach [AcaiaArduinoBLE](https://github.com/tatemazer/AcaiaArduinoBLE), [BooKoo](https://github.com/BooKooCode/OpenSource) und [Decent](https://decentespresso.com/decentscale_api) |
+| WLAN: URL abfragen | alles mit HTTP-Schnittstelle, z. B. ESPHome mit HX711 (`http://waage.local/sensor/gewicht`) | Antwort als Zahl oder JSON mit `value`, `weight` oder `gewicht`, etwa 8 Abfragen je Sekunde |
+| WLAN: Waage meldet selbst | `POST http://duo.local/api/waage` mit dem Gewicht in g, oder ein MQTT-Thema | Tara für WLAN-Waagen macht die Bridge selbst |
+
+**Ablauf:** Tasse auf die Waage, Bezug wie gewohnt am Hebel starten. Die Bridge
+erkennt den Bezug an den ersten Tropfen (gleichmäßig steigendes Gewicht, kein
+Sprung) oder, sobald das Druckwort bekannt ist, am Pumpendruck. Die Zeit zählt
+ab da. Erreicht Gewicht + Vorlauf das Ziel, kommt die Meldung „Ziel erreicht –
+Bezug stoppen!“ in der Weboberfläche und als Ereignis `ziel_erreicht` in Home
+Assistant. Nach dem Bezug lernt die Bridge den Vorlauf (was nach dem Stopp noch
+nachtropft) mit halber Schrittweite nach.
+
+**Selbst stoppen kann die Bridge über die Displayleitung nicht:** Bezug und
+Pumpe schaltet der Hebel über den Microswitch am Mainboard (Klemme 4 am
+5-poligen Block), das Display hat dafür keine Taste. Wer automatisch stoppen
+will, braucht Hardware: Unter „Stopp-Ausgang“ einen freien GPIO wählen (1, 2,
+38–42, 47, 48). Er schaltet bei Ziel für die eingestellte Haltezeit, zum
+Beispiel ein Optokoppler- oder Relaismodul, das den Microswitch-Kreis
+unterbricht. **Das ist ungetestet:** vorher die Klemme am stromlosen Mainboard
+durchmessen (Kleinspannung? welcher Pegel?), nie auf der 230-V-Seite
+eingreifen. Bleibt der Hebel nach der Haltezeit oben, läuft die Pumpe weiter —
+Haltezeit länger wählen als man zum Hebelsenken braucht.
 
 ---
 
@@ -468,7 +577,8 @@ Alle Python-Skripte brauchen nur die Standardbibliothek.
 | [`tools/duo_sniff.py`](tools/duo_sniff.py) | Log auswerten: `dgus` (Rahmenkopf automatisch), `stats`, `gicar`, `diff` |
 | [`tools/duo_live.py`](tools/duo_live.py) | Live-Anzeige im Terminal direkt vom Analyzer oder als Replay |
 | [`tools/bridge.py`](tools/bridge.py) | Befehle an die Bridge schicken und mitlesen |
-| [`tools/web_lokal.py`](tools/web_lokal.py) | Weboberfläche am Rechner über USB |
+| [`tools/web_lokal.py`](tools/web_lokal.py) | Weboberfläche am Rechner über USB; `--demo` ohne ESP32 |
+| [`tools/web_demo.py`](tools/web_demo.py) | simulierte Maschine und Waage für `--demo` |
 | [`tools/seiten_foto.py`](tools/seiten_foto.py) | alle Seiten durchschalten und per Webcam fotografieren (`brew install imagesnap`) |
 | [`tools/libop_lesen.py`](tools/libop_lesen.py) | Flash-Bereiche des Displays lesen — kennt nur den Lesemodus |
 | [`tools/touch13.py`](tools/touch13.py) | Touch-Konfiguration dekodieren → JSON und Header für die Bridge |
@@ -487,8 +597,10 @@ Tests: `python3 -m unittest discover -s tests`
 3. **Dauerbetrieb:** eigenes Passwort und Login, abschaltbares eigenes WLAN,
    Firmware-Update per WLAN (OTA), Watchdog, Versorgung aus der Maschine
    (5-V-Budget prüfen) und feste Verkabelung statt Breadboard.
-4. **Mehr als das Display:** Temperaturverlauf speichern, Bezüge zählen, Alarme
-   als Benachrichtigung, Home Assistant / MQTT, Zeitpläne.
+4. **Mehr als das Display an der Maschine prüfen:** Ein/Aus, Druckwort in VP
+   `0x0050` finden (Rohworte im Verlauf), Home Assistant gegen den Broker,
+   Brew by Weight mit einer echten Waage; für den automatischen Stopp den
+   Microswitch-Kreis durchmessen.
 5. **Variablen-Konfiguration (`14.bin`)** ebenfalls aus dem Flash lesen: Sie sagt,
    welche VP an welcher Stelle angezeigt wird — damit auch die Sollwerte auf den
    Kaffee- und Tee-Seiten.

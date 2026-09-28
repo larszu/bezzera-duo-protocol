@@ -15,6 +15,7 @@ python3 tools/duo_live.py --replay captures/boot.sr
 | `home.sr` | 3 s nach „OK“ auf „Bitte Tank füllen“. **Lief mit 1 MHz, ist aber mit 2 MHz beschriftet** (Abtastraten-Falle des Analyzers, README 2.3): mit `--baud 230400` dekodieren |
 | `tank.sr` | 3 s nach Wackeln am Touch-Kabel, Display zeigt wieder „Bitte Tank füllen“ |
 | `probe.sr` | Testaufnahme ohne Signal |
+| `neukabel.sr` | Ersatzkabel mit Displayfarben direkt am Display, Analyzer parallel: D1 = TX Mainboard, D2 = TX Display (D0 ohne Daten) |
+| `adern.sr` | 5 s, 2 MHz, beim Zuordnen der Adern: auf D0 wiederholt das Mainboard alle 200 ms den Verbindungstest (VP `0x0063` = 21 schreiben und lesen), D1 ohne Daten |
 
 Die Seitenfotos liegen verkleinert unter [`docs/seiten/`](../docs/seiten/).
-| `neukabel.sr` | Ersatzkabel mit Displayfarben direkt am Display, Analyzer parallel: D1 = TX Mainboard, D2 = TX Display (D0 ohne Daten) |

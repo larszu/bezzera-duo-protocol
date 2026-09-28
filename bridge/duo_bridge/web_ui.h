@@ -38,6 +38,7 @@ input{width:90px}
 input.breit{flex:1;min-width:160px}
 button{background:#1c3355;border-color:#2c4d7d;cursor:pointer}
 button:hover{background:#244170}
+button:disabled{opacity:.4;cursor:default}
 #log{font:12px/1.5 ui-monospace,monospace;max-height:260px;overflow:auto;white-space:pre-wrap;color:var(--leise)}
 #katalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;max-height:300px;overflow:auto;font-size:12px}
 #katalog button{text-align:left;padding:4px 6px;font-size:12px}
@@ -71,9 +72,34 @@ button:hover{background:#244170}
   </section>
 
   <section>
-    <h2>Temperaturverlauf</h2>
-    <canvas id="kurve" width="600" height="170"></canvas>
-    <p class="hinweis">Nur solange diese Seite offen ist. <span style="color:var(--kaffee)">■</span> Kaffee <span style="color:var(--dampf)">■</span> Service</p>
+    <h2>Maschine</h2>
+    <div id="m_status" style="font-size:20px;font-weight:600">–</div>
+    <div class="form" style="margin-top:12px"><button id="b_an" onclick="aktion('an')">Einschalten</button><button id="b_aus" onclick="aktion('aus')">Standby</button></div>
+    <p class="hinweis">Wirkt wie „Für Start drücken“ bzw. „Standby“ im Seitenmenü: VP 0x0000 = 1 / 0. Home Assistant: <span id="m_mqtt">–</span></p>
+  </section>
+
+  <section style="grid-column:1/-1">
+    <h2>Verlauf</h2>
+    <div class="form"><select id="v_sek"><option value="600">10 min</option><option value="3600" selected>1 h</option><option value="21600">6 h</option><option value="86400">24 h</option></select>
+      <label><input type="checkbox" id="v_roh" style="width:auto"> Rohworte VP 0x0050 zeigen (Druckwort suchen)</label></div>
+    <canvas id="kurve" width="600" height="220" style="height:220px"></canvas>
+    <p class="hinweis" id="v_legende"></p>
+  </section>
+
+  <section style="grid-column:1/-1">
+    <h2>Brew by Weight</h2>
+    <div class="gross">
+      <div><div class="wert" id="bw_g">–</div><div class="einheit">Gramm <span id="bw_ziel_txt"></span></div></div>
+      <div><div class="wert" id="bw_fluss">–</div><div class="einheit">g/s</div></div>
+      <div><div class="wert" id="bw_t">–</div><div class="einheit">Sekunden</div></div>
+      <div><div class="wert" id="bw_p" style="color:var(--akzent)">–</div><div class="einheit">bar</div></div>
+    </div>
+    <div class="form" style="margin-top:12px">Ziel <button onclick="zielAendern(-1)">−</button><input id="bw_ziel" style="width:70px" onchange="aktion('ziel '+v('bw_ziel'))"> g<button onclick="zielAendern(1)">+</button>
+      <button onclick="aktion('tara')">Tara</button><button onclick="aktion('abbruch')">Bezug abbrechen</button><button id="bw_frei" onclick="aktion('frei')" style="display:none">Stopp freigeben</button></div>
+    <div id="bw_meldung" class="einheit"></div>
+    <canvas id="bw_kurve" width="600" height="220" style="height:220px;margin-top:8px"></canvas>
+    <p class="hinweis"><span style="color:#e6edf7">■</span> Gewicht <span style="color:var(--ok)">■</span> Durchfluss g/s <span style="color:var(--akzent)">■</span> Druck bar (rechte Achse, sobald das Druckwort zugeordnet ist) · Waage: <span id="bw_waage">–</span></p>
+    <table style="margin-top:8px"><thead><tr><th>vor</th><th>Gewicht</th><th>Ziel</th><th>Dauer</th><th></th></tr></thead><tbody id="bw_liste"></tbody></table>
   </section>
 
   <section>
@@ -97,6 +123,29 @@ button:hover{background:#244170}
     <h2>Seiten</h2>
     <div class="form">Sprache <select id="f_sprache"><option value="100">Deutsch</option><option value="0">Englisch</option><option value="200">Italienisch</option></select></div>
     <div id="katalog"></div>
+  </section>
+
+  <section>
+    <h2>Einstellungen</h2>
+    <form id="einst" onsubmit="speichern(event)">
+    <h3 class="hinweis" style="margin:0 0 4px">Home Assistant (MQTT)</h3>
+    <div class="form">Broker <input name="mqtt_uri" class="breit" placeholder="mqtt://homeassistant.local:1883"></div>
+    <div class="form">Benutzer <input name="mqtt_user" class="breit"> Passwort <input name="mqtt_pass" type="password" class="breit" placeholder="unverändert"></div>
+    <div class="form">Discovery-Präfix <input name="ha_prefix" class="breit"></div>
+    <h3 class="hinweis" style="margin:10px 0 4px">Waage</h3>
+    <div class="form"><select name="waage_art"><option value="0">aus</option><option value="1">Bluetooth (Acaia, Bookoo, Felicita, Decent)</option><option value="2">WLAN: URL abfragen</option><option value="3">WLAN: Waage meldet selbst</option></select></div>
+    <div class="form">Bluetooth-Adresse <input name="waage_ble" class="breit" placeholder="leer = erste gefundene Waage"></div>
+    <div class="form">URL <input name="waage_url" class="breit" placeholder="http://waage.local/sensor/gewicht"></div>
+    <div class="form">MQTT-Thema <input name="waage_topic" class="breit" placeholder="waage/gewicht"></div>
+    <div class="form">Vorlauf <input name="vorlauf" style="width:60px"> g <label><input type="checkbox" name="lernen" style="width:auto"> aus jedem Bezug lernen</label></div>
+    <h3 class="hinweis" style="margin:10px 0 4px">Stopp-Ausgang (optional, Hardware)</h3>
+    <div class="form">GPIO <select name="stopp_pin"><option value="-1">keiner, nur melden</option><option>1</option><option>2</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>47</option><option>48</option></select>
+      <label><input type="checkbox" name="stopp_high" style="width:auto"> aktiv high</label> halten <input name="stopp_halten" style="width:50px"> s</div>
+    <h3 class="hinweis" style="margin:10px 0 4px">Druck (Wort in VP 0x0050)</h3>
+    <div class="form">Pumpe <select name="druck_p_wort"></select> ÷ <input name="druck_p_teil" style="width:60px"></div>
+    <div class="form">Servicekessel <select name="druck_k_wort"></select> ÷ <input name="druck_k_teil" style="width:60px"></div>
+    <div class="form"><button type="submit">Speichern</button><span class="hinweis" id="einst_ok"></span></div>
+    </form>
   </section>
 
   <section>
@@ -124,7 +173,7 @@ const SEITEN={0:"Standby",1:"Startbildschirm",2:"Alarm: Ladezeit überschritten"
 const ALARM=new Set([2,3,4,56,77,89,91]);
 const SPRACHE=["Englisch","Deutsch","Italienisch"];
 const $=id=>document.getElementById(id), v=id=>$(id).value.trim();
-let seit=0, verlauf=[];
+let seit=0;
 
 function seitenname(s){if(s<0)return "–";const b=s%100;return SEITEN[b]||("Seite "+b)}
 async function cmd(z){await fetch("/api/cmd",{method:"POST",body:z});}
@@ -140,22 +189,6 @@ function katalog(){
 }
 $("f_sprache").onchange=katalog; katalog();
 
-function zeichne(){
-  const c=$("kurve"), g=c.getContext("2d"), W=c.width=c.clientWidth*devicePixelRatio, H=c.height=170*devicePixelRatio;
-  g.clearRect(0,0,W,H); if(verlauf.length<2) return;
-  const alle=verlauf.flatMap(p=>[p.k,p.d]).filter(x=>x!=null);
-  let lo=Math.min(...alle)-2, hi=Math.max(...alle)+2; if(hi-lo<10){hi=lo+10}
-  const t0=verlauf[0].t, t1=verlauf[verlauf.length-1].t||t0+1;
-  const X=t=>(t-t0)/(t1-t0||1)*(W-40*devicePixelRatio)+34*devicePixelRatio, Y=y=>H-(y-lo)/(hi-lo)*(H-16)-8;
-  g.fillStyle="#8b9bb8"; g.font=(11*devicePixelRatio)+"px system-ui";
-  for(let i=0;i<=4;i++){const y=lo+(hi-lo)*i/4; g.fillText(Math.round(y),2,Y(y)+4); g.strokeStyle="#22304d"; g.beginPath(); g.moveTo(34*devicePixelRatio,Y(y)); g.lineTo(W,Y(y)); g.stroke()}
-  for(const [key,col] of [["k","#f4a261"],["d","#4cc9f0"]]){
-    g.strokeStyle=col; g.lineWidth=2*devicePixelRatio; g.beginPath(); let an=false;
-    for(const p of verlauf){if(p[key]==null)continue; an?g.lineTo(X(p.t),Y(p[key])):g.moveTo(X(p.t),Y(p[key])); an=true}
-    g.stroke();
-  }
-}
-
 async function hole(){
   try{
     const r=await fetch("/api/status?seit="+seit), j=await r.json();
@@ -168,14 +201,13 @@ async function hole(){
     const v50=j.vps.find(x=>x.vp==0x50);
     const k=v50?v50.w[3]:null, d=v50?v50.w[4]:null;
     $("t_kaffee").textContent=k??"–"; $("t_dampf").textContent=d??"–";
-    if(v50){verlauf.push({t:Date.now()/1000,k,d}); if(verlauf.length>1800) verlauf.shift(); zeichne()}
     $("vps").innerHTML=j.vps.sort((a,b)=>a.vp-b.vp).map(x=>`<tr><td>${hex(x.vp)}</td><td>${x.w.join(" ")}</td><td>${(x.alter_ms/1000).toFixed(1)} s</td></tr>`).join("");
     if(j.ereignisse.length){const l=$("log"); l.textContent+=j.ereignisse.join("\n")+"\n"; l.scrollTop=l.scrollHeight}
     seit=j.ereignis_nr;
     zeigeDisplay(j,k,d);
   }catch(e){$("l_mb").classList.remove("an");$("l_dp").classList.remove("an")}
 }
-setInterval(hole,700); hole(); addEventListener("resize",zeichne);
+setInterval(hole,700); hole();
 </script>
 
 <script>
@@ -795,6 +827,111 @@ zeigeDisplay=function(j,k,d){
       return `<rect x="${x0}" y="${y0}" width="${Math.abs(t[3]-t[1])}" height="${Math.abs(t[4]-t[2])}" fill="#ff9d4522" stroke="#ff9d45" stroke-width="1" stroke-dasharray="3 2" pointer-events="none"/>`}).join("");
   }
 };
+</script>
+<script>
+// ─── Zusatz: Maschine, Verlauf, Brew by Weight, Einstellungen (zusatz.h) ───
+let zj=null, bezugNr=-1, einstGeladen=false;
+async function aktion(a){await fetch("/api/aktion",{method:"POST",body:a}); holeZusatz()}
+function zielAendern(d){const z=Math.max(1,(parseFloat(v("bw_ziel"))||36)+d); $("bw_ziel").value=z; aktion("ziel "+z)}
+const f1=(x,n=1)=>x==null||isNaN(x)?"–":(+x).toFixed(n);
+const uhrzeit=ms=>new Date(ms).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+
+// Linienkurve mit linker (achse 0) und rechter Achse (achse 1).
+// reihen: [{p:[[x,y],...], farbe, achse, breite}]
+function kurve(id,reihen,o={}){
+  const c=$(id), dpr=devicePixelRatio||1, W=c.width=c.clientWidth*dpr, H=c.height=(c.clientHeight||220)*dpr, g=c.getContext("2d");
+  g.clearRect(0,0,W,H); g.font=10*dpr+"px system-ui";
+  const L=40*dpr, R=(reihen.some(r=>r.achse==1)?40:10)*dpr, T=8*dpr, B=18*dpr;
+  const xs=reihen.flatMap(r=>r.p.map(q=>q[0]));
+  if(!xs.length){g.fillStyle="#8b9bb8"; g.fillText(o.leer||"keine Daten",L,H/2); return}
+  let x0=o.x0??Math.min(...xs), x1=o.x1??Math.max(...xs); if(x1<=x0) x1=x0+1;
+  const bereich=a=>{const ys=reihen.filter(r=>(r.achse||0)==a).flatMap(r=>r.p.map(q=>q[1])).filter(y=>y!=null&&!isNaN(y));
+    if(!ys.length) return null; let lo=Math.min(...ys,o["min"+a]??Infinity), hi=Math.max(...ys,o["max"+a]??-Infinity);
+    if(hi-lo<(o["spanne"+a]||1)) hi=lo+(o["spanne"+a]||1); const r=(hi-lo)*.06; return [lo-r,hi+r]};
+  const ach=[bereich(0),bereich(1)];
+  const X=x=>L+(x-x0)/(x1-x0)*(W-L-R), Y=(y,a)=>{const [lo,hi]=ach[a]; return T+(1-(y-lo)/(hi-lo))*(H-T-B)};
+  for(let i=0;i<=4;i++){
+    if(ach[0]){const [lo,hi]=ach[0], y=lo+(hi-lo)*i/4; g.strokeStyle="#22304d"; g.lineWidth=1; g.beginPath(); g.moveTo(L,Y(y,0)); g.lineTo(W-R,Y(y,0)); g.stroke();
+      g.fillStyle="#8b9bb8"; g.textAlign="right"; g.fillText(Math.round(y),L-4*dpr,Y(y,0)+3*dpr)}
+    if(ach[1]){const [lo,hi]=ach[1], y=lo+(hi-lo)*i/4; g.fillStyle="#8b9bb8"; g.textAlign="left"; g.fillText(y.toFixed(1),W-R+4*dpr,Y(y,1)+3*dpr)}
+    const x=x0+(x1-x0)*i/4; g.textAlign=i==0?"left":i==4?"right":"center"; g.fillStyle="#8b9bb8"; g.fillText(o.fmtX?o.fmtX(x):Math.round(x),X(x),H-4*dpr);
+  }
+  if(o.linie!=null&&ach[0]){g.setLineDash([4*dpr,4*dpr]); g.strokeStyle="#f94144"; g.lineWidth=1.5*dpr; g.beginPath(); g.moveTo(L,Y(o.linie,0)); g.lineTo(W-R,Y(o.linie,0)); g.stroke(); g.setLineDash([])}
+  for(const r of reihen){const a=r.achse||0; if(!ach[a]) continue; g.strokeStyle=r.farbe; g.lineWidth=(r.breite||2)*dpr; g.beginPath(); let an=false;
+    for(const [x,y] of r.p){if(y==null||isNaN(y)){an=false; continue} an?g.lineTo(X(x),Y(y,a)):g.moveTo(X(x),Y(y,a)); an=true} g.stroke()}
+}
+
+// Verlauf aus dem Ringpuffer des ESP32 (1 Wert je Sekunde, auch ohne offene Seite)
+const ROHFARBEN=["#e6edf7","#b388ff","#43aa8b","#f4a261","#4cc9f0","#f9c74f","#f94144","#90be6d","#ff70a6"];
+let verlaufJ=null;
+async function holeVerlauf(){
+  try{const r=await fetch("/api/verlauf?sek="+v("v_sek")+"&max=600"); verlaufJ=await r.json(); zeichneVerlauf()}catch(e){}
+}
+function zeichneVerlauf(){
+  if(!verlaufJ) return;
+  const jetzt=Date.now(), P=verlaufJ.p, c=zj&&zj.cfg, reihen=[];
+  const x=q=>-q[0]; // Sekunden vor jetzt
+  if($("v_roh").checked){
+    for(let w=0;w<9;w++) reihen.push({p:P.map(q=>[x(q),q[2+w]]),farbe:ROHFARBEN[w],breite:1.5});
+    $("v_legende").innerHTML=ROHFARBEN.map((f,w)=>`<span style="color:${f}">■</span> Wort ${w}`).join(" ")+" — bei laufender Pumpe steigt das Druckwort; dann unten bei Einstellungen eintragen.";
+  }else{
+    reihen.push({p:P.map(q=>[x(q),q[5]]),farbe:"#f4a261"},{p:P.map(q=>[x(q),q[6]]),farbe:"#4cc9f0"});
+    let leg='<span style="color:#f4a261">■</span> Kaffeekessel °C <span style="color:#4cc9f0">■</span> Servicekessel °C';
+    if(c&&c.druck_p_wort>=0){reihen.push({p:P.map(q=>[x(q),q[2+c.druck_p_wort]/c.druck_p_teil]),farbe:"#43aa8b",achse:1}); leg+=' <span style="color:#43aa8b">■</span> Pumpendruck bar (rechts)'}
+    if(c&&c.druck_k_wort>=0){reihen.push({p:P.map(q=>[x(q),q[2+c.druck_k_wort]/c.druck_k_teil]),farbe:"#b388ff",achse:1}); leg+=' <span style="color:#b388ff">■</span> Kesseldruck bar (rechts)'}
+    if(c&&c.druck_p_wort<0&&c.druck_k_wort<0) leg+=" · Druck: Wort noch nicht zugeordnet (Rohworte zeigen)";
+    $("v_legende").innerHTML=leg+` · Speicher ${verlaufJ.groesse>=86400?"24 h":"30 min (ohne PSRAM)"}`;
+  }
+  kurve("kurve",reihen,{x0:-v("v_sek"),x1:0,fmtX:s=>uhrzeit(jetzt+s*1000),spanne0:10,min1:0,leer:"noch keine Werte vom Mainboard"});
+}
+$("v_sek").onchange=holeVerlauf; $("v_roh").onchange=zeichneVerlauf;
+
+async function holeBezug(){
+  try{const b=await (await fetch("/api/bezug")).json(); bezugNr=b.nr;
+    const z=zj?zj.cfg.ziel:null;
+    kurve("bw_kurve",[{p:b.p.map(q=>[q[0],q[1]]),farbe:"#e6edf7",breite:2.5},{p:b.p.map(q=>[q[0],q[2]]),farbe:"#43aa8b",achse:1},{p:b.p.map(q=>[q[0],q[3]]),farbe:"#4cc9f0",achse:1}],
+      {x0:0,linie:z,min0:0,max0:z||0,min1:0,spanne1:4,fmtX:s=>Math.round(s)+" s",leer:"noch kein Bezug seit dem Start der Bridge"});
+  }catch(e){}
+}
+
+function einstellungenFuellen(c,vp50){
+  const f=$("einst");
+  for(const k of ["mqtt_uri","mqtt_user","ha_prefix","waage_art","waage_url","waage_topic","waage_ble","vorlauf","stopp_pin","stopp_halten","druck_p_teil","druck_k_teil"]) if(f[k]) f[k].value=c[k];
+  f.lernen.checked=c.lernen; f.stopp_high.checked=c.stopp_high;
+  f.mqtt_pass.placeholder=c.mqtt_pass_gesetzt?"gesetzt (leer = unverändert, - = löschen)":"kein Passwort";
+  for(const n of ["druck_p_wort","druck_k_wort"]){
+    f[n].innerHTML='<option value="-1">unbekannt</option>'+[...Array(9).keys()].map(w=>`<option value="${w}">Wort ${w}${vp50?" (jetzt "+vp50.w[w]+")":""}</option>`).join("");
+    f[n].value=c[n];
+  }
+}
+async function speichern(ev){
+  ev.preventDefault(); const f=$("einst"), d=new URLSearchParams(new FormData(f));
+  d.set("lernen",f.lernen.checked?1:0); d.set("stopp_high",f.stopp_high.checked?1:0);
+  if(!f.mqtt_pass.value) d.delete("mqtt_pass");
+  const r=await fetch("/api/einstellungen",{method:"POST",body:d.toString()});
+  $("einst_ok").textContent=r.ok?" gespeichert":" Fehler"; f.mqtt_pass.value=""; einstGeladen=false; setTimeout(()=>$("einst_ok").textContent="",3000);
+}
+
+async function holeZusatz(){
+  try{
+    zj=await (await fetch("/api/zusatz")).json(); const w=zj.werte, b=zj.bezug;
+    $("m_status").textContent=zj.maschine.status; $("m_status").className=w.alarm=="ON"?"alarm":"";
+    $("b_an").disabled=zj.maschine.an; $("b_aus").disabled=!zj.maschine.an;
+    $("m_mqtt").textContent=zj.mqtt+(zj.mqtt=="verbunden"?" ("+zj.mqtt_basis+")":"");
+    $("bw_g").textContent=f1(b.laeuft?b.g:w.gewicht); $("bw_fluss").textContent=f1(w.durchfluss); $("bw_t").textContent=b.laeuft?f1(b.t):"–"; $("bw_p").textContent=f1(w.druck_pumpe);
+    $("bw_ziel_txt").textContent="· Ziel "+f1(zj.cfg.ziel)+" g, Vorlauf "+f1(zj.cfg.vorlauf)+" g";
+    if(document.activeElement!==$("bw_ziel")) $("bw_ziel").value=zj.cfg.ziel;
+    $("bw_waage").textContent=zj.waage.status;
+    $("bw_meldung").textContent=b.laeuft?(b.stopp_gesendet?"Ziel erreicht – Bezug stoppen!":"Bezug läuft"):zj.cfg.waage_art?"bereit: Bezug startet, sobald es in die Tasse tropft":"Waage ist aus (Einstellungen)";
+    $("bw_meldung").className=b.laeuft&&b.stopp_gesendet?"alarm einheit":"einheit";
+    $("bw_frei").style.display=b.stopp_aktiv?"":"none";
+    $("bw_liste").innerHTML=b.liste.map(x=>`<tr><td>${x.alter_s<3600?Math.round(x.alter_s/60)+" min":Math.round(x.alter_s/3600)+" h"}</td><td>${f1(x.g)} g</td><td>${f1(x.ziel)} g</td><td>${f1(x.dauer)} s</td><td>${x.gestoppt?"Stopp bei Ziel":""}</td></tr>`).join("");
+    if(!einstGeladen&&!$("einst").contains(document.activeElement)){einstellungenFuellen(zj.cfg,letzterStatus&&letzterStatus.vps.find(x=>x.vp==0x50)); einstGeladen=true}
+    if(b.laeuft||b.nr!=bezugNr) holeBezug();
+  }catch(e){}
+}
+setInterval(holeZusatz,700); holeZusatz(); setInterval(holeVerlauf,5000); holeVerlauf();
+addEventListener("resize",()=>{zeichneVerlauf(); holeBezug()});
 </script>
 </body>
 </html>)HTML";
