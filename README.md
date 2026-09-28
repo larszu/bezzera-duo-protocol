@@ -104,7 +104,7 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 
 ## 🗂️ Inhalt
 
-- [🔌 Hardware](#-hardware) — Display, Mainboard, Stecker und Adern
+- [🔌 Hardware](#-hardware) — Display, Mainboard, Stecker und Adern ([Details](docs/bauteile.md))
 - [📡 Das Protokoll](#-das-protokoll) — Mini DGUS, was gemessen wurde
 - [🖥️ Seiten und Tasten](#️-seiten-und-tasten) — Katalog und Touch-Konfiguration aus dem Flash
 - [🧪 Messen und mitschneiden](#-messen-und-mitschneiden) — Pegel, Logic Analyzer, Sniffer
@@ -143,6 +143,8 @@ Maschinenlogik** — es zeigt Variablen an und meldet Touch-Eingaben über UART.
   zeitweise — der Touch lebt, der Fehler ist ein **Wackelkontakt**. Die
   Touch-Register zeigten die letzte echte Berührung bei x=286, y=234, genau auf „OK“.
 - **LCD-Panel:** vermutlich LQ035NC111, 3,5" QVGA mit 54-poligem RGB-Flachkabel.
+- **Details** zu Zwischenstecker, SiS9252, Touch-Reparatur, LCD-Panel und
+  Typnummer: [`docs/bauteile.md`](docs/bauteile.md).
 - Eine unbestückte Reihe von 5 Pads in der Mitte ist vermutlich ein
   Programmier- oder Debug-Anschluss; unten sitzt ein unbenutzter DWIN-Stecker.
 
@@ -179,6 +181,10 @@ Passwörter auf 1901/1906.
 | 4 | **schwarz** | **braun** | GND | GND |
 
 Ein Ersatzkabel mit den Displayfarben ist damit 1:1 belegt.
+
+Der weiße Zwischenstecker ist vermutlich **Molex Mini-Fit Jr.** (4,2 mm), das
+komplette Kabel gibt es als Ersatzteil **Bezzera 7663518**. Teilenummern:
+[`docs/bauteile.md`](docs/bauteile.md).
 
 ---
 
@@ -339,6 +345,12 @@ läuft normal weiter. Ausgabe über USB mit 921600 Baud im Log-Format von
 `duo_sniff.py`, Markierungen mit `m <text>`, Baudrate mit `b`, Invertierung
 mit `i`, `scan` misst Ruhepegel und kürzesten Puls.
 
+Abgriff am saubersten über einen Y-Adapter für den Zwischenstecker: je ein
+Buchsen- und Steckergehäuse mit Kontakten (Mini-Fit Jr.: 39-01-4040 +
+39-01-4046, 39-00-0038 + 39-00-0041), 1:1 durchverdrahtet mit Abzweig an TX,
+RX und GND; +5 V bleibt frei. Vorher das Raster messen, bei 3,0 mm die
+Micro-Fit-Teile nehmen. Eine 2,54-mm-Stacking-Leiste passt nicht.
+
 ```
 Datenleitung 1 ──[10k]──┬── GPIO16 (Kanal A)      Spannungsteiler nur bei 5-V-Pegel
                         └──[20k]── GND
@@ -480,7 +492,8 @@ Tests: `python3 -m unittest discover -s tests`
 5. **Variablen-Konfiguration (`14.bin`)** ebenfalls aus dem Flash lesen: Sie sagt,
    welche VP an welcher Stelle angezeigt wird — damit auch die Sollwerte auf den
    Kaffee- und Tee-Seiten.
-6. **Touch reparieren oder ersetzen:** Kontakt am 6-poligen Stecker reinigen;
+6. **Touch reparieren oder ersetzen:** Kontakt am 6-poligen Stecker reinigen
+   ([Anleitung](docs/bauteile.md));
    alternativ den SiS9252 per I²C mitschneiden und vom ESP32 nachbilden lassen.
 
 <details>
