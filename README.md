@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/hero.png" alt="Nachbau des Bezzera-Displays in der Weboberfläche: Startbildschirm, Einstellungen, PID-Kessel Kaffee, Alarm Bitte Tank füllen" width="860" />
+  <img src="docs/screenshots/display_nachbau.png" alt="Nachbau des Bezzera-Displays in der Weboberfläche: Startbildschirm, Einstellungen, PID-Kessel Kaffee, Alarm Bitte Tank füllen" width="860" />
   <br />
   <sub><i>Der Display-Nachbau der Weboberfläche — gezeichnet nach den Bildschirmfotos im Bezzera-Handbuch und eigenen Fotos aller 300 Seiten, bedienbar mit den Tastenflächen aus dem Display-Flash. Das Herstellerlogo ist bewusst durch einen neutralen Schriftzug ersetzt.</i></sub>
 </p>
@@ -52,7 +52,7 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/screenshots/weboberflaeche.png" alt="Weboberfläche der Bridge mit Display-Nachbau, Temperaturen, Ein/Aus und Verlauf" width="420" /><br />
+      <img src="docs/screenshots/weboberflaeche_uebersicht.png" alt="Weboberfläche der Bridge mit Display-Nachbau, Temperaturen, Ein/Aus und Verlauf" width="420" /><br />
       <b>Weboberfläche der Bridge</b>
     </td>
     <td width="50%" align="center">
@@ -72,7 +72,7 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
   </tr>
   <tr>
     <td colspan="2" align="center">
-      <img src="docs/screenshots/standby_menue.png" alt="Nachgebauter Standby-Bildschirm und Startbildschirm mit Seitenmenü" width="700" /><br />
+      <img src="docs/screenshots/display_standby_menue.png" alt="Nachgebauter Standby-Bildschirm und Startbildschirm mit Seitenmenü" width="700" /><br />
       <b>Standby und Seitenmenü (Reinigen, Einstellungen, Rückspülen, Standby)</b>
     </td>
   </tr>
