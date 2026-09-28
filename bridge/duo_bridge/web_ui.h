@@ -85,7 +85,7 @@ button:hover{background:#244170}
     <div class="form">VP <input id="f_vp" value="0x0050"> Worte <input id="f_w" class="breit" value="10 11 12 13 14 15 16 17 18"><button onclick="cmd('w '+v('f_vp')+' '+v('f_w'))">schreiben</button></div>
     <div class="form">Roh <select id="f_ziel"><option value="d">→ Display</option><option value="m">→ Mainboard</option></select>
       <input id="f_roh" class="breit" value="c6 a5 03 81 03 02"><button onclick="cmd(v('f_ziel')+' '+v('f_roh'))">senden</button></div>
-    <p class="hinweis">Tastendruck: Die nächsten n Antworten des Displays auf „VP lesen“ werden überschrieben, das Mainboard sieht den Wert wie einen Druck. Welche Werte welche Taste sind, ist noch nicht vollständig bekannt.</p>
+    <p class="hinweis">Tastendruck: Die nächsten n Antworten des Displays auf „VP lesen“ werden überschrieben, das Mainboard sieht den Wert wie einen Druck. Welche Taste welchen Wert schickt, steht in der Tastentabelle aus dem Display-Flash (docs/tasten.json); ein Klick auf das Display oben nutzt sie direkt.</p>
   </section>
 
   <section>
