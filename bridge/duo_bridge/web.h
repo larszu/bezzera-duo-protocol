@@ -6,9 +6,15 @@
 //   - das eigene WLAN "duo-bridge" / espresso1 unter http://192.168.4.1.
 // Im Heimnetz: http://duo.local oder die IP, die beim Start ueber USB kommt.
 //
-// GET  /            Oberflaeche (web_ui.h)
-// GET  /api/status  JSON: Seite, Uhr, Lebenszeichen, alle VPs, neue Ereignisse
-// POST /api/cmd     eine Befehlszeile wie ueber USB (p, w, o, d, m, s)
+// GET  /                  Oberflaeche (web_ui.h)
+// GET  /api/status        JSON: Seite, Uhr, Lebenszeichen, alle VPs, neue Ereignisse
+// POST /api/cmd           eine Befehlszeile wie ueber USB (p, w, o, d, m, s)
+// GET  /api/zusatz        JSON: Maschine, Waage, Bezug, MQTT, Einstellungen
+// GET  /api/verlauf       ?sek=3600&max=720: VP 0x0050 je Sekunde (zusatz.h)
+// GET  /api/bezug         Kurve des laufenden bzw. letzten Bezugs
+// POST /api/aktion        an | aus | tara | abbruch | frei | ziel <g>
+// POST /api/einstellungen feld=wert&... (URL-kodiert)
+// POST /api/waage         Gewicht in g von einer WLAN-Waage (auch GET ?g=)
 //
 // Kein Login: nur im eigenen Netz betreiben.
 
@@ -21,6 +27,9 @@
 
 #include "tasten.h"
 #include "web_ui.h"
+#include "zusatz.h"
+#include "waage.h"
+#include "ha_mqtt.h"
 
 static const int ETH_CS = 14, ETH_IRQ = 10, ETH_RST = 9;
 static const int ETH_SCK = 13, ETH_MISO = 12, ETH_MOSI = 11;
@@ -148,6 +157,111 @@ static void befehlWeb() {
   server.send(200, "text/plain", "ok");
 }
 
+static String urlDecode(const String &s) {
+  String o;
+  for (size_t i = 0; i < s.length(); i++) {
+    char c = s[i];
+    if (c == '+') o += ' ';
+    else if (c == '%' && i + 2 < s.length()) {
+      o += (char)strtol(s.substring(i + 1, i + 3).c_str(), nullptr, 16);
+      i += 2;
+    } else o += c;
+  }
+  return o;
+}
+
+static String queryWert(const String &q, const char *k) {
+  String such = String(k) + "=";
+  int i = ("&" + q).indexOf("&" + such);
+  if (i < 0) return "";
+  int e = q.indexOf('&', i);
+  return urlDecode(q.substring(i + such.length(), e < 0 ? q.length() : e));
+}
+
+// Zusatz-API, gemeinsam fuer den Webserver und den USB-Befehl "z" (tools/web_lokal.py).
+static int zusatzApi(const String &pfad, const String &query, const String &rumpf, String &antwort) {
+  if (pfad == "/api/zusatz") antwort = zusatzJson();
+  else if (pfad == "/api/verlauf") {
+    String s = queryWert(query, "sek"), m = queryWert(query, "max");
+    antwort = verlaufJson(s.length() ? s.toInt() : 3600, m.length() ? m.toInt() : 720);
+  } else if (pfad == "/api/bezug") antwort = bezugJson();
+  else if (pfad == "/api/aktion") {
+    String a = rumpf;
+    a.trim();
+    if (!aktion(a)) {
+      antwort = "unbekannte Aktion";
+      return 400;
+    }
+    ereignis("- Web: %s", a.c_str());
+    antwort = "ok";
+  } else if (pfad == "/api/einstellungen") {
+    bool mqttNeuStart = false;
+    int a = 0;
+    while (a < (int)rumpf.length()) {
+      int e = rumpf.indexOf('&', a);
+      if (e < 0) e = rumpf.length();
+      String paar = rumpf.substring(a, e);
+      a = e + 1;
+      int g = paar.indexOf('=');
+      if (g < 0) continue;
+      String k = urlDecode(paar.substring(0, g)), v = urlDecode(paar.substring(g + 1));
+      v.trim();
+      if (!setzeEinstellung(k, v)) continue;
+      if (k.startsWith("mqtt_") || k == "ha_prefix" || k.startsWith("druck_") || k.startsWith("waage_")) mqttNeuStart = true;
+      if (k == "stopp_pin" && cfg.stoppPin >= 0) pinMode(cfg.stoppPin, OUTPUT);
+    }
+    einstellungenSpeichern();
+    stoppAusgang(stoppAktiv);
+    if (mqttNeuStart) mqttStarten();  // Discovery kommt beim Verbinden neu
+    ereignis("- Einstellungen gespeichert");
+    antwort = "ok";
+  } else if (pfad == "/api/waage") {
+    float g = waageZahl((rumpf.length() ? rumpf : queryWert(query, "g")).c_str());
+    if (isnan(g)) {
+      antwort = "keine Zahl";
+      return 400;
+    }
+    waageMelden(g);
+    antwort = "ok";
+  } else {
+    antwort = "unbekannt";
+    return 404;
+  }
+  return 200;
+}
+
+static void zusatzWeb() {
+  String q, antwort;
+  for (int i = 0; i < server.args(); i++) {
+    if (server.argName(i) == "plain") continue;
+    if (q.length()) q += '&';
+    q += server.argName(i) + "=" + server.arg(i);
+  }
+  int code = zusatzApi(server.uri(), q, server.arg("plain"), antwort);
+  server.send(code, antwort.startsWith("{") ? "application/json" : "text/plain", antwort);
+}
+
+// USB-Befehl "z <pfad>[?query] [rumpf]": Antwort als Zeile "#Z <antwort>"
+void zusatzBefehl(char *s) {
+  while (*s == ' ') s++;
+  String z = s, pfad = z, rumpf;
+  int sp = z.indexOf(' ');
+  if (sp >= 0) {
+    pfad = z.substring(0, sp);
+    rumpf = z.substring(sp + 1);
+  }
+  String query;
+  int f = pfad.indexOf('?');
+  if (f >= 0) {
+    query = pfad.substring(f + 1);
+    pfad = pfad.substring(0, f);
+  }
+  String antwort;
+  zusatzApi(pfad, query, rumpf, antwort);
+  Serial.print("#Z ");
+  Serial.println(antwort);
+}
+
 void webSetup() {
   Network.onEvent(netzEreignis);
   ETH.begin(ETH_PHY_W5500, 1, ETH_CS, ETH_IRQ, ETH_RST, SPI2_HOST, ETH_SCK, ETH_MISO, ETH_MOSI);
@@ -169,11 +283,19 @@ void webSetup() {
   server.on("/tasten.js", HTTP_GET, [] { server.send_P(200, "text/javascript; charset=utf-8", TASTEN_JS); });
   server.on("/api/status", HTTP_GET, statusJson);
   server.on("/api/cmd", HTTP_POST, befehlWeb);
+  for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage"})
+    server.on(p, zusatzWeb);
   server.begin();
+  zusatzSetup();
+  mqttSetup();
+  waageSetup();
 }
 
 void webLoop() {
   server.handleClient();
+  verlaufLoop();
+  bezugLoop();
+  mqttLoop();
   if (!heimWlanAn) return;
   if (WiFi.status() == WL_CONNECTED) {
     heimWlanFehlschlaege = 0;

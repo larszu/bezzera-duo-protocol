@@ -43,6 +43,8 @@
 //                        beantwortet die Leseanfragen selbst, Display optional),
 //                        2 Hybrid (Display antwortet, per Web/Befehl gesetzte VPs
 //                        werden in seinen Antworten ersetzt)
+//   z <pfad> [rumpf]     Zusatz-API wie im Web, z. B. "z /api/aktion an",
+//                        "z /api/zusatz"; Antwort als Zeile "#Z ..."
 //   x                    Mitschnitt-Ausgabe an/aus (Durchreichen laeuft immer)
 //   ?                    Zustand
 
@@ -201,6 +203,7 @@ static uint32_t rtcBasisMs = 0;  // millis() beim letzten Stellen der Uhr
 void webSetup();
 void webLoop();
 void heimWlan(char *s);
+void zusatzBefehl(char *s);
 String statusText(uint32_t seit);
 
 // ─── Rahmen-Parser je Richtung ─────────────────────────────────────────────
@@ -446,6 +449,8 @@ static void befehl(char *z) {
     scanNaechster = 0;
   } else if (c == 'n') {
     heimWlan(s);
+  } else if (c == 'z') {  // Zusatz-API (Ein/Aus, Waage, Verlauf, Einstellungen)
+    zusatzBefehl(s);
   } else if (c == 'j') {  // Zustand als JSON fuer die lokale Oberflaeche
     long seit = zahl(s, ok);
     Serial.print("#J ");
