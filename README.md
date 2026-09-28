@@ -21,7 +21,7 @@
 <p align="center">
   <img src="docs/screenshots/hero.png" alt="Nachbau des Bezzera-Displays in der Weboberfläche: Startbildschirm, Einstellungen, PID-Kessel Kaffee, Alarm Bitte Tank füllen" width="860" />
   <br />
-  <sub><i>Der Display-Nachbau der Weboberfläche — gezeichnet nach Fotos aller 300 Seiten, bedienbar mit den Tastenflächen aus dem Display-Flash.</i></sub>
+  <sub><i>Der Display-Nachbau der Weboberfläche — gezeichnet nach den Bildschirmfotos im Bezzera-Handbuch und eigenen Fotos aller 300 Seiten, bedienbar mit den Tastenflächen aus dem Display-Flash.</i></sub>
 </p>
 
 ---
@@ -67,6 +67,12 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
     <td width="50%" align="center">
       <img src="docs/screenshots/foto_startseite.jpg" alt="Webcam-Foto des echten Displays, Startbildschirm mit Testwerten 13 und 14" width="420" /><br />
       <b>Das Original (Webcam, Testwerte 13/14)</b>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <img src="docs/screenshots/standby_menue.png" alt="Nachgebauter Standby-Bildschirm und Startbildschirm mit Seitenmenü" width="700" /><br />
+      <b>Standby und Seitenmenü (Reinigen, Einstellungen, Rückspülen, Standby)</b>
     </td>
   </tr>
   <tr>
@@ -220,8 +226,14 @@ Tastencode.
 | `0x0000` | Mainboard liest | 100 ms | Tastencode des Displays (Navigation, Aktionen) |
 | `0x0001` | Mainboard liest | 100 ms | zweiter Tastencode (selten) |
 | `0x0002` | Mainboard liest | auf Einstellseiten | „OK“ in Einstellungen |
-| `0x0050` | Mainboard schreibt | ~300 ms | 9 Worte Status: **Wort 3 Kaffeekessel °C, Wort 4 Servicekessel °C**; Wort 2 wird nach Seite 103 zu 1, Wort 7 = 3 |
+| `0x0050` | Mainboard schreibt | ~300 ms | 9 Worte Status: **Wort 3 Kaffeekessel °C, Wort 4 Servicekessel °C**; Wort 2 wird nach Seite 103 zu 1, Wort 7 = 3; Wort 0, 1, 5, 6, 8 bisher 0 (kalte Maschine) — dort werden die Drücke vermutet |
 | `0x0063` | Mainboard schreibt | beim Start | Firmware-Version Mainboard × 10 (21 → „FW: 2.1“) |
+
+**Drücke:** Der Startbildschirm hat laut Handbuch zwei Druckanzeigen, links
+den **Pumpendruck 0–10 bar**, rechts den **Druck des Servicekessels
+0–2,5 bar**; das Mainboard hat dafür den Anschluss PRESS. Welches Wort sie
+trägt, zeigt ein Mitschnitt beim Aufheizen mit gefülltem Tank oder die
+Variablen-Konfiguration (`14.bin`) aus dem Display-Flash.
 
 Alle Tasten sind vom Typ `FDxx`: **Das Display meldet nichts von sich aus**,
 das Mainboard fragt ab. Reine Seitenwechsel erledigt das Display lokal, ohne
@@ -507,6 +519,11 @@ entweder später aktualisiert, oder die Zahlen bedeuten nicht dasselbe.
 
 ## 📚 Quellen
 
+- Bezzera: Bedienungsanleitung „Matrix Duo“ (IT/EN/FR/DE/ES/ZH, 2018 und 2020), mit Bildschirmfotos der Oberfläche in Originalauflösung —
+  [Whole Latte Love](https://www.wholelattelove.com/cdn/shop/files/Bezzera_DUO_Matrix_Manual.pdf),
+  [kaffee24.de](https://www.kaffee24.de/media/e8/95/94/1677585579/W904059%20Bedienungsanleitung%20Bezzera%20Duo%20MN.pdf?ts=1677585579).
+  Vorlage für Farben, Symbole und Skalen des Nachbaus; die Bilder selbst liegen nicht im Repo
+- [Clive Coffee: Technician Menu and Reset](https://support.clivecoffee.com/en/articles/16425965-bezzera-duo-de-mn-accessing-the-technician-menu-and-resetting-the-machine) — Weg ins Technikmenü, Werkspasswort
 - [andrivet/ADVi3pp](https://github.com/andrivet/ADVi3pp), `Marlin/src/advi3pp/core/dgus.h`: Mini-DGUS-Befehle und Register
 - [Sébastien Andrivet: DWIN Mini DGUS Display Development Guide (non-official)](https://sebastien.andrivet.com/en/posts/dwin-mini-dgus-display-development-guide-non-official/)
 - DWIN DGUS Development Guide [v4.0 (2014)](https://cdn.papouch.com/data/user-content/old_eshop/files/DIS_DMT48270T043_3WT/dwin-dgus-dev-guide_v40_2014.pdf), [v4.3 (2015)](https://whiteelectronics.pl/img/cms/DWIN_DGUS_DEV_GUIDE_V43_2015.pdf): DGUS-Register, LibOP, Touch-Konfiguration (Kapitel 7)
