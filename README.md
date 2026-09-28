@@ -449,6 +449,8 @@ Im Hybridmodus gelten per Weboberfläche oder `w` gesetzte VPs, bis das
 Mainboard selbst in diese VP schreibt. **Stand:** kompiliert, noch nicht an
 der Maschine getestet.
 
+Steckplan mit Lochpositionen: [`docs/breadboard_hybrid.png`](docs/breadboard_hybrid.png).
+
 Aufbau für Emulation und Hybrid: Display an Versorgung und TX Mainboard
 lassen, nur seine Antwortleitung über den ESP32 führen:
 
