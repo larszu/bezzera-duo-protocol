@@ -492,9 +492,9 @@ Display grün an ESP32 **5V**, braun an GND, gelb an GPIO15, weiß an GPIO18.
 | `d <hex …>` / `m <hex …>` | Rohbytes an Display / Mainboard |
 | `s <von> <bis> [ms]` | Seiten durchschalten |
 | `n <ssid> <passwort>` | Heim-WLAN speichern (nur 2,4 GHz), `n ?` listet sichtbare Netze |
-| `e [0\|1]` | Display-Emulation aus/an (gespeichert) |
+| `e [0\|1\|2]` | Modus: durchreichen, Emulation, Hybrid (gespeichert) |
 | `j [seit]` | Zustand als JSON-Zeile `#J {…}` |
-| `M <hex …>` | Test: Rahmen behandeln, als käme er vom Mainboard |
+| `M <hex …>` / `D <hex …>` | Test: Rahmen behandeln, als käme er vom Mainboard / Display |
 
 **Weboberfläche:** eigenes WLAN `duo-bridge` (Passwort `espresso1`) →
 http://192.168.4.1, im Heimnetz http://duo.local, per Ethernet ebenso.
@@ -518,10 +518,33 @@ Weboberfläche landen im Modell und werden beim nächsten Abfragen gemeldet.
 Getestet mit simulierten Mainboard-Rahmen (`M <hex>`): Antworten stimmen
 Byte für Byte mit denen des echten Displays überein.
 
-**Befund 2026-09-28: Ohne Display sendet das Mainboard nichts.** Mit nur dem
-ESP32 an CN6 (TX über Teiler, RX, GND) blieb die Leitung stumm. Aufbau, der
-funktioniert: Display an Versorgung und TX Mainboard lassen und nur seine
-Antwortleitung auftrennen:
+**Befund 2026-09-28:** Ohne Antwortleitung des Displays startet die Maschine
+nicht weiter; mit Display parallel zum ESP32 stürzt sie ab (zwei Antworten
+gleichzeitig). Vermutliche Ursache: Beim Start schreibt das Mainboard VP
+`0x0063` und prüft das Echo. Der Emulator hatte diesen Schreibvorgang
+verpasst (Spannungsteiler an GPIO17 zu der Zeit falsch, nur Störbytes) und
+mit 0 geantwortet. Die frühere Beobachtung „ohne Display sendet das
+Mainboard nichts“ geht vermutlich auf denselben Teiler zurück: Mit richtigem
+Teiler kamen auch ohne Display gültige Rahmen. Ein Startbyte des Displays gibt
+es nicht; vor dem ersten Rahmen des Mainboards zeigen beide Leitungen nur
+gleichzeitige Störflanken vom Einschalten.
+
+**Modi** (`e 0|1|2`, gespeichert):
+
+| Modus | Wer antwortet dem Mainboard | wofür |
+|---|---|---|
+| 0 durchreichen | das Display | mitschneiden, `o` für einzelne Tastendrücke |
+| 1 Emulation | der ESP32 aus seinem Modell | ohne Display; muss den Start mitbekommen |
+| 2 Hybrid | das Display, gesetzte VPs ersetzt der ESP32 | Steuern bei laufendem Display |
+
+Im Hybridmodus gelten per Weboberfläche oder `w` gesetzte VPs, bis das
+Mainboard selbst in diese VP schreibt. **Stand:** kompiliert, noch nicht an
+der Maschine getestet.
+
+Steckplan mit Lochpositionen: [`docs/breadboard_hybrid.png`](docs/breadboard_hybrid.png).
+
+Aufbau für Emulation und Hybrid: Display an Versorgung und TX Mainboard
+lassen, nur seine Antwortleitung über den ESP32 führen:
 
 | Verbindung | wie |
 |---|---|

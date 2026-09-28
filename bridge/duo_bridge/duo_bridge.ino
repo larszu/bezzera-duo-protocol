@@ -38,8 +38,11 @@
 //   n <ssid> <passwort>  Heim-WLAN speichern (nur ueber USB), "n -" loescht es
 //   j [seit]             Zustand als JSON-Zeile "#J {...}" (tools/web_lokal.py)
 //   M <hex ...>          Test: Rahmen behandeln, als kaeme er vom Mainboard
-//   e [0|1]              Display-Emulation: der ESP32 beantwortet die Leseanfragen
-//                        des Mainboards selbst (Display optional)
+//   D <hex ...>          Test: Rahmen behandeln, als kaeme er vom Display
+//   e [0|1|2]            Modus: 0 durchreichen, 1 Display emulieren (der ESP32
+//                        beantwortet die Leseanfragen selbst, Display optional),
+//                        2 Hybrid (Display antwortet, per Web/Befehl gesetzte VPs
+//                        werden in seinen Antworten ersetzt)
 //   x                    Mitschnitt-Ausgabe an/aus (Durchreichen laeuft immer)
 //   ?                    Zustand
 
@@ -49,7 +52,7 @@
 
 // Vorwaertsdeklaration: die Arduino-IDE setzt Funktionsprototypen vor die Typen.
 struct Parser;
-static void modellSchreiben(const uint8_t *r, size_t n);
+static void modellSchreiben(const uint8_t *r, size_t n, char quelle);
 static void emuliereAntwort(const uint8_t *r, size_t n);
 
 static const int PIN_RX_DISPLAY = 15;
@@ -154,7 +157,7 @@ static void beobachte(char quelle, const uint8_t *r, size_t n) {
     leitung.rahmenMainboard++;
     leitung.zuletztMainboard = millis();
   }
-  if (zumDisplay) modellSchreiben(r, n);
+  if (zumDisplay) modellSchreiben(r, n, quelle);
   const uint8_t cmd = r[3];
   const uint8_t *p = r + 4;
   size_t pn = n - 4;
@@ -188,7 +191,11 @@ static void beobachte(char quelle, const uint8_t *r, size_t n) {
 static const uint16_t VP_ANZAHL = 0x1000;  // 0x0000..0x0FFF, mehr nutzt das Projekt nicht
 static uint16_t vpRam[VP_ANZAHL];
 static uint8_t regRam[256];
-static bool emulation = false;
+static uint8_t emulation = 0;  // 0 durchreichen, 1 Display emulieren, 2 Hybrid
+// Hybrid: das echte Display antwortet, gesetzte VPs werden in seinen Antworten
+// ersetzt. Gesetzt = von der Weboberflaeche/Befehlen geschrieben ('b'); das
+// Mainboard hebt es auf, indem es selbst in die VP schreibt ('B').
+static uint8_t vpGesetzt[0x1000 / 8];
 static uint32_t rtcBasisMs = 0;  // millis() beim letzten Stellen der Uhr
 
 void webSetup();
@@ -247,9 +254,28 @@ static void seite(uint16_t s) {
 // Ein vollstaendiger Rahmen vom Display: ggf. Antwort ueberschreiben, dann
 // an das Mainboard weiterreichen.
 static void rahmenVomDisplay(uint8_t *r, size_t n) {
-  if (emulation) {  // das Mainboard bekommt nur die Antworten des Emulators
+  if (emulation == 1) {  // das Mainboard bekommt nur die Antworten des Emulators
     beobachte('A', r, n);
     return;
+  }
+  if (emulation == 2 && n >= 9 && r[3] == 0x83) {  // Hybrid: gesetzte VPs ersetzen
+    uint16_t vp = (r[4] << 8) | r[5];
+    uint8_t anz = r[6];
+    bool geaendert = false;
+    for (uint8_t i = 0; i < anz && 7u + 2 * i + 1 < n; i++) {
+      uint16_t v = vp + i;
+      if (v < VP_ANZAHL && (vpGesetzt[v / 8] & (1 << (v % 8)))) {
+        if (!geaendert) logZeile('A', r, n);  // Original protokollieren
+        r[7 + 2 * i] = vpRam[v] >> 8;
+        r[8 + 2 * i] = vpRam[v] & 0xFF;
+        geaendert = true;
+      }
+    }
+    if (geaendert) {
+      uartA.write(r, n);
+      logZeile('a', r, n);
+      return;
+    }
   }
   // C6 A5 06 83 vpH vpL 01 wH wL
   if (n == 9 && r[3] == 0x83 && r[6] == 0x01) {
@@ -276,7 +302,7 @@ static void rahmenVomDisplay(uint8_t *r, size_t n) {
 static void rahmenVomMainboard(uint8_t *r, size_t n) {
   uartB.write(r, n);
   logZeile('B', r, n);
-  if (emulation) emuliereAntwort(r, n);
+  if (emulation == 1) emuliereAntwort(r, n);
 }
 
 // Liest Bytes, setzt Rahmen zusammen. Bytes ausserhalb eines Rahmens werden
@@ -424,19 +450,24 @@ static void befehl(char *z) {
     long seit = zahl(s, ok);
     Serial.print("#J ");
     Serial.println(statusText(ok ? seit : 0));
+  } else if (c == 'D') {  // Test: Rahmen verarbeiten, als kaeme er vom Display
+    uint8_t b[256];
+    size_t n = hexBytes(s, b, sizeof b);
+    if (n >= 4) rahmenVomDisplay(b, n);
   } else if (c == 'M') {  // Test: Rahmen verarbeiten, als kaeme er vom Mainboard
     uint8_t b[256];
     size_t n = hexBytes(s, b, sizeof b);
     if (n >= 4) rahmenVomMainboard(b, n);
   } else if (c == 'e') {
     long an = zahl(s, ok);
-    emulation = ok ? an != 0 : !emulation;
+    emulation = ok ? (an >= 0 && an <= 2 ? an : 0) : (emulation ? 0 : 1);
     Preferences pref;  // dauerhaft: USB-Verbindungsaufbau startet den ESP32 neu
     pref.begin("bridge", false);
-    pref.putBool("emulation", emulation);
+    pref.putUChar("modus", emulation);
     pref.end();
-    Serial.printf("# Display-Emulation %s (gespeichert)\n", emulation ? "an" : "aus");
-    ereignis("- Emulation %s", emulation ? "an" : "aus");
+    static const char *namen[] = {"durchreichen", "Emulation", "Hybrid"};
+    Serial.printf("# Modus %s (gespeichert)\n", namen[emulation]);
+    ereignis("- Modus %s", namen[emulation]);
   } else if (c == 'x') {
     ausgabe = !ausgabe;
     Serial.printf("# ausgabe %s\n", ausgabe ? "an" : "aus");
@@ -483,7 +514,8 @@ void setup() {
   {
     Preferences pref;
     pref.begin("bridge", true);
-    emulation = pref.getBool("emulation", false);
+    emulation = pref.getUChar("modus", 0);
+    if (emulation > 2) emulation = 0;
     pref.end();
   }
   Serial.println("# duo_bridge bereit, ? fuer Zustand");
@@ -525,7 +557,7 @@ static void rtcAktuell(uint8_t *aus) {
 }
 
 // Schreibzugriffe Richtung Display ins Modell uebernehmen.
-static void modellSchreiben(const uint8_t *r, size_t n) {
+static void modellSchreiben(const uint8_t *r, size_t n, char quelle) {
   const uint8_t cmd = r[3];
   const uint8_t *p = r + 4;
   size_t pn = n - 4;
@@ -539,8 +571,12 @@ static void modellSchreiben(const uint8_t *r, size_t n) {
     }
   } else if (cmd == 0x82 && pn >= 4) {
     uint16_t vp = (p[0] << 8) | p[1];
-    for (size_t i = 2; i + 1 < pn; i += 2, vp++)
-      if (vp < VP_ANZAHL) vpRam[vp] = (p[i] << 8) | p[i + 1];
+    for (size_t i = 2; i + 1 < pn; i += 2, vp++) {
+      if (vp >= VP_ANZAHL) continue;
+      vpRam[vp] = (p[i] << 8) | p[i + 1];
+      if (quelle == 'b') vpGesetzt[vp / 8] |= 1 << (vp % 8);
+      else vpGesetzt[vp / 8] &= ~(1 << (vp % 8));
+    }
   }
 }
 
