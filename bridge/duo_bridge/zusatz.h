@@ -493,20 +493,7 @@ static void waageTara() {
 // VP 0x002E..0x0032 -> neue Werte hineinschreiben -> OK (VP 0x0002 = 1) ->
 // Mainboard uebernimmt sie in seine Echtzeituhr. Reihenfolge der VPs laut
 // Touch-Konfiguration: 2E Stunde, 2F Minute, 30 Tag, 31 Monat, 32 Jahr (2-stellig).
-static void uhrStellen(int jj, int mm, int tt, int hh, int mi) {
-  int32_t s = leitung.seite;
-  int sprache = s >= 0 && s < 300 ? (s / 100) * 100 : 100;
-  char b[64];
-  befehl((char *)"w 0x0000 23");
-  snprintf(b, sizeof b, "p %d", sprache + 57);
-  befehl(b);
-  delay(400);  // Mainboard schreibt die alten Werte
-  snprintf(b, sizeof b, "w 0x002E %d %d %d %d %d", hh, mi, tt, mm, jj);
-  befehl(b);
-  delay(150);
-  befehl((char *)"w 0x0002 1");
-  ereignis("- Uhr gestellt: 20%02d-%02d-%02d %02d:%02d", jj, mm, tt, hh, mi);
-}
+static void uhrStellen(int jj, int mm, int tt, int hh, int mi);  // profile.h (Ablauf ohne delay)
 
 // Aktionen fuer Web, USB und MQTT: "an", "aus", "tara", "abbruch", "stopp", "ziel <g>", "uhr JJ MM TT hh mm"
 static bool aktion(const String &a) {

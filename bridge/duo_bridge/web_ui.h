@@ -128,6 +128,23 @@ button:disabled{opacity:.4;cursor:default}
     <div id="katalog"></div>
   </section>
 
+  <section style="grid-column:1/-1">
+    <h2>Brühprofile</h2>
+    <p class="hinweis">Je Kaffeesorte gespeichert in der Bridge. „Auf die Maschine“ stellt Brühtemperatur, Vorbrühen, Kesselpriorität und Dampfkessel am Mainboard ein (wie am Display mit OK) und setzt das Zielgewicht für Brew by Weight. Nur vom Startbildschirm aus.</p>
+    <table><thead><tr><th>Name</th><th>Röster / Sorte</th><th>Mahlgrad</th><th>Dosis → Ziel</th><th>°C</th><th>Vorbrühen</th><th>Dampf</th><th></th></tr></thead><tbody id="pr_liste"></tbody></table>
+    <p id="pr_ergebnis" class="einheit"></p>
+    <form id="pr_form" onsubmit="profilSpeichern(event)" style="margin-top:10px">
+      <input type="hidden" name="nr" value="">
+      <div class="form">Name <input name="name" class="breit" required placeholder="z. B. Hausespresso"> Röster / Sorte <input name="roester" class="breit"></div>
+      <div class="form">Mahlgrad <input name="mahlgrad" style="width:90px"> Dosis <input name="dosis" style="width:60px"> g → Ziel <input name="ziel" style="width:60px"> g
+        · Brühtemperatur <select name="temp"><option>89</option><option>90</option><option>91</option><option>92</option><option>93</option><option>94</option><option>95</option><option>96</option></select> °C
+        · Vorbrühen <input name="vorb" style="width:55px"> s</div>
+      <div class="form">Dampfkessel <input name="dampf" style="width:60px" placeholder="leer = lassen"> °C · Priorität <select name="prio"><option value="-1">nicht ändern</option><option value="0">Kaffee</option><option value="1">Services</option><option value="2">keine</option></select></div>
+      <div class="form">Notiz <input name="notiz" class="breit"></div>
+      <div class="form"><button type="submit">Speichern</button><button type="button" onclick="profilVonMaschine()">Werte der Maschine übernehmen</button><button type="button" onclick="profilNeu()">Neu</button></div>
+    </form>
+  </section>
+
   <section>
     <h2>Einstellungen</h2>
     <form id="einst" onsubmit="speichern(event)">
@@ -429,7 +446,10 @@ function seiteTemperatur(s,j){
 // über seite%100+100; nur Titel, die in T stehen, erscheinen übersetzt.
 let dspJ=null, dspFehlt=new Set(), dspGefragt=new Set();
 function vpj(j,vp,i=0){const e=j&&j.vps&&j.vps.find(v=>v.vp==vp); return e&&e.w.length>i?e.w[i]:null}
-function vpw(vp,i=0){const e=dspJ&&dspJ.vps.find(v=>v.vp==vp); if(!e||e.w.length<=i){dspFehlt.add(vp);return null} return e.w[i]}
+// Jede Variable, die eine Seite anzeigt, wird regelmaessig neu beim Display
+// abgefragt (dspGefragt wird alle 3 s geleert): Aenderungen, die das Display
+// selbst macht (± am Touch), kommen sonst nie in der Bridge an.
+function vpw(vp,i=0){dspFehlt.add(vp); const e=dspJ&&dspJ.vps.find(v=>v.vp==vp); if(!e||e.w.length<=i) return null; return e.w[i]}
 function tastenRect(s){return tastenAuf(s).map(t=>({x0:Math.min(t[1],t[3]),y0:Math.min(t[2],t[4]),x1:Math.max(t[1],t[3]),y1:Math.max(t[2],t[4]),t}))}
 function kn(r,label,sz=14,aktiv=false){const w=r.x1-r.x0,h=r.y1-r.y0;
   return `<rect x="${r.x0+2}" y="${r.y0+2}" width="${w-4}" height="${h-4}" rx="4" fill="${aktiv?"#bfe9ff":"url(#gknopf)"}" stroke="#9fc4e6" stroke-width="1.2"/>`+
@@ -848,7 +868,8 @@ function seiteTemperatur(s,j){
   if(b==7||b==8) o+=txt(66,136,soll==null?"–":String(soll),{s:50,w:200,a:"middle",f:"#8fd8dc"})+txt(128,104,vpw(0x58)==1?"°F":"°C",{s:22,w:200,f:"#8fd8dc"});
   o+=tastenRect(s).filter(r=>r.t[6]==5&&r.t[7]==0x15).map(r=>kn(r,r.t[8]==2?"+":"–")).join("");
   if(kaffee) o+=`<rect x="4" y="202" width="2" height="18" fill="#bfe9ec"/>`+txt(10,217,"CRONO",{s:12,f:FARBE.text})+txt(62,217,crono?"ON":"OFF",{s:12,f:TK})+`<rect x="62" y="221" width="22" height="2" fill="${crono?"#39d353":"#777"}"/>`+
-    `<rect x="142" y="202" width="2" height="18" fill="#bfe9ec"/>`+txt(150,217,tx("vorb",s),{s:12,f:FARBE.text});
+    `<rect x="142" y="202" width="2" height="18" fill="#bfe9ec"/>`+txt(150,217,tx("vorb",s),{s:12,f:FARBE.text})+
+    txt(240,217,vpw(0x5c)==null?"–":(vpw(0x5c)/10).toFixed(1)+"″",{s:12,f:TK});  // VP 0x005C in Zehntelsekunden
   return o+okEcke();
 }
 // Spülablauf: Brühgruppe von der Seite mit Hebel und Pfeil
@@ -1015,6 +1036,35 @@ async function holeZusatz(){
   }catch(e){}
 }
 setInterval(holeZusatz,700); holeZusatz(); setInterval(holeVerlauf,5000); holeVerlauf();
+
+// ─── Brühprofile (profile.h) ───────────────────────────────────────────────
+let profJ=null;
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function holeProfile(){
+  try{profJ=await (await fetch("/api/profile")).json();
+    $("pr_liste").innerHTML=profJ.profile.map(({nr,p})=>`<tr${nr==profJ.aktiv?' style="background:#1c3355"':""}><td><b>${esc(p.name)}</b>${p.notiz?`<br><span class="hinweis">${esc(p.notiz)}</span>`:""}</td><td>${esc(p.roester)}</td><td>${esc(p.mahlgrad)}</td>
+      <td>${p.dosis?f1(p.dosis)+" g":"–"} → ${p.ziel?f1(p.ziel)+" g":"–"}</td><td>${p.temp}</td><td>${(p.vorb/10).toFixed(1)} s</td><td>${p.dampf||"–"}</td>
+      <td><button onclick="profilAnwenden(${nr})" ${profJ.ablauf?"disabled":""}>Auf die Maschine</button> <button onclick="profilBearbeiten(${nr})">Bearbeiten</button> <button onclick="profilLoeschen(${nr})">Löschen</button></td></tr>`).join("")||`<tr><td colspan="8" class="hinweis">noch keine Profile</td></tr>`;
+    $("pr_ergebnis").textContent=profJ.ergebnis;
+  }catch(e){}
+}
+function profilBearbeiten(nr){const e=profJ.profile.find(x=>x.nr==nr); if(!e) return; const f=$("pr_form"), p=e.p;
+  f.nr.value=nr; for(const k of ["name","roester","mahlgrad","notiz","dosis","ziel","temp"]) f[k].value=p[k]||"";
+  f.vorb.value=(p.vorb/10).toFixed(1); f.dampf.value=p.dampf||""; f.prio.value=p.prio==255?-1:p.prio; f.name.focus()}
+function profilNeu(){const f=$("pr_form"); f.reset(); f.nr.value=""; f.temp.value=93}
+async function profilSpeichern(ev){ev.preventDefault(); const d=new URLSearchParams(new FormData($("pr_form")));
+  if(!d.get("nr")) d.delete("nr"); if(!d.get("dampf")) d.set("dampf","0");
+  const r=await fetch("/api/profil",{method:"POST",body:d.toString()}); if(r.ok) $("pr_form").nr.value=await r.text(); holeProfile()}
+async function profilAnwenden(nr){const r=await fetch("/api/profil_aktion",{method:"POST",body:"anwenden "+nr});
+  $("pr_ergebnis").textContent=r.ok?"wird geschrieben …":"Nicht möglich: "+await r.text(); holeProfile()}
+async function profilLoeschen(nr){await fetch("/api/profil_aktion",{method:"POST",body:"loeschen "+nr}); holeProfile()}
+// Werte aus dem Variablenspeicher des Displays holen (das Mainboard hat sie beim letzten Öffnen der Seiten geschrieben)
+async function profilVonMaschine(){
+  await cmd("d c6 a5 04 83 00 5a 08"); await new Promise(r=>setTimeout(r,400));
+  const j=await (await fetch("/api/status")).json(), w=vp=>{const e=j.vps.find(v=>v.vp==vp);return e?e.w[0]:null};
+  const f=$("pr_form"); if(w(0x60)) f.temp.value=w(0x60); if(w(0x5c)!=null) f.vorb.value=(w(0x5c)/10).toFixed(1);
+  if(w(0x61)) f.dampf.value=w(0x61); if(w(0x5a)!=null) f.prio.value=w(0x5a); if(zj) f.ziel.value=zj.cfg.ziel}
+setInterval(holeProfile,2000); holeProfile();
 addEventListener("resize",()=>{zeichneVerlauf(); holeBezug()});
 </script>
 </body>

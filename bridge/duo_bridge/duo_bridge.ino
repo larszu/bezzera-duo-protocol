@@ -84,7 +84,7 @@ struct VpWert {
   uint8_t d[64];
   uint32_t ms;
 };
-static VpWert vpTabelle[48];
+static VpWert vpTabelle[96];
 static size_t vpAnzahl = 0;
 
 struct Leitung {
@@ -126,7 +126,7 @@ static void merkeVp(uint16_t vp, const uint8_t *d, size_t n, char quelle) {
   VpWert *e = nullptr;
   for (size_t i = 0; i < vpAnzahl; i++)
     if (vpTabelle[i].vp == vp) e = &vpTabelle[i];
-  if (!e && vpAnzahl < 48) {
+  if (!e && vpAnzahl < 96) {
     e = &vpTabelle[vpAnzahl++];
     e->vp = vp;
     e->len = 0;
@@ -203,6 +203,7 @@ static uint8_t emulation = 0;  // 0 durchreichen, 1 Display emulieren, 2 Hybrid
 // Mainboard hebt es auf, indem es selbst in die VP schreibt ('B').
 static uint8_t vpGesetzt[0x1000 / 8];
 static uint32_t rtcBasisMs = 0;  // millis() beim letzten Stellen der Uhr
+static uint32_t vpMainboardMs[0x100];  // wann das Mainboard VP 0x00..0xFF zuletzt geschrieben hat
 
 void webSetup();
 void webLoop();
@@ -653,6 +654,7 @@ static void modellSchreiben(const uint8_t *r, size_t n, char quelle) {
       vpRam[vp] = (p[i] << 8) | p[i + 1];
       if (quelle == 'b') vpGesetzt[vp / 8] |= 1 << (vp % 8);
       else vpGesetzt[vp / 8] &= ~(1 << (vp % 8));
+      if (quelle == 'B' && vp < 0x100) vpMainboardMs[vp] = millis();
     }
   }
 }

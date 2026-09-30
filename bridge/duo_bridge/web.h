@@ -33,6 +33,7 @@
 #include "zusatz.h"
 #include "waage.h"
 #include "ha_mqtt.h"
+#include "profile.h"
 
 static const int ETH_CS = 14, ETH_IRQ = 10, ETH_RST = 9;
 static const int ETH_SCK = 13, ETH_MISO = 12, ETH_MOSI = 11;
@@ -219,6 +220,55 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
     if (mqttNeuStart) mqttStarten();  // Discovery kommt beim Verbinden neu
     ereignis("- Einstellungen gespeichert");
     antwort = "ok";
+  } else if (pfad == "/api/profile") {
+    antwort = profileJson();
+  } else if (pfad == "/api/profil") {  // speichern: nr=-1 legt neu an
+    String nrText = queryWert(rumpf, "nr");
+    int nr = nrText.length() ? nrText.toInt() : -1;
+    if (nr < 0)
+      for (int i = 0; i < PROFILE_MAX && nr < 0; i++)
+        if (!profile[i].belegt) nr = i;
+    if (nr < 0 || nr >= PROFILE_MAX) {
+      antwort = "kein Platz (höchstens 20 Profile)";
+      return 400;
+    }
+    Profil &p = profile[nr];
+    if (!p.belegt) {
+      memset(&p, 0, sizeof p);
+      p.temp = 93;
+      p.vorb = 0;
+      p.prio = 255;
+    }
+    int a = 0;
+    while (a < (int)rumpf.length()) {
+      int e = rumpf.indexOf('&', a);
+      if (e < 0) e = rumpf.length();
+      String paar = rumpf.substring(a, e);
+      a = e + 1;
+      int g = paar.indexOf('=');
+      if (g > 0) profilFeld(p, urlDecode(paar.substring(0, g)), urlDecode(paar.substring(g + 1)));
+    }
+    if (!p.name[0]) snprintf(p.name, sizeof p.name, "Profil %d", nr + 1);
+    p.belegt = true;
+    profilSpeichern(nr);
+    antwort = String(nr);
+  } else if (pfad == "/api/profil_aktion") {  // "anwenden N" | "loeschen N"
+    String a = rumpf;
+    a.trim();
+    int nr = a.substring(a.indexOf(' ') + 1).toInt();
+    if (a.startsWith("anwenden ")) {
+      const char *f = profilAnwenden(nr);
+      antwort = f ? f : "ok";
+      return f ? 409 : 200;
+    } else if (a.startsWith("loeschen ") && nr >= 0 && nr < PROFILE_MAX) {
+      profile[nr].belegt = false;
+      if (profilAktiv == nr) profilAktiv = -1;
+      profilSpeichern(nr);
+      antwort = "ok";
+    } else {
+      antwort = "unbekannt";
+      return 400;
+    }
   } else if (pfad == "/api/waage") {
     float g = waageZahl((rumpf.length() ? rumpf : queryWert(query, "g")).c_str());
     if (isnan(g)) {
@@ -297,10 +347,12 @@ void webSetup() {
     server.send(302, "text/plain", "");
   });
   dns.start(53, "*", WiFi.softAPIP());
-  for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage"})
+  for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage",
+                        "/api/profile", "/api/profil", "/api/profil_aktion"})
     server.on(p, zusatzWeb);
   server.begin();
   zusatzSetup();
+  profileLaden();
   mqttSetup();
   waageSetup();
 }
@@ -325,6 +377,7 @@ void webLoop() {
   dns.processNextRequest();
   server.handleClient();
   displayNachlesen();
+  ablaufLoop();
   verlaufLoop();
   bezugLoop();
   mqttLoop();

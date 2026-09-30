@@ -95,6 +95,7 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 | 🧪 | Pressure curves | built; pressure word unknown (💡 above) |
 | 🧪 | Home Assistant via MQTT discovery | built; never run against a broker |
 | 🧪 | Bluetooth scales Acaia, Bookoo, Felicita, Decent | built after [AcaiaArduinoBLE](https://github.com/tatemazer/AcaiaArduinoBLE), BooKoo and Decent docs; not tested with any real scale |
+| 🧪 | Brew profiles: stored in the bridge, written to the machine via page x07/x08 + OK, checked by reopening | built, machine test pending |
 | 🧪 | Wi-Fi scales (poll a URL, `POST /api/waage`, MQTT) | built |
 | 🧪 | Shot detection from the first drops, learning the stop offset | built, checked in the simulation |
 | 🧪 | Stop output: short key press, only during a running shot (≥ 0.5 g/s) | built |
