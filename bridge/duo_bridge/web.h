@@ -32,8 +32,9 @@
 #include "web_ui.h"
 #include "zusatz.h"
 #include "waage.h"
-#include "ha_mqtt.h"
 #include "profile.h"
+#include "shots.h"
+#include "ha_mqtt.h"
 
 static const int ETH_CS = 14, ETH_IRQ = 10, ETH_RST = 9;
 static const int ETH_SCK = 13, ETH_MISO = 12, ETH_MOSI = 11;
@@ -269,6 +270,55 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
       antwort = "unbekannt";
       return 400;
     }
+  } else if (pfad == "/api/shots") {
+    antwort = shotsJson();
+  } else if (pfad == "/api/shot") {
+    antwort = shotKurveJson(queryWert(query, "nr").toInt());
+  } else if (pfad == "/api/shot_aktion") {
+    String a = urlDecode(rumpf);
+    a.trim();
+    if (!shotAktion(a)) {
+      antwort = "unbekannt";
+      return 400;
+    }
+    antwort = "ok";
+  } else if (pfad == "/api/ble_suche") {
+    bleSucheAnfordern = true;
+    bleFundeN = 0;
+    antwort = "ok";
+  } else if (pfad == "/api/ble_geraete") {
+    antwort = "{\"laeuft\":";
+    antwort += (bleSucheLaeuft || bleSucheAnfordern) ? "true" : "false";
+    antwort += ",\"geraete\":[";
+    for (int i = 0; i < bleFundeN; i++) {
+      if (i) antwort += ',';
+      antwort += "{\"name\":";
+      jsonText(antwort, bleFunde[i].name);
+      antwort += ",\"adresse\":";
+      jsonText(antwort, bleFunde[i].adresse);
+      antwort += ",\"rssi\":";
+      antwort += bleFunde[i].rssi;
+      antwort += ",\"bekannt\":";
+      antwort += bleFunde[i].bekannt ? "true" : "false";
+      antwort += '}';
+    }
+    antwort += "]}";
+  } else if (pfad == "/api/maschine") {  // alles, was das Mainboard in den Variablenspeicher geschrieben hat
+    antwort = "{\"vps\":{";
+    bool erstes = true;
+    for (uint16_t vp = 0; vp < 0x100; vp++) {
+      if (!vpMainboardMs[vp]) continue;
+      if (!erstes) antwort += ',';
+      erstes = false;
+      antwort += "\"" + String(vp) + "\":[";
+      antwort += vpRam[vp];
+      antwort += ',';
+      antwort += (millis() - vpMainboardMs[vp]) / 1000;
+      antwort += ']';
+    }
+    antwort += "},\"bezuege_maschine\":";
+    antwort += bezuegeMaschine();
+    antwort += '}';
   } else if (pfad == "/api/waage") {
     float g = waageZahl((rumpf.length() ? rumpf : queryWert(query, "g")).c_str());
     if (isnan(g)) {
@@ -348,11 +398,13 @@ void webSetup() {
   });
   dns.start(53, "*", WiFi.softAPIP());
   for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage",
-                        "/api/profile", "/api/profil", "/api/profil_aktion"})
+                        "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion",
+                        "/api/ble_suche", "/api/ble_geraete", "/api/maschine"})
     server.on(p, zusatzWeb);
   server.begin();
   zusatzSetup();
   profileLaden();
+  shotsSetup();
   mqttSetup();
   waageSetup();
 }
@@ -378,6 +430,7 @@ void webLoop() {
   server.handleClient();
   displayNachlesen();
   ablaufLoop();
+  shotsLoop();
   verlaufLoop();
   bezugLoop();
   mqttLoop();

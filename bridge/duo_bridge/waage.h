@@ -15,6 +15,7 @@
 
 #include <BLEDevice.h>
 #include <HTTPClient.h>
+#include <algorithm>
 
 // Zahl aus Text oder JSON ("value": 12.3 / "weight": / "gewicht":)
 static float waageZahl(const char *s) {
@@ -219,10 +220,59 @@ static void httpSchritt() {
   vTaskDelay(pdMS_TO_TICKS(fehler >= 5 ? 2000 : 120));
 }
 
+// ─── Bluetooth-Suche fuer die Weboberflaeche ──────────────────────────────
+// Liste aller Geraete in Reichweite mit Name, Adresse, Signal und ob die
+// Bridge ihr Protokoll kennt. Auswahl in der Oberflaeche setzt waage_ble.
+struct BleFund {
+  char name[32];
+  char adresse[18];
+  int8_t rssi;
+  bool bekannt;
+};
+static BleFund bleFunde[24];
+static volatile int bleFundeN = 0;
+static volatile bool bleSucheAnfordern = false, bleSucheLaeuft = false;
+
+static void bleSuche() {
+  bleSucheLaeuft = true;
+  if (bleClient) bleTrennen();
+  BLEScan *scan = BLEDevice::getScan();
+  scan->setActiveScan(true);
+  BLEScanResults *r = scan->start(6, false);
+  int n = 0;
+  for (int i = 0; r && i < r->getCount() && n < 24; i++) {
+    BLEAdvertisedDevice d = r->getDevice(i);
+    String name = d.getName();
+    if (!name.length()) continue;  // namenlose Geraete (Tracker, Handys) weglassen
+    BleFund &f = bleFunde[n++];
+    strlcpy(f.name, name.c_str(), sizeof f.name);
+    strlcpy(f.adresse, d.getAddress().toString().c_str(), sizeof f.adresse);
+    f.rssi = d.getRSSI();
+    f.bekannt = istWaagenName(name);
+  }
+  // bekannte Waagen zuerst, dann nach Signalstaerke
+  std::sort(bleFunde, bleFunde + n, [](const BleFund &a, const BleFund &b) {
+    return a.bekannt != b.bekannt ? a.bekannt : a.rssi > b.rssi;
+  });
+  bleFundeN = n;
+  scan->clearResults();
+  bleSucheLaeuft = false;
+}
+
 static void waageTask(void *) {
   bool bleAn = false;
   for (;;) {
     uint8_t art = cfg.waageArt;
+    if (bleSucheAnfordern) {
+      bleSucheAnfordern = false;
+      if (!bleAn) {
+        BLEDevice::init("duo-bridge");
+        bleAn = true;
+      }
+      waageStatusSetzen("Bluetooth: suche Geräte …");
+      bleSuche();
+      waageStatusSetzen(bleFundeN ? "Bluetooth: Suche fertig" : "Bluetooth: nichts gefunden");
+    }
     if (art != 1 && bleClient) bleTrennen();  // BLE bleibt initialisiert, nur die Verbindung geht
     if (art == 1) {
       if (!bleAn) {
