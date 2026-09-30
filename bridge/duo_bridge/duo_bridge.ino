@@ -31,7 +31,8 @@
 //                        auf "VP lesen <vp>" mit <wert> ueberschreiben
 //                        -> so sieht das Mainboard einen Tastendruck
 //   o <vp> -             Ueberschreiben fuer <vp> aufheben
-//   d <hex ...>          Rohbytes an das Display
+//   d <hex ...>          Rohbytes an das Display; Antworten auf eigene Lese-
+//                        anfragen (0x81, 0x83 ausser VP 0/1) gehen nicht ans Mainboard
 //   m <hex ...>          Rohbytes an das Mainboard
 //   s <von> <bis> [ms]   Seiten von..bis durchschalten, je ms (Standard 3000)
 //   s                    Durchschalten abbrechen
@@ -225,6 +226,44 @@ struct Override {
 };
 static Override overrides[8];
 
+// Eigene Leseanfragen der Bridge an das Display (Befehl d, Weboberflaeche):
+// Die Antwort des Displays geht nur ins Protokoll, nicht ans Mainboard. Sonst
+// saehe das Mainboard Antworten auf Fragen, die es nie gestellt hat.
+// VP 0x0000/0x0001 fragt das Mainboard selbst alle 100 ms ab; dort laesst
+// sich eine eigene Antwort nicht von seiner unterscheiden, sie bleibt aussen vor.
+struct EigeneAnfrage {
+  uint8_t cmd = 0;  // 0x81 Register, 0x83 VP; 0 = frei
+  uint16_t adresse = 0;
+  uint32_t ms = 0;
+};
+static EigeneAnfrage eigene[4];
+
+static void eigeneAnfrageMerken(const uint8_t *b, size_t n) {
+  if (n < 6 || b[0] != KOPF0 || b[1] != KOPF1) return;
+  uint16_t adr;
+  if (b[3] == 0x83 && n >= 7) adr = (b[4] << 8) | b[5];
+  else if (b[3] == 0x81) adr = b[4];
+  else return;
+  if (b[3] == 0x83 && adr <= 1) return;
+  EigeneAnfrage *frei = &eigene[0];
+  for (auto &e : eigene)
+    if (!e.cmd || millis() - e.ms > 500) frei = &e;
+  *frei = {b[3], adr, millis()};
+}
+
+// true = Antwort gehoert zu einer eigenen Anfrage (und wird verbraucht)
+static bool eigeneAntwort(const uint8_t *r, size_t n) {
+  if (n < 6) return false;
+  uint16_t adr = r[3] == 0x83 ? (r[4] << 8) | r[5] : r[4];
+  for (auto &e : eigene) {
+    if (e.cmd && e.cmd == r[3] && e.adresse == adr && millis() - e.ms < 500) {
+      e.cmd = 0;
+      return true;
+    }
+  }
+  return false;
+}
+
 // Seiten-Durchlauf
 static bool scanAktiv = false;
 static int scanSeite = 0, scanBis = 0;
@@ -258,7 +297,12 @@ static void seite(uint16_t s) {
 // an das Mainboard weiterreichen.
 static void rahmenVomDisplay(uint8_t *r, size_t n) {
   if (emulation == 1) {  // das Mainboard bekommt nur die Antworten des Emulators
-    beobachte('A', r, n);
+    if (eigeneAntwort(r, n)) logZeile('A', r, n);  // eigene Anfrage: sichtbar machen
+    else beobachte('A', r, n);
+    return;
+  }
+  if (eigeneAntwort(r, n)) {  // Antwort auf eine Frage der Bridge: nicht ans Mainboard
+    logZeile('A', r, n);
     return;
   }
   if (emulation == 2 && n >= 9 && r[3] == 0x83) {  // Hybrid: gesetzte VPs ersetzen
@@ -430,6 +474,7 @@ static void befehl(char *z) {
     uint8_t b[256];
     size_t n = hexBytes(s, b, sizeof b);
     if (!n) return;
+    if (c == 'd') eigeneAnfrageMerken(b, n);
     (c == 'd' ? uartB : uartA).write(b, n);
     logZeile(c == 'd' ? 'b' : 'a', b, n);
   } else if (c == 's') {

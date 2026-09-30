@@ -483,7 +483,15 @@ green to ESP32 **5V**, brown to GND, yellow to GPIO15, white to GPIO18.
 | **1** emulation | the ESP32 from its model (VPs, registers, running clock) | without a display; must catch the machine's start-up |
 | **2** hybrid | the display; VPs set via web/`w` are replaced by the ESP32 | control while the display is running |
 
-The mode is stored and persists after a restart.
+The mode is stored and survives a restart; the default is 0.
+
+**Mode 0 really only passes through:** the display shows exactly what the
+mainboard sends, and the mainboard only gets the display's answers. When the
+bridge asks the display something itself (web UI, `d`,
+`tools/libop_lesen.py`), the answer goes to the log only, not to the
+mainboard. Interventions only happen when you trigger them: a click in the
+display replica, on/off, `o`, `w`, `p`. The web UI runs in every mode and only
+observes in mode 0.
 
 **Finding on starting without a display:** Without the display's reply line
 the machine does not continue its start-up; with the display in parallel to the ESP32 it crashes (two
