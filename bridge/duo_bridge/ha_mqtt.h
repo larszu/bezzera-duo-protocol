@@ -126,6 +126,8 @@ static void haDiscovery() {
   haEntitaet("number", "ziel", "Zielgewicht", "\"cmd_t\":\"~/set/ziel\",\"min\":5,\"max\":100,\"step\":0.5,\"unit_of_meas\":\"g\",\"ic\":\"mdi:scale\",\"val_tpl\":\"{{ value_json.ziel }}\"", cfg.waageArt);
   haEntitaet("button", "tara", "Tara", "\"cmd_t\":\"~/set/tara\",\"ic\":\"mdi:scale-balance\"", cfg.waageArt);
   haEntitaet("button", "stopp", "Bezug stoppen", "\"cmd_t\":\"~/set/aktion\",\"payload_press\":\"stopp\",\"ic\":\"mdi:stop\"", cfg.stoppPin >= 0);
+  haEntitaet("binary_sensor", "bereit", "Bereit", "\"ic\":\"mdi:coffee\",\"val_tpl\":\"{{ value_json.bereit }}\"");
+  haEntitaet("sensor", "bezuege_maschine", "Bezüge Maschine", "\"stat_cla\":\"total_increasing\",\"ic\":\"mdi:counter\",\"val_tpl\":\"{{ value_json.bezuege_maschine }}\"");
   haEntitaet("sensor", "waage", "Waage", "\"ent_cat\":\"diagnostic\",\"val_tpl\":\"{{ value_json.waage }}\"");
   mqttSenden(mqttBasis + "/verfuegbar", "online", true);
 }
@@ -165,6 +167,17 @@ static String haZustand() {
   jsonZahl(j, cfg.ziel, 1);
   j += ",\"waage\":";
   jsonText(j, waageStatusText());
+  j += ",\"bereit\":\"";
+  j += maschineBereit() ? "ON" : "OFF";
+  j += "\",\"bezuege_maschine\":";
+  if (bezuegeMaschine()) j += bezuegeMaschine();
+  else j += "null";
+  j += ",\"shot_laeuft\":";
+  j += shotLaeuft ? "true" : "false";
+  j += ",\"seit_rueckspuelen\":";
+  j += zaehler.seitRueckspuelen;
+  j += ",\"rueckspuelen_alle\":";
+  j += zaehler.rueckspuelenAlle;
   j += '}';
   return j;
 }
