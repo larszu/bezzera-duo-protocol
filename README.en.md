@@ -580,6 +580,18 @@ The bridge therefore reads the on/standby state from the key value, not from the
 page: the display performs touch page changes without reporting them to the mainboard.
 The next capture should be a complete shot with a full tank.
 
+### Brew profiles
+
+One profile per coffee in the bridge (up to 20, in NVS): name, roaster/bean,
+grind setting, dose, target weight, brew temperature (89–96 °C), pre-infusion
+(0–5 s), steam boiler, boiler priority, note. “Auf die Maschine” (to the
+machine) takes the same path as a finger on the display: open the coffee
+settings (key code 7), the mainboard writes its values, the bridge overwrites
+temperature, pre-infusion and priority, OK; the same for the steam boiler (key
+code 8). It then opens the pages again and checks what the mainboard writes
+back. Only from the home screen. Fields modelled on Beanconqueror and
+GaggiMate. 🧪
+
 ### Home Assistant
 
 <img src="docs/screenshots/zusatz_einstellungen.png" alt="Settings: MQTT broker, scale, stop offset, stop output and pressure word" width="280" align="right" />

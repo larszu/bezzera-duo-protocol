@@ -582,6 +582,17 @@ Den Zustand „an/Standby“ liest die Bridge deshalb am Tastenwert, nicht an de
 Seite: Seitenwechsel per Touch macht das Display ohne Meldung ans Mainboard.
 Der nächste Mitschnitt sollte ein ganzer Bezug mit vollem Tank sein.
 
+### Brühprofile
+
+Je Kaffeesorte ein Profil in der Bridge (bis 20, im NVS): Name, Röster/Sorte,
+Mahlgrad, Dosis, Zielgewicht, Brühtemperatur (89–96 °C), Vorbrühen (0–5 s),
+Dampfkessel, Kesselpriorität, Notiz. „Auf die Maschine“ geht denselben Weg wie
+ein Finger am Display: Kaffee-Einstellungen öffnen (Tastencode 7), das
+Mainboard schreibt seine Werte, die Bridge überschreibt Temperatur, Vorbrühen
+und Priorität, OK; dasselbe für den Dampfkessel (Tastencode 8). Danach öffnet
+sie die Seiten noch einmal und prüft, was das Mainboard zurückschreibt. Nur vom
+Startbildschirm aus. Felder angelehnt an Beanconqueror und GaggiMate. 🧪
+
 ### Home Assistant
 
 <img src="docs/screenshots/zusatz_einstellungen.png" alt="Einstellungen: MQTT-Broker, Waage, Vorlauf, Stopp-Ausgang und Druckwort" width="280" align="right" />
