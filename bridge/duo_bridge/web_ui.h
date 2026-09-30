@@ -58,6 +58,8 @@ button:disabled{opacity:.4;cursor:default}
     <h2>Display</h2>
     <div id="dsp_wrap" style="max-width:640px;margin:0 auto"><svg id="dsp" viewBox="0 0 320 240" style="width:100%;display:block;border-radius:6px;box-shadow:0 0 0 6px #000,0 6px 30px #0008"></svg></div>
     <div class="form" style="margin-top:8px"><label><input type="checkbox" id="f_flaechen" style="width:auto"> Tastenflächen zeigen</label></div>
+    <p class="hinweis" id="dsp_erklaerung" style="color:var(--text)"></p>
+    <div class="form" id="dsp_pw" style="display:none">Werkspasswort eingeben: <button onclick="passwort(1901)">1901</button><button onclick="passwort(1906)">1906</button><span class="hinweis">laut Clive Coffee nach einem Reset; welches wofür gilt, ist nicht belegt</span></div>
     <p class="hinweis" id="dsp_hinweis">Nachbau aus Fotos. Ein Klick wirkt wie eine Berührung an dieser Stelle: Die Taste aus der Touch-Konfiguration des Displays (1070 Tasten) schreibt ihren Wert und wechselt die Seite, genau wie das Display selbst. Ist das Mainboard verbunden, liest es den Wert beim nächsten Abfragen.</p>
   </section>
 
@@ -74,7 +76,8 @@ button:disabled{opacity:.4;cursor:default}
   <section>
     <h2>Maschine</h2>
     <div id="m_status" style="font-size:20px;font-weight:600">–</div>
-    <div class="form" style="margin-top:12px"><button id="b_an" onclick="aktion('an')">Einschalten</button><button id="b_aus" onclick="aktion('aus')">Standby</button></div>
+    <div class="form" style="margin-top:12px"><button id="b_an" onclick="aktion('an')">Einschalten</button><button id="b_aus" onclick="aktion('aus')">Standby</button>
+      <button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button></div>
     <p class="hinweis">Wirkt wie „Für Start drücken“ bzw. „Standby“ im Seitenmenü: VP 0x0000 = 1 / 0. Home Assistant: <span id="m_mqtt">–</span></p>
   </section>
 
@@ -208,6 +211,9 @@ async function hole(){
   }catch(e){$("l_mb").classList.remove("an");$("l_dp").classList.remove("an")}
 }
 setInterval(hole,700); hole();
+// Werte der aktuellen Seite alle 3 s neu beim Display abfragen: Aenderungen,
+// die nur das Display kennt (Uhr, Einstellungen), kommen sonst nie zurueck.
+setInterval(()=>dspGefragt.clear(),3000);
 </script>
 
 <script>
@@ -246,6 +252,39 @@ const LISTE_TITEL={16:"einst",17:"einst",18:"einst",19:"einst",20:"tech",21:"tec
 const ALARM_ICON={2:"warn",3:"tank",4:"warn",56:"wrench",77:"warn",89:"sun",91:"warn"};
 
 let dspSeite=-1, dspDaten={};
+// Was die Seite bedeutet (Handbuch „Matrix Duo“ und Messungen); Schluessel = Seite % 100
+const ERKLAERUNG={
+ 1:"Startbildschirm: links Pumpendruck 0–10 bar, rechts Druck Servicekessel 0–2,5 bar, Mitte Kaffee- und Servicekessel °C, rechts Wasserstand. Linien unter den Temperaturen: blau heizt, rot fast am Sollwert, grau Heizung aus (Handbuch 5.4). Warndreieck oben rechts: Tank leer.",
+ 5:"Startbildschirm-Variante nach „OK“ auf einem Alarm.",
+ 6:"Ausgabezähler: während des Bezugs Pumpendruck und Sekunden seit Start, darunter die Kaffeetemperatur. Abschaltbar über CRONO in den Kaffee-Einstellungen (Handbuch 5.4.4).",
+ 7:"Einstellungen Kaffee: KESSEL schaltet den Kaffeekessel ein/aus · PRIORITÄT: welcher Kessel zuerst heizt (Kaffee, Services oder keiner) · Temperatur: Sollwert 89–96 °C laut SCAE · CRONO: Ausgabezähler (Zeit und Druck während des Bezugs) ein/aus · VORBRÜHEN: Sekunden Vorbrühen.",
+ 8:"Einstellungen Tee/Dampf: Servicekessel ein/aus und seine Temperatur.",
+ 9:"Kesselpriorität: welcher Kessel beim Aufheizen zuerst versorgt wird. Kein = beide gleichzeitig, höchster Stromverbrauch (Handbuch 5.4.3).",
+ 10:"Vorbrühen: Sekunden, die die Pumpe zu Beginn läuft und dann pausiert.",
+ 14:"Seitenmenü: Reinigungssperre (Display 10 s sperren), Einstellungen, Rückspülen der Brühgruppe, Standby.",
+ 16:"Einstellungen 1: Sprache, Einheiten °C/°F, LED Körper RGB. Die graue Zeile ist erst auf der nächsten Seite bedienbar.",
+ 17:"Einstellungen 2: Lichter (Gehäuselicht, an der Duo nicht verbaut), Tank-Sensor kalibrieren, Wartung (Bezüge zählen), Wasserfilter (Tage).",
+ 18:"Einstellungen 3: Wasserfilter, Wassereingang Tank/Festwasser, Datum und Uhrzeit, Auto Ein/Aus.",
+ 19:"Einstellungen 4: Auto Ein/Aus (Zeitplan je Wochentag), Passwort für Einstellungen ein/aus.",
+ 20:"Technikmenü 1 (Passwort): Maschinentyp E61/BZ, PID der Gruppe, PID Kaffeekessel, PID Servicekessel.",
+ 21:"Technikmenü 2: PID Servicekessel, Füllstandssonden (Empfindlichkeit), Passwörter, Ladezeit-Limit der Pumpe.",
+ 22:"Technikmenü 3: Ladezeit-Limit, Bezüge gesamt, Reset auf Werkseinstellung.",
+ 23:"PID Kaffeekessel: P, I, D und Band. Nur ändern, wenn man weiß, was man tut.",
+ 27:"Füllstandssonde: Empfindlichkeit 50K–1M je nach Wasserhärte.",
+ 31:"Ladezeit-Limit: nach dieser Zeit ohne Füllstand stoppt die Pumpe und die Maschine blockiert (Alarm Ladezeit).",
+ 34:"Reset: setzt alle Einstellungen zurück, Passwörter wieder 1901/1906.",
+ 35:"Passwort für die Einstellungen eingeben.",
+ 44:"Passwort für das Technikmenü eingeben.",
+ 49:"LED Körper RGB: Farbe und Helligkeit des Gehäuselichts.",
+ 51:"Tank-Sensor kalibrieren: Tank leeren und trocknen, dann bestätigen. Nötig, wenn der Tank als leer gemeldet wird, obwohl Wasser drin ist.",
+ 54:"Wartung: Zähler der Bezüge seit dem letzten Zurücksetzen.",
+ 55:"Wasserfilter: Tage seit dem letzten Wechsel, zurücksetzen nach dem Wechsel.",
+ 58:"Datum und Uhrzeit: Feld antippen, mit ± ändern, OK. Die Bridge kann die Uhr auch vom Handy stellen (Knopf oben).",
+ 64:"Rückspülen: KURZ oder COMPLET mit Blindsieb, die Pumpe läuft in Zyklen.",
+ 70:"Auto Ein/Aus: Einschalt- und Ausschaltzeit je Wochentag.",
+ 90:"Startbild beim Einschalten: TFT-Version des Displays und FW des Mainboards.",
+};
+function passwort(n){const b=dspSeite%100, vp=[35,36,40].includes(b)?0x0004:0x0005; cmd(`w ${hex(vp)} ${n}`); protokoll(`Passwort ${n} in VP ${hex(vp)} geschrieben`)}
 function lang(s){return Math.floor(Math.max(0,s)/100)*100}
 function geh(s){cmd("p "+s)}
 function taste(name){const e=$("log"); e.textContent+=`Taste „${name}“ auf Seite ${dspSeite}: Code noch unbekannt, nichts gesendet\n`; e.scrollTop=e.scrollHeight}
@@ -308,6 +347,26 @@ function wasserstand(){
   ${strich(245,"max",-4)}${strich(115,"min",10)}`;
 }
 
+// Ausgabezaehler (Seite x06) laut 14.bin: Zeiger Pumpendruck (VP 0x0055),
+// grosse Zahl VP 0x0059 = Sekunden seit Bezugsstart, Kaffeetemperatur VP 0x0053
+// klein darunter, Einheit VP 0x0058. Gemessen 2026-09-30: 0x0059 = 12 nach
+// einem Bezug, 0x0055 = 6 (-> 3,0 bar).
+function seiteAusgabe(s,j){
+  const cx=158, cy=120, R=84, rad=a=>a*Math.PI/180, P=(a,r)=>[cx+Math.cos(rad(a))*r, cy+Math.sin(rad(a))*r];
+  const bogen=(a0,a1,r)=>{const [x0,y0]=P(a0,r),[x1,y1]=P(a1,r);return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`};
+  const LA=v=>95+v/10*170, druck=(vpj(j,0x55)??0)/2, zeit=vpj(j,0x59), temp=vpj(j,0x53)??vpj(j,0x50,3);
+  let o=`<rect width="320" height="240" fill="#000"/><circle cx="${cx}" cy="${cy}" r="${R-8}" fill="url(#gscheibe)"/>`;
+  o+=`<path d="${bogen(95,265,R)}" stroke="${TK}" stroke-width="15" fill="none"/>`;
+  for(let v=0;v<=10;v+=.5){const [x0,y0]=P(LA(v),R-7.5),[x1,y1]=P(LA(v),R+(v%1?-3:7.5));o+=`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} L${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="#000" stroke-width="${v%1?1:1.6}"/>`}
+  ["1.0","2.0","3.0","4.0","5.0","6.0","7.0","8.0","9.0","10"].forEach((t,i)=>{const [x,y]=P(i==9?LA(9.55):LA(i+1),R+17);o+=txt(x.toFixed(1),(y+3).toFixed(1),t,{s:i==9||i==4?13:8,a:"middle",f:"#dfe7e8"})});
+  o+=`<path d="${bogen(LA(6),LA(9.8),R-11)}" stroke="#e3161b" stroke-width="2.5" fill="none" stroke-opacity=".9"/>`;
+  const [zx0,zy0]=P(LA(Math.min(10,druck)),R-8),[zx1,zy1]=P(LA(Math.min(10,druck)),R+8);
+  o+=`<path d="M${zx0.toFixed(1)} ${zy0.toFixed(1)} L${zx1.toFixed(1)} ${zy1.toFixed(1)}" stroke="#fff" stroke-width="4"/>`;
+  o+=txt(cx,cy+R+13,"0",{s:12,a:"middle",f:"#dfe7e8"})+txt(cx+6,cy+R+13,"bar",{s:8,f:"#dfe7e8"});
+  o+=SYM.tasse(cx-6,cy-40,1)+txt(cx-4,cy+8,zeit==null?"–":String(zeit),{s:34,w:300,a:"middle",f:"#fff"})+txt(cx+34,cy+8,"s",{s:12,f:"#8fd8dc"});
+  o+=txt(cx,cy+44,temp==null?"–":String(temp),{s:16,a:"middle",f:"#fff"})+txt(cx+20,cy+44,vpj(j,0x58)==1?"°F":"°C",{s:9,f:"#fff"});
+  return o+menueQuadrate()+kopfLogo(14,2)+uhr(j.rtc);
+}
 function seiteStandby(s,j){
   return `<rect width="320" height="240" fill="url(#gbg)"/>${SYM.tasse(160,96,3)}
   ${txt(160,140,"Duo",{s:15,a:"middle",glow:1})}
@@ -369,6 +428,7 @@ function seiteTemperatur(s,j){
 // Englische (0–95) und italienische (200–295) Seiten nutzen dieselbe Vorlage
 // über seite%100+100; nur Titel, die in T stehen, erscheinen übersetzt.
 let dspJ=null, dspFehlt=new Set(), dspGefragt=new Set();
+function vpj(j,vp,i=0){const e=j&&j.vps&&j.vps.find(v=>v.vp==vp); return e&&e.w.length>i?e.w[i]:null}
 function vpw(vp,i=0){const e=dspJ&&dspJ.vps.find(v=>v.vp==vp); if(!e||e.w.length<=i){dspFehlt.add(vp);return null} return e.w[i]}
 function tastenRect(s){return tastenAuf(s).map(t=>({x0:Math.min(t[1],t[3]),y0:Math.min(t[2],t[4]),x1:Math.max(t[1],t[3]),y1:Math.max(t[2],t[4]),t}))}
 function kn(r,label,sz=14,aktiv=false){const w=r.x1-r.x0,h=r.y1-r.y0;
@@ -515,9 +575,15 @@ function seiteBaukasten(s,j,k,d){
     return o;
   }
   case "datum": {
-    const r=j.rtc||"2000-01-01 00:00:00", felder=[r.slice(8,10),r.slice(5,7),r.slice(0,4),r.slice(11,13),r.slice(14,16)];
+    // Felder Tag, Monat, Jahr, Stunde, Minute aus VP 0x0030, 0x0031, 0x0032, 0x002E, 0x002F
+    // (Touch-Konfiguration: ±-Tasten je Seite); solange das Mainboard sie nicht
+    // geschrieben hat, aus der Display-Uhr. Seiten: 157/158 Stunde, 159 Minute,
+    // 160 Tag, 161 Jahr, 162 Monat.
+    const r=j.rtc||"2000-01-01 00:00:00", z2=n=>String(n).padStart(2,"0");
+    const vd=vpw(0x30), vm=vpw(0x31), vj=vpw(0x32), vh=vpw(0x2e), vmi=vpw(0x2f);
+    const felder=[vd==null?r.slice(8,10):z2(vd), vm==null?r.slice(5,7):z2(vm), vj==null?r.slice(0,4):"20"+z2(vj), vh==null?r.slice(11,13):z2(vh), vmi==null?r.slice(14,16):z2(vmi)];
     const pos=[[15,66,52,110],[61,67,98,111],[108,67,158,111],[184,66,224,110],[240,66,290,110]];
-    const hell=[0,1,2,3,4,0][def.hell];
+    const hell=[3,3,4,0,2,1][def.hell];
     let o=rahmen("Datum und Uhrzeit")+`<rect x="12" y="30" width="154" height="158" rx="4" fill="none" stroke="#6fb8e6"/><rect x="170" y="30" width="138" height="158" rx="4" fill="none" stroke="#6fb8e6"/>`+
       txt(18,46,"Datum",{s:10})+txt(176,46,"Uhrzeit",{s:10});
     pos.forEach((q,i)=>{o+=`<rect x="${q[0]}" y="${q[1]}" width="${q[2]-q[0]}" height="${q[3]-q[1]}" rx="3" fill="${i==hell?"#bfe9ff":"#1c2f4a"}"/>`+txt((q[0]+q[2])/2,q[1]+28,felder[i],{s:15,a:"middle",f:i==hell?"#0b1a2e":FARBE.text})});
@@ -533,7 +599,9 @@ function seiteBaukasten(s,j,k,d){
     return o+txt(14,222,"ZURÜCKSETZEN",{s:10})+okEcke();
   }
   case "spuelen": {
-    const kurz=T_.code(6,0), komplett=T_.code(6,1), esc=R.find(r=>r.t[7]==0);
+    // zwei Tastencodes auf VP 6, links KURZ, rechts COMPLET; die Codes sind je
+    // Seite verschieden (164: 0/1, 185: 1/2), deshalb nach Position zuordnen
+    const [kurz,komplett]=R.filter(r=>r.t[6]==5&&r.t[7]==6).sort((a,b)=>a.x0-b.x0), esc=R.find(r=>r.t[7]==0);
     return dialog("Waschen")+txt(160,62,"Rückspülen der Brühgruppe",{s:12,a:"middle",glow:1})+(kurz?kn(kurz,"KURZ",15):"")+(komplett?kn(komplett,"COMPLET",15):"")+fussLinie(172)+(esc?kn(esc,"ESC",14):"");
   }
   case "hebel": {
@@ -546,7 +614,7 @@ function seiteBaukasten(s,j,k,d){
     return rahmen("Gruppentemperatur")+txt(18,48,"GRUPPEN",{s:10})+txt(76,48,"OFF",{s:13,f:FARBE.cyan})+`<path d="M16 60 H304" stroke="${FARBE.cyan}" stroke-width="2" opacity=".6"/>`+
       txt(18,82,"Temperatur",{s:12,f:FARBE.cyan})+(vp!=null?txt(110,132,fmt(vpw(vp),1,0),{s:34,a:"middle",glow:1}):"")+(m?kn(m,"–",22):kn({x0:206,y0:104,x1:246,y1:142},"–",22))+(p?kn(p,"+",22):kn({x0:252,y0:104,x1:292,y1:142},"+",22))+okEcke();
   }
-  case "start1": return seiteStart(s,j,k,null,true);
+  case "start1": return seiteAusgabe(s,j);
   case "menue": return seiteMenue(s,j,k,d);
   }
   return null;
@@ -576,6 +644,8 @@ function zeigeDisplay(j,k,d){
   else if(b==90) inhalt=`<rect width="320" height="240" fill="url(#gbg)"/>${SYM.tasse(160,96,3)}${txt(160,140,"Duo",{s:15,a:"middle",glow:1})}${txt(40,226,"TFT 2.0",{s:14,f:FARBE.cyan})}${txt(200,226,"FW: "+(((j.vps.find(x=>x.vp==0x63)||{w:[0]}).w[0])/10).toFixed(1),{s:14,f:FARBE.orange})}`;
   else inhalt=seiteSonst(s);
   $("dsp").innerHTML=defs+inhalt;
+  const e=ERKLAERUNG[b]||ERKLAERUNG[{2:2,3:3,4:4,12:7,13:8,11:9,24:23,25:23,26:23,28:27,29:27,30:27,32:31,33:31,36:35,40:35,45:44,92:44,93:44,95:44,50:49,57:58,59:58,60:58,61:58,62:58,65:64,66:64,67:64,68:64,69:64,85:64,86:64,87:64,88:64,71:70,72:70,73:70,74:70,75:70,76:70,63:14,78:1,83:6,79:20,82:16}[b]]||"";
+  $("dsp_erklaerung").textContent=e; $("dsp_pw").style.display=[35,36,40,44,45,92,93,95].includes(b)?"":"none";
   // fehlende Werte der Seite einmal beim Display abfragen (Antwort landet in der VP-Tabelle)
   for(const vp of dspFehlt){ if(dspGefragt.has(s+":"+vp)) continue; dspGefragt.add(s+":"+vp);
     cmd(`d c6 a5 04 83 ${(vp>>8).toString(16).padStart(2,"0")} ${(vp&255).toString(16).padStart(2,"0")} 01`); }
@@ -689,15 +759,23 @@ function seiteStart(s,j,k,d,einZeiger=false){
   }else{
     o+=SYM.tasse(cx-26,cy-28,1)+SYM.dampf(cx+20,cy-26,.95)+SYM.wasser(cx+40,cy-28,.9);
     o+=txt(cx-24,cy+12,k??"–",{s:24,a:"middle",f:"#fff"})+txt(cx+2,cy-2,"°C",{s:9,a:"middle",f:"#fff"})+txt(cx+28,cy+12,d??"–",{s:24,a:"middle",f:"#fff"});
-    o+=`<rect x="${cx-44}" y="${cy+18}" width="34" height="3" fill="#7a8285"/><rect x="${cx+10}" y="${cy+18}" width="34" height="3" fill="#7a8285"/>`;
+    // Heizlinien unter den Temperaturen: Wort 0 (Kaffee) und 1 (Service) von VP 0x0050,
+    // je ein Icon aus drei (14.bin). Farben laut Handbuch blau/rot/grau; welche Zahl
+    // welche Farbe ist, ist noch nicht beobachtet (Vermutung: 0 grau, 1 blau, 2 rot).
+    const hz=n=>["#7a8285","#3b82f6","#e3161b"][Math.max(0,Math.min(2,n||0))];
+    o+=`<rect x="${cx-44}" y="${cy+18}" width="34" height="3" fill="${hz(vpj(j,0x50,0))}"/><rect x="${cx+10}" y="${cy+18}" width="34" height="3" fill="${hz(vpj(j,0x50,1))}"/>`;
     // Wasserstand, rechts angeschnitten
     const wx=304, wy=120, wr=34;
     const seg=(a0,a1,voll)=>{const q=a=>[wx+Math.cos(rad(a))*wr, wy+Math.sin(rad(a))*wr];const [x0,y0]=q(a0),[x1,y1]=q(a1);
       return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${wr} ${wr} 0 0 0 ${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="${TK}" stroke-width="7" fill="none" ${voll?"":`stroke-opacity=".25"`}/>`};
-    o+=`<circle cx="${wx}" cy="${wy}" r="${wr-6}" fill="#0c1718"/>`+seg(248,215,false)+seg(211,178,true)+seg(174,141,true)+seg(137,104,true);
+    // Wasserstand: Wort 7 = Icon 0..4 (14.bin: VP 0x0057, fuenf Icons) -> volle Segmente
+    const lvl=Math.max(0,Math.min(4,vpj(j,0x50,7)??3));
+    o+=`<circle cx="${wx}" cy="${wy}" r="${wr-6}" fill="#0c1718"/>`+[[248,215],[211,178],[174,141],[137,104]].map((a,k)=>seg(a[0],a[1],k<lvl)).join("");
     o+=txt(wx-12,wy-2,"water",{s:8,a:"middle",f:TK})+txt(wx-12,wy+8,"level",{s:8,a:"middle",f:TK});
     o+=`<g transform="translate(${wx-26},${wy-38}) rotate(-58)">`+txt(0,0,"max",{s:9,f:"#cfd8d9"})+`</g><g transform="translate(${wx-38},${wy+36}) rotate(58)">`+txt(0,0,"min",{s:9,f:"#cfd8d9"})+`</g>`;
   }
+  // Warndreieck oben rechts: Wort 2 (VP 0x0052, zwei Icons) — 1 seit "Bitte Tank füllen"
+  if(vpj(j,0x50,2)==1) o+=SYM.warn(300,16,.55);
   return o+menueQuadrate()+kopfLogo(14,2)+uhr(j.rtc);
 }
 function seiteStandby(s,j){
@@ -739,24 +817,37 @@ function seiteListe(s){
   const b=s%100, L=LISTEN[b], i=sprachIndex(s), tech=LISTE_TITEL[b]=="tech";
   let o=rahmen(tx(LISTE_TITEL[b],s));
   L.forEach((z,n)=>{const y=27+n*50, sym=tech?"":zeilenSymbol(z);
+    // Die letzte Zeile ist im Werksbild grau: Sie steht auf der naechsten Seite
+    // noch einmal oben und ist erst dort bedienbar (z. B. "Lichter" auf 116/117).
+    const grau=n==L.length-1&&!!LISTEN[b+1]&&LISTEN[b+1][0][0]==z[0];
+    if(grau) o+=`<g opacity=".45">`;
     o+=zeilenBox(8,y,258,40)+(sym?`<g transform="translate(0,${y+20})">${sym}</g>`:"")+txt(tech?16:44,y+26,z[i],{s:15,f:FARBE.text});
-    const w=z[3];
+    // Wert des Feldes aus der Variablen, an der die ±-Taste dieser Zeile haengt
+    // (Touch-Konfiguration); ohne Taste bleibt der feste Text aus LISTEN.
+    const pm=tastenRect(s).find(r=>r.t[6]==2&&r.y1>y&&r.y0<y+40), v=pm?vpw(pm.t[7]):null;
+    let w=z[3];
+    if((w=="OFF"||w=="ON")&&v!=null) w=v?"ON":"OFF";
     if(w=="OFF"||w=="ON") o+=schalter(222,y+26,w,w=="ON");
-    else if(w=="°C | °F") o+=txt(206,y+26,"°C",{s:15,f:FARBE.text})+`<rect x="206" y="${y+31}" width="22" height="2.5" fill="#39d353"/>`+schalter(236,y+26,"°F",false);
+    else if(w=="°C | °F"){const f=v==1; o+=txt(206,y+26,"°C",{s:15,f:FARBE.text})+`<rect x="206" y="${y+31}" width="22" height="2.5" fill="${f?"#777":"#39d353"}"/>`+schalter(236,y+26,"°F",f);}
     else if(w=="E61 | BZ") o+=txt(196,y+26,"E61",{s:15,f:FARBE.text})+`<rect x="196" y="${y+31}" width="28" height="2.5" fill="#39d353"/>`+schalter(234,y+26,"BZ",false);
     else if(w) o+=txt(258,y+26,w,{s:15,a:"end",f:FARBE.text});
-    if(!tech&&z[0].toLowerCase().startsWith("water source")) o+=SYM.tank(214,y+19,.7)+`<rect x="206" y="${y+31}" width="18" height="2.5" fill="#39d353"/>`+SYM.hahn(248,y+20,.8);
+    if(!tech&&z[0].toLowerCase().startsWith("water source")){const netz=v==1; // VP 0x0020: 0 Tank, 1 Wassernetz
+      o+=SYM.tank(214,y+19,.7)+`<rect x="206" y="${y+31}" width="18" height="2.5" fill="${netz?"#777":"#39d353"}"/>`+SYM.hahn(248,y+20,.8)+`<rect x="240" y="${y+31}" width="18" height="2.5" fill="${netz?"#39d353":"#777"}"/>`;}
+    if(grau) o+=`</g>`;
   });
   const erste=[16,20].includes(b), stufe={16:0,17:1,18:2,19:3,20:0,21:1,22:2,79:0,82:0}[b]||0, stufen=[16,17,18,19].includes(b)?4:3;
   return o+scrollleiste(stufe,stufen)+okEcke();
 }
 function seiteTemperatur(s,j){
-  const b=s%100, kaffee=b==7||b==12;
-  let o=rahmen(tx(kaffee?"kaffee":"tee",s))+txt(10,48,tx("kessel",s),{s:12,f:FARBE.text})+txt(70,48,"OFF",{s:15,f:TK})+`<rect x="70" y="53" width="30" height="3" fill="#777"/>`+
-    txt(134,48,tx("prio",s)+":",{s:12,f:FARBE.text})+txt(208,48,["coffee","Kaffee","caffè"][sprachIndex(s)],{s:15,f:TK})+`<rect x="8" y="62" width="300" height="2" fill="url(#gtrenn)"/>`+txt(12,88,tx("temp",s),{s:16,f:TK});
-  if(b==7||b==8) o+=txt(66,136,"–",{s:50,w:200,a:"middle",f:"#8fd8dc"})+txt(128,104,"°C",{s:22,w:200,f:"#8fd8dc"});
+  // Variablen laut 14.bin: Kessel ein/aus 0x5E (Kaffee) / 0x5F (Tee), Prioritaet 0x5A
+  // (0 Kaffee, 1 Services, 2 Kein), Sollwert 0x60 / 0x61, Crono 0x5B, Einheit 0x58
+  const b=s%100, kaffee=b==7||b==12, an=vpw(kaffee?0x5e:0x5f), prio=vpw(0x5a), soll=vpw(kaffee?0x60:0x61), crono=vpw(0x5b);
+  const prioNamen=[["coffee","Kaffee","caffè"],["service","Services","servizi"],["none","Kein","nessuna"]][Math.max(0,Math.min(2,prio||0))];
+  let o=rahmen(tx(kaffee?"kaffee":"tee",s))+txt(10,48,tx("kessel",s),{s:12,f:FARBE.text})+txt(70,48,an?"ON":"OFF",{s:15,f:TK})+`<rect x="70" y="53" width="30" height="3" fill="${an?"#39d353":"#777"}"/>`+
+    txt(134,48,tx("prio",s)+":",{s:12,f:FARBE.text})+txt(208,48,prioNamen[sprachIndex(s)],{s:15,f:TK})+`<rect x="8" y="62" width="300" height="2" fill="url(#gtrenn)"/>`+txt(12,88,tx("temp",s),{s:16,f:TK});
+  if(b==7||b==8) o+=txt(66,136,soll==null?"–":String(soll),{s:50,w:200,a:"middle",f:"#8fd8dc"})+txt(128,104,vpw(0x58)==1?"°F":"°C",{s:22,w:200,f:"#8fd8dc"});
   o+=tastenRect(s).filter(r=>r.t[6]==5&&r.t[7]==0x15).map(r=>kn(r,r.t[8]==2?"+":"–")).join("");
-  if(kaffee) o+=`<rect x="4" y="202" width="2" height="18" fill="#bfe9ec"/>`+txt(10,217,"CRONO",{s:12,f:FARBE.text})+txt(62,217,"OFF",{s:12,f:TK})+`<rect x="62" y="221" width="22" height="2" fill="#777"/>`+
+  if(kaffee) o+=`<rect x="4" y="202" width="2" height="18" fill="#bfe9ec"/>`+txt(10,217,"CRONO",{s:12,f:FARBE.text})+txt(62,217,crono?"ON":"OFF",{s:12,f:TK})+`<rect x="62" y="221" width="22" height="2" fill="${crono?"#39d353":"#777"}"/>`+
     `<rect x="142" y="202" width="2" height="18" fill="#bfe9ec"/>`+txt(150,217,tx("vorb",s),{s:12,f:FARBE.text});
   return o+okEcke();
 }
@@ -822,6 +913,9 @@ zeigeDisplay=function(j,k,d){
 // ─── Zusatz: Maschine, Verlauf, Brew by Weight, Einstellungen (zusatz.h) ───
 let zj=null, bezugNr=-1, einstGeladen=false;
 async function aktion(a){await fetch("/api/aktion",{method:"POST",body:a}); holeZusatz()}
+// Uhr des Mainboards auf die Zeit dieses Geraets (Handy/Rechner) stellen: die
+// Bridge geht denselben Weg wie die Seite "Datum und Uhrzeit" mit OK.
+function uhrStellen(){const d=new Date(); aktion(`uhr ${d.getFullYear()%100} ${d.getMonth()+1} ${d.getDate()} ${d.getHours()} ${d.getMinutes()}`)}
 function zielAendern(d){const z=Math.max(1,(parseFloat(v("bw_ziel"))||36)+d); $("bw_ziel").value=z; aktion("ziel "+z)}
 const f1=(x,n=1)=>x==null||isNaN(x)?"–":(+x).toFixed(n);
 const uhrzeit=ms=>new Date(ms).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});

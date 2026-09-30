@@ -3,7 +3,9 @@
 //   - Ethernet (W5500 auf dem Waveshare ESP32-S3-ETH),
 //   - das Heim-WLAN, wenn per USB-Befehl "n <ssid> <passwort>" hinterlegt
 //     (gespeichert in NVS, nicht im Quelltext),
-//   - das eigene WLAN "duo-bridge" / espresso1 unter http://192.168.4.1.
+//   - das eigene WLAN "duo-bridge" / espresso1: dort beantwortet die Bridge
+//     jede DNS-Anfrage mit sich selbst, also http://espresso.maschine oder
+//     jeder andere Name; Handys oeffnen die Seite als Anmeldeportal von selbst.
 // Im Heimnetz: http://duo.local oder die IP, die beim Start ueber USB kommt.
 //
 // GET  /                  Oberflaeche (web_ui.h)
@@ -19,6 +21,7 @@
 // Kein Login: nur im eigenen Netz betreiben.
 
 #include <ETH.h>
+#include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <SPI.h>
 #include <WebServer.h>
@@ -35,6 +38,7 @@ static const int ETH_CS = 14, ETH_IRQ = 10, ETH_RST = 9;
 static const int ETH_SCK = 13, ETH_MISO = 12, ETH_MOSI = 11;
 
 static WebServer server(80);
+static DNSServer dns;  // im eigenen WLAN: jeder Name fuehrt zur Bridge (Captive Portal)
 
 // Staendige Verbindungsversuche mit einem unerreichbaren Heim-WLAN lassen den
 // Funk die Kanaele wechseln; das eigene WLAN "duo-bridge" wird dann unsichtbar.
@@ -282,6 +286,17 @@ void webSetup() {
   server.on("/tasten.js", HTTP_GET, [] { server.send_P(200, "text/javascript; charset=utf-8", TASTEN_JS); });
   server.on("/api/status", HTTP_GET, statusJson);
   server.on("/api/cmd", HTTP_POST, befehlWeb);
+  // Captive-Portal-Pruefadressen von Android, Apple und Windows und alles
+  // Unbekannte: zur Oberflaeche umleiten
+  server.onNotFound([] {
+    if (server.uri().startsWith("/api/")) {
+      server.send(404, "text/plain", "unbekannt");
+      return;
+    }
+    server.sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/", true);
+    server.send(302, "text/plain", "");
+  });
+  dns.start(53, "*", WiFi.softAPIP());
   for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage"})
     server.on(p, zusatzWeb);
   server.begin();
@@ -290,8 +305,26 @@ void webSetup() {
   waageSetup();
 }
 
+// Werte, die nur das Display kennt, regelmaessig selbst nachlesen; die
+// Antworten gehen nicht ans Mainboard (Modus 0) und nicht ins Protokoll.
+//   Register 0x03 (aktuelle Seite) alle 2 s: die Bridge erfaehrt Seitenwechsel
+//     sonst nur, wenn das Mainboard sie schaltet, nach einem Neustart also gar nicht
+//   Register 0x20 (Uhr, 7 Byte) alle 6 s: das Mainboard stellt sie im Betrieb
+//     nur einmal, danach laeuft sie im Display weiter
+static void displayNachlesen() {
+  static uint32_t zuletzt = 0;
+  static uint8_t takt = 0;
+  if (millis() - zuletzt < 2000 || emulation == 1) return;
+  zuletzt = millis();
+  char b[32];
+  strcpy(b, ++takt % 3 ? "d c6 a5 03 81 03 02" : "d c6 a5 03 81 20 07");
+  befehl(b);
+}
+
 void webLoop() {
+  dns.processNextRequest();
   server.handleClient();
+  displayNachlesen();
   verlaufLoop();
   bezugLoop();
   mqttLoop();

@@ -19,8 +19,11 @@ struct Einstellungen {
   int8_t stoppPin = -1;
   bool stoppHigh = true;
   uint16_t stoppPulsMs = 300;  // so lange "drueckt" der Ausgang die Taste
-  int8_t druckPWort = -1, druckKWort = -1;  // Wort in VP 0x0050, -1 = noch unbekannt
-  uint16_t druckPTeiler = 10, druckKTeiler = 10;
+  // Wort in VP 0x0050, -1 = unbekannt. Laut Variablen-Konfiguration (14.bin)
+  // treibt Wort 5 den linken Zeiger (0..20 -> 0..10 bar) und Wort 6 den
+  // rechten (0..10 -> 0..2,5 bar); an der laufenden Pumpe noch nicht gesehen.
+  int8_t druckPWort = 5, druckKWort = 6;
+  uint16_t druckPTeiler = 2, druckKTeiler = 4;
 };
 static Einstellungen cfg;
 
@@ -50,10 +53,10 @@ static void einstellungenLaden() {
   cfg.stoppPin = p.getChar("stopp_pin", -1);
   cfg.stoppHigh = p.getBool("stopp_high", true);
   cfg.stoppPulsMs = p.getUShort("stopp_puls", 300);
-  cfg.druckPWort = p.getChar("druck_p_wort", -1);
-  cfg.druckKWort = p.getChar("druck_k_wort", -1);
-  cfg.druckPTeiler = p.getUShort("druck_p_teil", 10);
-  cfg.druckKTeiler = p.getUShort("druck_k_teil", 10);
+  cfg.druckPWort = p.getChar("druck_p_wort", 5);
+  cfg.druckKWort = p.getChar("druck_k_wort", 6);
+  cfg.druckPTeiler = p.getUShort("druck_p_teil", 2);
+  cfg.druckKTeiler = p.getUShort("druck_k_teil", 4);
   p.end();
   if (cfg.waageArt > 3) cfg.waageArt = 0;
   if (!stoppPinErlaubt(cfg.stoppPin)) cfg.stoppPin = -1;
@@ -485,7 +488,27 @@ static void waageTara() {
   waageHistN = 0;
 }
 
-// Aktionen fuer Web, USB und MQTT: "an", "aus", "tara", "abbruch", "stopp", "ziel <g>"
+// Uhr stellen wie ueber die Seite "Datum und Uhrzeit": Taste "Datum und
+// Uhrzeit" (Tastencode 23) -> Mainboard schreibt die aktuellen Werte in
+// VP 0x002E..0x0032 -> neue Werte hineinschreiben -> OK (VP 0x0002 = 1) ->
+// Mainboard uebernimmt sie in seine Echtzeituhr. Reihenfolge der VPs laut
+// Touch-Konfiguration: 2E Stunde, 2F Minute, 30 Tag, 31 Monat, 32 Jahr (2-stellig).
+static void uhrStellen(int jj, int mm, int tt, int hh, int mi) {
+  int32_t s = leitung.seite;
+  int sprache = s >= 0 && s < 300 ? (s / 100) * 100 : 100;
+  char b[64];
+  befehl((char *)"w 0x0000 23");
+  snprintf(b, sizeof b, "p %d", sprache + 57);
+  befehl(b);
+  delay(400);  // Mainboard schreibt die alten Werte
+  snprintf(b, sizeof b, "w 0x002E %d %d %d %d %d", hh, mi, tt, mm, jj);
+  befehl(b);
+  delay(150);
+  befehl((char *)"w 0x0002 1");
+  ereignis("- Uhr gestellt: 20%02d-%02d-%02d %02d:%02d", jj, mm, tt, hh, mi);
+}
+
+// Aktionen fuer Web, USB und MQTT: "an", "aus", "tara", "abbruch", "stopp", "ziel <g>", "uhr JJ MM TT hh mm"
 static bool aktion(const String &a) {
   if (a == "an" || a == "aus") maschineSchalten(a == "an");
   else if (a == "tara") waageTara();
@@ -495,6 +518,11 @@ static bool aktion(const String &a) {
     stoppSeitMs = millis();
     stoppAusgang(true);
     ereignis("- Stopp-Taste gedrueckt (von Hand)");
+  }
+  else if (a.startsWith("uhr ")) {
+    int jj, mm, tt, hh, mi;
+    if (sscanf(a.c_str() + 4, "%d %d %d %d %d", &jj, &mm, &tt, &hh, &mi) != 5) return false;
+    uhrStellen(constrain(jj, 0, 99), constrain(mm, 1, 12), constrain(tt, 1, 31), constrain(hh, 0, 23), constrain(mi, 0, 59));
   }
   else if (a.startsWith("ziel ")) {
     cfg.ziel = constrain(zahlAus(a.substring(5), cfg.ziel), 0.0f, 200.0f);

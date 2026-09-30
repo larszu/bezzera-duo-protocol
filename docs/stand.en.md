@@ -50,10 +50,10 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 | 💡 | Dealer version table and reasons for incompatibilities: [`versionen.en.md`](versionen.en.md) | dealer information, conclusion |
 | ✅ | Word 2 becomes 1 after page 103, word 7 = 3, word 5 was 1 once for 1 s; words 0, 1, 6, 8 always 0 | `boot.sr` |
 | 💡 | Meaning of words 2, 5 and 7 | — |
-| 💡 | One word in VP `0x0050` carries the pump pressure, one the boiler pressure | the manual shows both gauges; the pump never ran |
+| 🧪 | Word 5 = pump pressure (0.5 bar per unit), word 6 = service boiler pressure (0.25 bar per unit), all words in [`variablen.en.md`](variablen.en.md) | `14.bin` (gauge configuration); word 6 = 6 at 127 °C matches 1.5 bar; no shot captured yet |
 | ✅ | The display reports nothing on its own; it changes pages on touch without telling the mainboard | captures, key type `FDxx` in flash |
 | ✅ | Register `0x4F` and touch registers `0x05`–`0x07` do not trigger a key press | tried (`tools/tasten_scan.py`) |
-| 💡 | The mainboard reads VP `0x0002` on settings pages | only from the key table, never captured |
+| ✅ | The mainboard reads VP `0x0002` on settings pages and answers 1 with the settings block `0x0020`–`0x002D` | bridge log 2026-09-30 |
 
 ## Pages and keys
 
@@ -64,7 +64,7 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 | ✅ | „Für Start drücken“ (press to start) writes VP `0x0000` = 1 (DE, IT), “Standby” in the side menu writes 0 (all languages) | flash |
 | ✅ | English page 9: one byte damaged in flash (`F3` instead of `FE`) | flash, read twice |
 | 💡 | Therefore the “Coffee” key does not work there | conclusion |
-| 💡 | Page x06 (pump pressure gauge only, large number) is the dispensing counter the mainboard switches to during a shot | photo + manual 5.4.4 |
+| ✅ | Page x06 is the dispensing counter: pump pressure gauge (VP `0x0055`), seconds since shot start (VP `0x0059`), temperature | `14.bin` + shot on 2026-09-30 (`0x0059` = 12) |
 
 ## ESP32 bridge
 
@@ -77,7 +77,7 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 | ✅ | Without the display's reply line the machine does not continue booting; with the display in parallel to the ESP32 it crashes | observed |
 | 💡 | The cause was the missed connection test VP `0x0063` | conclusion |
 | 🧪 | Hybrid mode (mode 2) and key injection (`o`, `w` on VP `0x0000`) | compiles |
-| 💡 | The mainboard reacts to a key value set from outside like to a real press | basic assumption behind all remote control, **never tried** |
+| ✅ | The mainboard reacts to a key value set from outside like to a real press: start (VP `0x0000` = 1 + page 101 → status words and page 103 after 57 ms), standby (= 0 + page 100 → mainboard confirms page 100 after 145 ms), OK on alarm (= 5), settings OK (`0x0002` = 1 → settings block) | bridge log 2026-09-30 |
 | ✅ | Web UI with display replica on the real display: live values, page changes, VPs read from the display (PID values `0x0076`–`0x0078`) | screenshot of 2026-09-27 |
 | 🧪 | Local web UI over USB (`tools/web_lokal.py`) | script |
 | ✅ | Tests of the Python tools (`python3 -m unittest discover -s tests`) | 26 tests pass |
@@ -86,7 +86,9 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 
 | | Statement | Evidence |
 |---|---|---|
-| 🧪 | Remote on/off (VP `0x0000` = 1/0 plus page x01/x00) | built; effect depends on the 💡 assumption above |
+| ✅ | Remote on/off (VP `0x0000` = 1/0 plus page x01/x00) | 2026-09-30 on the machine, also from the web UI |
+| ✅ | Set the clock from phone/computer (VP `0x002E`–`0x0032`, then `0x0002` = 1) | 2026-09-30, display clock follows |
+| ✅ | The machine only heats when word 2 (tank empty) = 0; after filling and off/on the pump fills the boiler, then both boilers heat (words 0/1 = 2) | 2026-09-30 |
 | 🧪 | On/standby state from the key value instead of the page | built |
 | 🧪 | Alarm report from the page | built; ✅ that the mainboard switches to page 103 itself (`boot.sr`) |
 | 🧪 | History of VP `0x0050` in the ESP32 (24 h with PSRAM) | built, UI checked in the simulation |
