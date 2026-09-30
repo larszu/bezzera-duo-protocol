@@ -483,7 +483,15 @@ grün an ESP32 **5V**, braun an GND, gelb an GPIO15, weiß an GPIO18.
 | **1** Emulation | der ESP32 aus seinem Modell (VPs, Register, laufende Uhr) | ohne Display; muss den Start der Maschine mitbekommen |
 | **2** Hybrid | das Display, per Web/`w` gesetzte VPs ersetzt der ESP32 | Steuern bei laufendem Display |
 
-Der Modus wird gespeichert und gilt auch nach einem Neustart.
+Der Modus wird gespeichert und gilt auch nach einem Neustart; Standard ist 0.
+
+**Modus 0 reicht wirklich nur durch:** Das Display zeigt genau, was das
+Mainboard schickt, und das Mainboard bekommt nur die Antworten des Displays.
+Fragt die Bridge selbst etwas beim Display ab (Weboberfläche, `d`,
+`tools/libop_lesen.py`), geht die Antwort nur ins Protokoll, nicht ans
+Mainboard. Eingriffe gibt es nur, wenn man sie auslöst: Klick im
+Display-Nachbau, Ein/Aus, `o`, `w`, `p`. Die Weboberfläche läuft in jedem Modus
+und beobachtet in Modus 0 nur.
 
 **Befund zum Start ohne Display:** Ohne Antwortleitung des Displays startet
 die Maschine nicht weiter, mit Display parallel zum ESP32 stürzt sie ab (zwei

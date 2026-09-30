@@ -44,6 +44,7 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 | ✅ | Einschaltablauf: Seite 90, Verbindungstest VP `0x0063` = 21, Uhr stellen, Seite 101, VP `0x0000` = 1, bei leerem Tank Seite 103 | `boot.sr` |
 | ✅ | Mainboard liest VP `0x0000` und `0x0001` alle 100 ms | `boot.sr`, `home.sr`, `tank.sr` |
 | ✅ | VP `0x0000` = 5 nach „OK“ auf „Bitte Tank füllen“ und bleibt stehen | `home.sr`, `tank.sr` |
+| ✅ | Beim Wechsel in den Standby schreibt das Mainboard selbst Seite 100 und VP `0x0000` = 0; im Standby stellt es jede Sekunde die Uhr | Bridge-Protokoll 2026-09-30 |
 | ✅ | VP `0x0050` alle ~300 ms, Wort 3 Kaffeekessel °C, Wort 4 Servicekessel °C | Mitschnitte, mit Testwerten auf dem Display zugeordnet |
 | ✅ | VP `0x0063` = Firmware Mainboard × 10 (21 → „FW: 2.1“) | `boot.sr`, Startbild |
 | 💡 | Versionstabelle der Händler und Gründe für Inkompatibilitäten: [`versionen.md`](versionen.md) | Händlerangaben, Folgerung |

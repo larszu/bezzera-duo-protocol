@@ -44,6 +44,7 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 | ✅ | Boot sequence: page 90, connection test VP `0x0063` = 21, set clock, page 101, VP `0x0000` = 1, page 103 when the tank is empty | `boot.sr` |
 | ✅ | The mainboard reads VP `0x0000` and `0x0001` every 100 ms | `boot.sr`, `home.sr`, `tank.sr` |
 | ✅ | VP `0x0000` = 5 after “OK” on „Bitte Tank füllen“ (please fill the tank) and stays there | `home.sr`, `tank.sr` |
+| ✅ | When going to standby the mainboard itself writes page 100 and VP `0x0000` = 0; in standby it sets the clock every second | bridge log 2026-09-30 |
 | ✅ | VP `0x0050` every ~300 ms, word 3 coffee boiler °C, word 4 service boiler °C | captures, matched with test values on the display |
 | ✅ | VP `0x0063` = mainboard firmware × 10 (21 → “FW: 2.1”) | `boot.sr`, boot screen |
 | 💡 | Dealer version table and reasons for incompatibilities: [`versionen.en.md`](versionen.en.md) | dealer information, conclusion |

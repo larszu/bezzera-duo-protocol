@@ -258,8 +258,7 @@ void zusatzBefehl(char *s) {
   }
   String antwort;
   zusatzApi(pfad, query, rumpf, antwort);
-  Serial.print("#Z ");
-  Serial.println(antwort);
+  usbAntwort("#Z " + antwort);
 }
 
 void webSetup() {
