@@ -91,6 +91,7 @@ struct Leitung {
   int32_t seite = -1;
   uint8_t rtc[7] = {0};
   bool rtcGueltig = false;
+  uint32_t rtcMs = 0;  // wann die Uhr zuletzt gestellt oder gelesen wurde
   uint32_t rahmenDisplay = 0, rahmenMainboard = 0;
   uint32_t zuletztDisplay = 0, zuletztMainboard = 0;
 };
@@ -171,12 +172,14 @@ static void beobachte(char quelle, const uint8_t *r, size_t n) {
   } else if (cmd == 0x80 && pn >= 9 && p[0] == 0x1F && p[1] == 0x5A && zumDisplay) {
     memcpy(leitung.rtc, p + 2, 7);
     leitung.rtcGueltig = true;
+    leitung.rtcMs = millis();
     ereignis("%c Uhr gestellt", quelle);
   } else if (cmd == 0x81 && pn >= 4 && !zumDisplay) {
     if (p[0] == 0x03 && pn >= 4) leitung.seite = (p[2] << 8) | p[3];
     if (p[0] == 0x20 && pn >= 9) {
       memcpy(leitung.rtc, p + 2, 7);
       leitung.rtcGueltig = true;
+      leitung.rtcMs = millis();
     }
   } else if (cmd == 0x82 && pn >= 4 && zumDisplay) {
     merkeVp((p[0] << 8) | p[1], p + 2, pn - 2, quelle);
@@ -492,6 +495,10 @@ static void befehl(char *z) {
     size_t n = hexBytes(s, b, sizeof b);
     if (!n) return;
     if (c == 'd') eigeneAnfrageMerken(b, n);
+    if (c == 'd' && n >= 6 && b[3] == 0x81 && (b[4] == 0x20 || b[4] == 0x03)) {  // Nachlesen: nicht ins Protokoll
+      uartB.write(b, n);
+      return;
+    }
     (c == 'd' ? uartB : uartA).write(b, n);
     logZeile(c == 'd' ? 'b' : 'a', b, n);
   } else if (c == 's') {

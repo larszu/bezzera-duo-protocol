@@ -50,10 +50,10 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 | 💡 | Versionstabelle der Händler und Gründe für Inkompatibilitäten: [`versionen.md`](versionen.md) | Händlerangaben, Folgerung |
 | ✅ | Wort 2 wird nach Seite 103 zu 1, Wort 7 = 3, Wort 5 einmal 1 s lang 1; Wort 0, 1, 6, 8 immer 0 | `boot.sr` |
 | 💡 | Bedeutung von Wort 2, 5 und 7 | — |
-| 💡 | Ein Wort in VP `0x0050` trägt den Pumpendruck, eins den Kesseldruck | Handbuch zeigt beide Anzeigen; Pumpe lief nie |
+| 🧪 | Wort 5 = Pumpendruck (0,5 bar je Einheit), Wort 6 = Druck Servicekessel (0,25 bar je Einheit), alle Worte in [`variablen.md`](variablen.md) | `14.bin` (Zeiger-Konfiguration); Wort 6 = 6 bei 127 °C passt zu 1,5 bar; Bezug noch nicht mitgeschnitten |
 | ✅ | Das Display meldet nichts von sich aus; Seitenwechsel per Touch macht es ohne Meldung ans Mainboard | Mitschnitte, Tastentyp `FDxx` im Flash |
 | ✅ | Register `0x4F` und die Touch-Register `0x05`–`0x07` lösen keinen Tastendruck aus | ausprobiert (`tools/tasten_scan.py`) |
-| 💡 | Das Mainboard liest VP `0x0002` auf Einstellseiten | nur aus der Tastentabelle, nie mitgeschnitten |
+| ✅ | Das Mainboard liest VP `0x0002` auf Einstellseiten und antwortet auf 1 mit dem Einstellungsblock `0x0020`–`0x002D` | Bridge-Protokoll 2026-09-30 |
 
 ## Seiten und Tasten
 
@@ -64,7 +64,7 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 | ✅ | „Für Start drücken“ schreibt VP `0x0000` = 1 (DE, IT), „Standby“ im Seitenmenü = 0 (alle Sprachen) | Flash |
 | ✅ | Englische Seite 9: ein Byte im Flash beschädigt (`F3` statt `FE`) | Flash, zweimal gelesen |
 | 💡 | Deshalb wirkt dort die Taste „Coffee“ nicht | Folgerung |
-| 💡 | Seite x06 (nur Pumpendruck-Zeiger, große Zahl) ist der Ausgabezähler, auf den das Mainboard beim Bezug schaltet | Foto + Handbuch 5.4.4 |
+| ✅ | Seite x06 ist der Ausgabezähler: Zeiger Pumpendruck (VP `0x0055`), Sekunden seit Bezugsstart (VP `0x0059`), Temperatur | `14.bin` + Bezug 2026-09-30 (`0x0059` = 12) |
 
 ## ESP32-Bridge
 
@@ -77,7 +77,7 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 | ✅ | Ohne Antwortleitung des Displays startet die Maschine nicht weiter; mit Display parallel zum ESP32 stürzt sie ab | beobachtet |
 | 💡 | Ursache war der verpasste Verbindungstest VP `0x0063` | Folgerung |
 | 🧪 | Hybridmodus (Modus 2) und Tastendruck-Injektion (`o`, `w` auf VP `0x0000`) | kompiliert |
-| 💡 | Das Mainboard reagiert auf einen von außen gesetzten Tastenwert wie auf einen echten Druck | Grundannahme aller Fernsteuerung, **noch nie ausprobiert** |
+| ✅ | Das Mainboard reagiert auf einen von außen gesetzten Tastenwert wie auf einen echten Druck: Start (VP `0x0000` = 1 + Seite 101 → 57 ms später Statusworte und Seite 103), Standby (= 0 + Seite 100 → 145 ms später bestätigt das Mainboard Seite 100), OK auf Alarm (= 5), Einstellungen-OK (`0x0002` = 1 → Einstellungsblock) | Bridge-Protokoll 2026-09-30 |
 | ✅ | Weboberfläche mit Display-Nachbau am echten Display: Live-Werte, Seitenwechsel, VPs aus dem Display gelesen (PID-Werte `0x0076`–`0x0078`) | Screenshot vom 2026-09-27 |
 | 🧪 | Lokale Weboberfläche über USB (`tools/web_lokal.py`) | Skript |
 | ✅ | Tests der Python-Werkzeuge (`python3 -m unittest discover -s tests`) | 26 Tests grün |
@@ -86,7 +86,9 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 
 | | Aussage | Beleg |
 |---|---|---|
-| 🧪 | Ein/Aus aus der Ferne (VP `0x0000` = 1/0 plus Seite x01/x00) | gebaut; Wirkung hängt an der 💡-Annahme oben |
+| ✅ | Ein/Aus aus der Ferne (VP `0x0000` = 1/0 plus Seite x01/x00) | 2026-09-30 an der Maschine, auch aus der Weboberfläche |
+| ✅ | Uhr vom Handy/Rechner stellen (VP `0x002E`–`0x0032`, dann `0x0002` = 1) | 2026-09-30, Display-Uhr übernimmt |
+| ✅ | Maschine heizt nur, wenn Wort 2 (Tank leer) = 0 ist; nach Füllen und Aus/Ein füllt die Pumpe den Kessel, dann heizen beide Kessel (Wort 0/1 = 2) | 2026-09-30 |
 | 🧪 | Zustand an/Standby aus dem Tastenwert statt aus der Seite | gebaut |
 | 🧪 | Alarmmeldung aus der Seite | gebaut; ✅ dass das Mainboard Seite 103 selbst schaltet (`boot.sr`) |
 | 🧪 | Verlauf von VP `0x0050` im ESP32 (24 h mit PSRAM) | gebaut, Oberfläche in der Simulation geprüft |

@@ -115,9 +115,11 @@ Beleg je Aussage steht in [`docs/stand.md`](docs/stand.md).
 | Bridge durchreichen / mitschneiden | ✅ an der Maschine |
 | Weboberfläche mit Display-Nachbau | ✅ am echten Display gelaufen (Live-Werte, Seiten, Werte aus dem Display gelesen) · 💡 ob ein Klick an der Maschine wirkt |
 | Display-Emulation, Hybridmodus | 🧪 |
-| Tastendruck von außen wirkt wie ein echter | 💡 Grundannahme aller Fernsteuerung, noch nie ausprobiert |
-| Ein/Aus, Home Assistant, Verlauf, Brew by Weight | 🧪 in der Simulation geprüft, nicht an der Maschine, mit keiner echten Waage |
-| Druckwort, Seite x06 als Ausgabezähler, Stopp über die Dauerausgabe-Taste | 💡 |
+| Tastendruck von außen wirkt wie ein echter | ✅ 2026-09-30: Start, Standby, OK, Einstellungen-OK, Uhr stellen |
+| Ein/Aus, Uhr stellen, Weboberfläche mit Live-Werten | ✅ an der Maschine |
+| Home Assistant, Verlauf, Brew by Weight | 🧪 in der Simulation geprüft, mit keiner echten Waage |
+| Druckworte 5/6 und alle Variablen aus `14.bin` | 🧪 gelesen, [`docs/variablen.md`](docs/variablen.md); Bezug noch nicht mitgeschnitten |
+| Stopp über die Dauerausgabe-Taste | 💡 |
 | Dauerbetrieb (Passwort, OTA, Watchdog, Versorgung) | 💡 nicht gebaut |
 
 Alle Mitschnitte stammen von der kalten Maschine mit leerem Tank; ein Bezug war
@@ -258,7 +260,7 @@ Tastencode.
 | `0x0000` | Mainboard liest | 100 ms | Tastencode des Displays (Navigation, Aktionen) |
 | `0x0001` | Mainboard liest | 100 ms | zweiter Tastencode (selten) |
 | `0x0002` | Mainboard liest | auf Einstellseiten | „OK“ in Einstellungen |
-| `0x0050` | Mainboard schreibt | ~300 ms | 9 Worte Status: **Wort 3 Kaffeekessel °C, Wort 4 Servicekessel °C**; Wort 2 wird nach Seite 103 zu 1, Wort 7 = 3, Wort 5 war einmal für 1 s auf 1; Wort 0, 1, 6, 8 bisher 0 (kalte Maschine, leerer Tank) — dort werden die Drücke vermutet |
+| `0x0050` | Mainboard schreibt | ~300 ms | 9 Worte Status: Wort 0/1 Heizzustand, **Wort 2 Tank leer**, **Wort 3 Kaffeekessel °C, Wort 4 Servicekessel °C**, Wort 5 Pumpendruck (×0,5 bar), Wort 6 Druck Servicekessel (×0,25 bar), Wort 7 Wasserstand, Wort 8 Einheit — alle Variablen in [`docs/variablen.md`](docs/variablen.md) |
 | `0x0063` | Mainboard schreibt | beim Start | Firmware-Version Mainboard × 10 (21 → „FW: 2.1“) |
 
 **Drücke:** Der Startbildschirm hat laut Handbuch zwei Druckanzeigen, links
