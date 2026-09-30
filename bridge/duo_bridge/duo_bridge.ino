@@ -269,9 +269,26 @@ static bool scanAktiv = false;
 static int scanSeite = 0, scanBis = 0;
 static uint32_t scanMs = 3000, scanNaechster = 0;
 
+// Antworten auf Befehle (j, z, ?) muessen vollstaendig ankommen: in Stuecken
+// schreiben und je Stueck kurz warten, aber nie haengen bleiben.
+static void usbAntwort(const String &s) {
+  if (!Serial) return;
+  size_t i = 0;
+  while (i < s.length()) {
+    uint32_t t0 = millis();
+    while (Serial.availableForWrite() < 1 && millis() - t0 < 50) delay(1);
+    size_t frei = Serial.availableForWrite();
+    if (!frei) return;  // niemand liest mit
+    size_t n = min(frei, s.length() - i);
+    Serial.write((const uint8_t *)s.c_str() + i, n);
+    i += n;
+  }
+  Serial.write('\n');
+}
+
 static void logZeile(char richtung, const uint8_t *d, size_t n) {
   beobachte(richtung, d, n);
-  if (!ausgabe) return;
+  if (!ausgabe || !Serial || Serial.availableForWrite() < 64) return;  // niemand liest mit: verwerfen
   char zeile[16 + 3 * 260];
   int k = snprintf(zeile, sizeof zeile, "%lu %c", (unsigned long)millis(), richtung);
   for (size_t i = 0; i < n && k < (int)sizeof zeile - 4; i++) k += snprintf(zeile + k, sizeof zeile - k, " %02x", d[i]);
@@ -498,8 +515,7 @@ static void befehl(char *z) {
     zusatzBefehl(s);
   } else if (c == 'j') {  // Zustand als JSON fuer die lokale Oberflaeche
     long seit = zahl(s, ok);
-    Serial.print("#J ");
-    Serial.println(statusText(ok ? seit : 0));
+    usbAntwort("#J " + statusText(ok ? seit : 0));
   } else if (c == 'D') {  // Test: Rahmen verarbeiten, als kaeme er vom Display
     uint8_t b[256];
     size_t n = hexBytes(s, b, sizeof b);
@@ -544,6 +560,10 @@ static void leseBefehle() {
 
 void setup() {
   Serial.begin(921600);
+  // Liest am Rechner niemand mit, darf die Ausgabe ueber USB nie warten: Jede
+  // blockierte Zeile liess die UARTs ueberlaufen, Antworten gingen verloren und
+  // das Mainboard begann seinen Start (Uhr stellen) immer wieder von vorn.
+  Serial.setTxTimeoutMs(0);
   uartA.setRxBufferSize(2048);
   uartB.setRxBufferSize(2048);
   uartA.begin(BAUD, SERIAL_8N1, PIN_RX_DISPLAY, PIN_TX_MAINBOARD);
