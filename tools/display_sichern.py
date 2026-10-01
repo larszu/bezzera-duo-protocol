@@ -8,7 +8,7 @@ beantwortet das Mainboard selbst), danach wieder im vorherigen Modus.
 
     python3 display_sichern.py suche              # welche Bibliotheken Inhalt haben
     python3 display_sichern.py alles              # alle mit Inhalt + Bildspeicher-Probe
-    python3 display_sichern.py lib 14             # eine Bibliothek (256 KB)
+    python3 display_sichern.py lib 14             # eine Bibliothek (128 KB)
     python3 display_sichern.py db 0 65536         # Datenbank/Bildspeicher, Wortadresse, Worte
 
 Ziel: flash/sicherung-<Datum>/ (nicht im Repo), mit manifest.json (SHA-256).
@@ -29,7 +29,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bridge import oeffne  # noqa: E402
 
-LIB_WORTE = 0x20000  # jede Bibliothek 128 KW = 256 KB (DGUS-Handbuch, Register 0x42)
+LIB_WORTE = 0x10000  # jede Bibliothek 64 KW = 128 KB (gemessen: hoehere Adressen fangen von vorn an)
 BILD_WORTE = 0x20000  # Platz je Bild im Datenbank-Bereich (Annahme, Probe klaert es)
 
 
@@ -156,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
             libs = a.zahlen
         if a.was in ("lib", "alles"):
             for lib in libs:
-                print(f"Lib {lib}: 256 KB lesen …")
+                print(f"Lib {lib}: {LIB_WORTE // 512} KB lesen …")
                 d = br.lesen(f"S lib {lib} 0 {LIB_WORTE}", LIB_WORTE, 3600)
                 if d is None:
                     print(f"  Lib {lib} unvollstaendig, nicht gespeichert")

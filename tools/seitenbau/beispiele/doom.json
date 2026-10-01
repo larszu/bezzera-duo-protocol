@@ -1,4 +1,0 @@
-{"seite": 299, "bg": "#000000", "bild": null, "el": [
- {"typ": "flaeche", "x": 0, "y": 0, "b": 320, "h": 240, "vp": "0x2000"},
- {"typ": "flaeche", "x": 0, "y": 0, "b": 320, "h": 240, "vp": "0x6000"},
- {"typ": "text", "x": 6, "y": 4, "b": 60, "h": 12, "text": "DOOM", "groesse": 12, "farbe": "#8a1a1a", "fett": true}]}

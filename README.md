@@ -600,7 +600,6 @@ Weboberfläche und liegen im NVS des ESP32, nie im Quelltext.
 | **Brew by Weight** | Bluetooth- oder WLAN-Waage, Stopp bei Ziel minus gelerntem Vorlauf über die Stopp-Taste | 🧪 · 💡 Stopp über das Tastenfeld |
 | **Einrichtung ohne Rechner** | WLAN suchen und verbinden im Anmeldeportal; nach dem Flashen im Browser per Improv | 🧪 |
 | **Eigene Display-Seiten** | [Seitenbau](https://larszu.github.io/bezzera-duo-protocol/seitenbau/) im Browser (Windows/Mac/Linux): Bild, Tasten, Zahlen auf den freien Plätzen 96–99/196–199/296–299, per SD-Karte aufs Display; Tasten lösen Bridge-Aktionen aus ([Anleitung](docs/seitenbau.md)) | 🧪 |
-| **Doom** 🕹️ | Easter Egg: 10× auf den Schriftzug der Startseite tippen; Doom läuft auf dem ESP32 und malt per Bitmap-Befehl ins Display | 🧪 |
 
 <p align="center">
   <img src="docs/screenshots/zusatz_rohworte.png" alt="Verlauf mit allen neun Rohworten von VP 0x0050; in der Simulation steigt Wort 1 bei laufender Pumpe" width="800" /><br />
@@ -840,7 +839,7 @@ Alle Links nach Themen, auch zu Waagen und Grind by Weight: [`docs/links.md`](do
 
 ## ⚖️ Lizenz
 
-GPL-2.0 ([LICENSE](LICENSE)). Doom kommt aus [doomgeneric](https://github.com/ozkl/doomgeneric) (GPL-2.0).
+GPL-2.0 ([LICENSE](LICENSE)).
 
 ## 👤 Autor
 

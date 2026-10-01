@@ -1,28 +1,31 @@
 #pragma once
 // Eigene Seiten aus tools/seitenbau auf den freien Plaetzen 96-99, 196-199, 296-299.
 //
-// Tasten mit "Bridge-Aktion" schreiben ihren Wert in VP 0x6100 (Tastencode
+// Tasten mit "Bridge-Aktion" schreiben ihren Wert in VP 0x0300 (Tastencode
 // FD05, das Display meldet ihn nicht von selbst). Steht das Display auf einer
-// eigenen Seite, liest die Bridge VP 0x6100 alle 150 ms, fuehrt die Aktion aus
+// eigenen Seite, liest die Bridge VP 0x0300 alle 150 ms, fuehrt die Aktion aus
 // und setzt ihn auf 0 zurueck. Der Wert bleibt im Display stehen, bis die
 // Bridge ihn abholt; ein Druck geht also auch dann nicht verloren, wenn sie
 // den Seitenwechsel erst mit dem naechsten Nachlesen (2 s) bemerkt.
 //
 // Werte der Bridge fuer Zahlenanzeigen (alle 500 ms, nur auf eigenen Seiten):
-//   0x6110 Gewicht der Waage, g x 10      0x6111 Bezugszeit, s x 10
-//   0x6112 Bezuege seit Rueckspuelen      0x6113 Bezuege gesamt (bis 65535)
-//   0x6114 Uhrzeit hhmm                   0x6115 aktives Profil (1-20, 0 = keins)
+//   0x0310 Gewicht der Waage, g x 10      0x0311 Bezugszeit, s x 10
+//   0x0312 Bezuege seit Rueckspuelen      0x0313 Bezuege gesamt (bis 65535)
+//   0x0314 Uhrzeit hhmm                   0x0315 aktives Profil (1-20, 0 = keins)
+//   0x0316 Hoechstdruck, bar x 10         0x0317 mittlere Bruehtemperatur, °C x 10
+//   (beide vom laufenden bzw. letzten Bezug)
 // Werte des Mainboards (z. B. 0x0053 Kaffeekessel) zeigt das Display ohnehin.
 
-static const uint16_t ES_VP_AKTION = 0x6100, ES_VP_WERTE = 0x6110;
+// Das Display kennt nur VPs 0x0000-0x3FFF (hoehere werden abgeschnitten); Bezzera nutzt bis 0x010A.
+static const uint16_t ES_VP_AKTION = 0x0300, ES_VP_WERTE = 0x0310;
 
 // Aktionen (Wert der Taste): siehe auch ES_AKTIONEN in tools/seitenbau/index.html
-//   1 Ein   2 Standby   3 Bezug stoppen   4 Waage tarieren   5 Doom
+//   1 Ein   2 Standby   3 Bezug stoppen   4 Waage tarieren
 //   10-29 Profil 1-20 anwenden
 static bool eigeneSeite(int32_t s) {
   if (s < 0) return false;
   int r = s % 100;
-  return r >= 96 && r <= 99 && s != doomEinst.seite;
+  return r >= 96 && r <= 99;
 }
 
 static void esAktion(uint16_t w) {
@@ -31,11 +34,10 @@ static void esAktion(uint16_t w) {
   else if (w == 2) aktion("aus");
   else if (w == 3) aktion("stopp");
   else if (w == 4) aktion("tara");
-  else if (w == 5) doomStarten("eigene Seite");
   else if (w >= 10 && w < 10 + PROFILE_MAX) profilAnwenden(w - 10);
 }
 
-// aus rahmenVomDisplay: Antwort auf das Lesen von VP 0x6100
+// aus rahmenVomDisplay: Antwort auf das Lesen von VP 0x0300
 static void eigeneSeitenAntwort(const uint8_t *r, size_t n) {
   if (n < 9 || r[3] != 0x83 || ((r[4] << 8) | r[5]) != ES_VP_AKTION) return;
   uint16_t w = (r[7] << 8) | r[8];
@@ -48,10 +50,10 @@ static void eigeneSeitenAntwort(const uint8_t *r, size_t n) {
 // ─── Bruehkurve ────────────────────────────────────────────────────────────
 // Druck und Temperatur des laufenden bzw. letzten Bezugs (shots.h, 10 Punkte
 // je Sekunde) als zwei Linien. Die Seite braucht dafuer zwei Zeichenflaechen
-// (Basic Graphics 0x21) auf VP 0x6200 (Druck) und 0x6300 (Temperatur); Achsen
+// (Basic Graphics 0x21) auf VP 0x0400 (Druck) und 0x0480 (Temperatur); Achsen
 // und Beschriftung stehen im Hintergrundbild (tools/seitenbau/beispiele/
 // bruehkurve.json). Linienbefehl 0x0002: Anzahl Strecken, Farbe, Punkte.
-static const uint16_t BK_VP_DRUCK = 0x6200, BK_VP_TEMP = 0x6300;
+static const uint16_t BK_VP_DRUCK = 0x0400, BK_VP_TEMP = 0x0480;
 static const int BK_X0 = 36, BK_Y0 = 34, BK_B = 248, BK_H = 150;  // Plotbereich, muss zum Bild passen
 static const int BK_SEK = 45, BK_PUNKTE = 60;
 static const float BK_DRUCK_MAX = 12, BK_T_MIN = 80, BK_T_MAX = 100;
@@ -100,8 +102,36 @@ static void bruehkurveZeichnen(bool erzwingen) {
   bkLinie(BK_VP_TEMP, BK_FARBE_TEMP, temp, nt);
 }
 
+// Taste zur Bruehkurve auf der Startseite (x01), im Stil der Menuetaste: cyaner
+// Rahmen (Basic Graphics 0x0003, zwei Rechtecke = 2 px) mit weisser Kurve
+// (0x0002). Touch-Flaeche und Zeichenflaechen VP 0x0500/0x0580 kommen aus
+// tools/seitenbau/beispiele/start_*.json.
+static const uint16_t FARBE_CYAN = 0x3E7F, FARBE_WEISS = 0xFFFF;
+static void startSymbol() {
+  static int32_t seite = -1;
+  static uint32_t zuletzt = 0;
+  if (leitung.seite < 0 || leitung.seite % 100 != 1) {
+    seite = -1;
+    return;
+  }
+  if (seite == leitung.seite && millis() - zuletzt < 5000) return;
+  seite = leitung.seite;
+  zuletzt = millis();
+  const uint16_t rahmen[] = {0x0003, 2, 254, 8, 306, 48, FARBE_CYAN, 255, 9, 305, 47, FARBE_CYAN};
+  uint8_t f[6 + sizeof rahmen] = {KOPF0, KOPF1, (uint8_t)(3 + sizeof rahmen), 0x82, 0x05, 0x00};
+  for (size_t i = 0; i < sizeof rahmen / 2; i++) {
+    f[6 + 2 * i] = rahmen[i] >> 8;
+    f[7 + 2 * i] = rahmen[i];
+  }
+  uartB.write(f, sizeof f);
+  static const uint16_t kurve[] = {260, 40, 266, 40, 270, 22, 277, 16, 286, 16, 292, 20, 300, 20};
+  bkLinie(0x0580, FARBE_WEISS, kurve, 7);
+}
+
 static void eigeneSeitenLoop() {
-  if (doomAktiv || emulation == 1 || !eigeneSeite(leitung.seite)) return;
+  if (emulation == 1) return;
+  startSymbol();
+  if (!eigeneSeite(leitung.seite)) return;
   static uint32_t lesen = 0, schreiben = 0;
   uint32_t jetzt = millis();
   if (jetzt - lesen >= 150) {
@@ -121,16 +151,18 @@ static void eigeneSeitenLoop() {
     struct tm t;
     bool zeit = jetztLokal(t);
     float g = bezugG;
-    uint16_t w[6] = {
+    uint16_t w[8] = {
         (uint16_t)(isnan(g) || g < 0 ? 0 : lroundf(g * 10)),
         (uint16_t)(bezugZustand == BZ_LAEUFT ? (millis() - bezugStartMs) / 100 : 0),
         (uint16_t)zaehler.seitRueckspuelen,
         (uint16_t)min<uint32_t>(bezuegeMaschine(), 65535),
         (uint16_t)(zeit ? t.tm_hour * 100 + t.tm_min : 0),
         (uint16_t)(profilAktiv >= 0 ? profilAktiv + 1 : 0),
+        (uint16_t)lroundf(shotDruckMax * 10),
+        (uint16_t)(shotTempN ? lroundf(shotTempSumme / shotTempN * 10) : 0),
     };
-    uint8_t f[6 + 12] = {KOPF0, KOPF1, 3 + 12, 0x82, ES_VP_WERTE >> 8, ES_VP_WERTE & 0xFF};
-    for (int i = 0; i < 6; i++) {
+    uint8_t f[6 + 16] = {KOPF0, KOPF1, 3 + 16, 0x82, ES_VP_WERTE >> 8, ES_VP_WERTE & 0xFF};
+    for (int i = 0; i < 8; i++) {
       f[6 + 2 * i] = w[i] >> 8;
       f[7 + 2 * i] = w[i];
     }

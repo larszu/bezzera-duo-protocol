@@ -11,7 +11,7 @@ only matching reads are emitted. The computer only collects.
 
 ```sh
 python3 tools/display_sichern.py suche   # which libraries 0–127 have content
-python3 tools/display_sichern.py alles   # all with content, 256 KB each, + image probes 128/201/296
+python3 tools/display_sichern.py alles   # all with content, 128 KB each, + image probes 128/201/296
 ```
 
 Stored in `flash/sicherung-<date>/` with `manifest.json` (SHA-256), not in the repo.

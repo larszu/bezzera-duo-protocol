@@ -273,7 +273,7 @@
   },
   {
    "typ": "zahl",
-   "x": 150,
+   "x": 120,
    "y": 4,
    "b": 50,
    "h": 24,
@@ -281,11 +281,11 @@
    "stellen": 3,
    "nachkomma": 0,
    "farbe": "#ff9a3c",
-   "vorlage": 0
+   "vorlage": 2
   },
   {
    "typ": "text",
-   "x": 204,
+   "x": 158,
    "y": 10,
    "b": 40,
    "h": 12,
@@ -296,19 +296,19 @@
   },
   {
    "typ": "zahl",
-   "x": 234,
+   "x": 180,
    "y": 4,
    "b": 60,
    "h": 24,
-   "vp": "0x6111",
+   "vp": "0x0311",
    "stellen": 3,
    "nachkomma": 1,
    "farbe": "#ffffff",
-   "vorlage": 0
+   "vorlage": 2
   },
   {
    "typ": "text",
-   "x": 300,
+   "x": 222,
    "y": 10,
    "b": 40,
    "h": 12,
@@ -323,7 +323,7 @@
    "y": 34,
    "b": 249,
    "h": 151,
-   "vp": "0x6200"
+   "vp": "0x0400"
   },
   {
    "typ": "flaeche",
@@ -331,52 +331,128 @@
    "y": 34,
    "b": 249,
    "h": 151,
-   "vp": "0x6300"
+   "vp": "0x0480"
+  },
+  {
+   "typ": "zahl",
+   "x": 236,
+   "y": 4,
+   "b": 60,
+   "h": 24,
+   "vp": "0x0310",
+   "stellen": 3,
+   "nachkomma": 1,
+   "farbe": "#7ddc8a",
+   "vorlage": 2
+  },
+  {
+   "typ": "text",
+   "x": 304,
+   "y": 10,
+   "b": 40,
+   "h": 12,
+   "text": "g",
+   "groesse": 12,
+   "farbe": "#7ddc8a",
+   "fett": false
   },
   {
    "typ": "taste",
-   "x": 8,
+   "x": 6,
    "y": 204,
-   "b": 96,
+   "b": 70,
    "h": 32,
    "art": "bridge",
+   "wert": 4,
    "grafik": true,
-   "beschriftung": "Doom",
-   "farbe": "#8a1a1a",
+   "beschriftung": "Tara",
+   "farbe": "#3a4652",
    "textfarbe": "#ffffff",
    "groesse": 15,
-   "radius": 8,
-   "wert": 5
+   "radius": 8
+  },
+  {
+   "typ": "text",
+   "x": 84,
+   "y": 203,
+   "b": 40,
+   "h": 10,
+   "text": "max. Druck",
+   "groesse": 10,
+   "farbe": "#9aa4ad",
+   "fett": false
+  },
+  {
+   "typ": "zahl",
+   "x": 84,
+   "y": 215,
+   "b": 50,
+   "h": 20,
+   "vp": "0x0316",
+   "stellen": 2,
+   "nachkomma": 1,
+   "farbe": "#5ea8ff",
+   "vorlage": 0
+  },
+  {
+   "typ": "text",
+   "x": 134,
+   "y": 221,
+   "b": 40,
+   "h": 10,
+   "text": "bar",
+   "groesse": 10,
+   "farbe": "#5ea8ff",
+   "fett": false
+  },
+  {
+   "typ": "text",
+   "x": 162,
+   "y": 203,
+   "b": 40,
+   "h": 10,
+   "text": "Ø Brühtemp.",
+   "groesse": 10,
+   "farbe": "#9aa4ad",
+   "fett": false
+  },
+  {
+   "typ": "zahl",
+   "x": 162,
+   "y": 215,
+   "b": 50,
+   "h": 20,
+   "vp": "0x0317",
+   "stellen": 2,
+   "nachkomma": 1,
+   "farbe": "#ff9a3c",
+   "vorlage": 0
+  },
+  {
+   "typ": "text",
+   "x": 212,
+   "y": 221,
+   "b": 40,
+   "h": 10,
+   "text": "°C",
+   "groesse": 10,
+   "farbe": "#ff9a3c",
+   "fett": false
   },
   {
    "typ": "taste",
-   "x": 112,
+   "x": 244,
    "y": 204,
-   "b": 96,
-   "h": 32,
-   "art": "bridge",
-   "grafik": true,
-   "beschriftung": "Standby",
-   "farbe": "#5a2a2a",
-   "textfarbe": "#ffffff",
-   "groesse": 15,
-   "radius": 8,
-   "wert": 2
-  },
-  {
-   "typ": "taste",
-   "x": 216,
-   "y": 204,
-   "b": 96,
+   "b": 70,
    "h": 32,
    "art": "seite",
+   "ziel": 101,
    "grafik": true,
    "beschriftung": "Zurück",
    "farbe": "#2f7d4a",
    "textfarbe": "#ffffff",
    "groesse": 15,
-   "radius": 8,
-   "ziel": 101
+   "radius": 8
   }
  ]
 }

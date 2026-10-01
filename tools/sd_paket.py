@@ -5,10 +5,12 @@ Gleiche Logik wie der Seitenbau im Browser (tools/seitenbau/index.html), aber
 fuer mehrere Seiten auf einmal und mit Konfiguration:
 
     python3 sd_paket.py flash/sicherung-20261001-2120 --ziel /Volumes/DWIN \\
-        --seite seiten/doom.json --seite seiten/test.json --config R2=05
+        --seite tools/seitenbau/beispiele/bruehkurve.json --config R2=05
 
-Erzeugt DWIN_SET/<seite>.bmp je Seite, 13.bin (Touch), 14.bin (Variablen der
-Seiten 0-299, ueber Bibliothek 14-16) und CONFIG.TXT. Die Projektdateien sind
+Erzeugt DWIN_SET/<seite>.bmp je Seite, 13.bin (Touch, 128 KB = Bibliothek 13),
+14.bin (Variablen der Seiten 0-299, 600 KB ab Bibliothek 14, je 64 Seiten
+eine Bibliothek) und CONFIG.TXT. Alles hinter der Touch-Tabelle bleibt aus
+der Sicherung erhalten. Die Projektdateien sind
 seitenbau.json-Dateien (Seitenbau: "Projekt speichern"). Die Ausgangsdateien
 kommen vollstaendig aus der Sicherung; nur die genannten Seiten werden ersetzt.
 Prueft am Ende, dass alle anderen Seiten byte-gleich geblieben sind.
@@ -25,6 +27,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H = 320, 240
 SEITE14, EINTRAG = 2048, 32
+LIB = 0x20000  # eine Bibliothek: 64 K Worte = 128 KB (gemessen; darueber faengt die Adresse von vorn an)
+SEITEN = 300
+LIBS14 = (14, 15, 16, 17, 18)  # Seite p liegt in Bibliothek 14 + p // 64
 FREI = {96, 97, 98, 99, 196, 197, 198, 199, 296, 297, 298, 299}
 SCHRIFT = "/System/Library/Fonts/Helvetica.ttc"
 # Konfiguration des Displays 2.2 (Register 0x10-0x1C), R0/R4 nie setzen, RB loescht alles
@@ -76,7 +81,7 @@ def touch_fuer(seite: int, e: dict) -> bytes:
     w16(k, 14, 0xFD05)  # Tastencode, meldet nicht von selbst (wie die Originaltasten)
     b = bytearray(16)
     b[0] = 0xFE
-    w16(b, 1, 0x0000 if e["art"] == "code" else 0x6100)
+    w16(b, 1, 0x0000 if e["art"] == "code" else 0x0300)
     w16(b, 4, int(e.get("wert") or 0))
     return bytes(k) + bytes(b)
 
@@ -84,7 +89,7 @@ def touch_fuer(seite: int, e: dict) -> bytes:
 def vorlagen(lib14: bytes) -> list[bytes]:
     """Zahlenanzeigen (0x10) aus den Originalseiten als Schriftvorlage."""
     out, gesehen = [], set()
-    for s in range(300):
+    for s in range(SEITEN):
         for i in range(64):
             o = s * SEITE14 + i * EINTRAG
             if lib14[o] != 0x5A:
@@ -140,18 +145,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", action="append", default=[], help="z. B. R2=05 (Touch-Piepen aus)")
     a = ap.parse_args(argv)
 
-    lies = lambda n: open(os.path.join(a.sicherung, f"lib_{n:03d}.bin"), "rb").read()
+    lies = lambda n: open(os.path.join(a.sicherung, f"lib_{n:03d}.bin"), "rb").read()[:LIB]
     lib13 = lies(13)
-    lib14 = bytearray(b"\xff" * (300 * SEITE14))
-    o = 0
-    for n in (14, 15, 16):
+    lib14 = bytearray()
+    for n in LIBS14:
         pfad = os.path.join(a.sicherung, f"lib_{n:03d}.bin")
-        d = open(pfad, "rb").read() if os.path.exists(pfad) else b"\xff" * 0x40000
         if not os.path.exists(pfad):
-            print(f"Hinweis: lib_{n:03d}.bin fehlt in der Sicherung, Seiten dort gelten als leer")
-        teil = d[:len(lib14) - o]
-        lib14[o:o + len(teil)] = teil
-        o += len(teil)
+            raise SystemExit(f"lib_{n:03d}.bin fehlt in der Sicherung")
+        lib14 += lies(n)
+    lib14 = lib14[:SEITEN * SEITE14]
     alt14 = bytes(lib14)
     vl = vorlagen(lib14)
     touch = touch_eintraege(lib13)
@@ -163,34 +165,55 @@ def main(argv: list[str] | None = None) -> int:
     for pfad in a.seite:
         p = json.load(open(pfad))
         s = p["seite"]
-        if s not in FREI:
-            raise SystemExit(f"Seite {s} ist keine freie Seite ({sorted(FREI)})")
-        if any(t[0] == s for t in alt_touch) or lib14[s * SEITE14] == 0x5A:
-            raise SystemExit(f"Seite {s} ist im Display schon belegt")
+        ergaenzen = p.get("ergaenzen", False)  # bestehende Seite: anhaengen, Bild bleibt
+        if not ergaenzen:
+            if s not in FREI:
+                raise SystemExit(f"Seite {s} ist keine freie Seite ({sorted(FREI)})")
+            if any(t[0] == s for t in alt_touch) or lib14[s * SEITE14] == 0x5A:
+                raise SystemExit(f"Seite {s} ist im Display schon belegt")
         seiten.append(s)
-        # Touch: Reihenfolge der Originaldatei beibehalten, vor der ersten hoeheren Seite einfuegen
+        # Touch: Reihenfolge der Originaldatei beibehalten; neue Tasten nach den
+        # vorhandenen dieser Seite bzw. vor der ersten hoeheren Seite
         neu = [(s, touch_fuer(s, e)) for e in p["el"] if e["typ"] == "taste"]
         pos = next((i for i, t in enumerate(touch) if t[0] > s), len(touch))
         touch = touch[:pos] + neu + touch[pos:]
         vars_ = [e for e in p["el"] if e["typ"] in ("zahl", "flaeche")]
-        if len(vars_) > 64:
+        start = 0
+        if ergaenzen:
+            while start < 64 and lib14[s * SEITE14 + start * EINTRAG] == 0x5A:
+                start += 1
+        else:
+            lib14[s * SEITE14:(s + 1) * SEITE14] = b"\xff" * SEITE14
+        if start + len(vars_) > 64:
             raise SystemExit("hoechstens 64 Anzeigen je Seite")
-        lib14[s * SEITE14:(s + 1) * SEITE14] = b"\xff" * SEITE14
-        for i, e in enumerate(vars_):
+        for i, e in enumerate(vars_, start):
             lib14[s * SEITE14 + i * EINTRAG:s * SEITE14 + (i + 1) * EINTRAG] = variable_fuer(e, vl)
-        bild(p).save(os.path.join(ziel, f"{s}.bmp"))
-        print(f"Seite {s}: {len(neu)} Tasten, {len(vars_)} Anzeigen, Bild {s}.bmp")
+        if ergaenzen:
+            if lib14[s * SEITE14:s * SEITE14 + start * EINTRAG] != alt14[s * SEITE14:s * SEITE14 + start * EINTRAG]:
+                raise SystemExit(f"Seite {s}: vorhandene Anzeigen veraendert, Abbruch")
+            print(f"Seite {s} ergaenzt: {len(neu)} Tasten, {len(vars_)} Anzeigen (nach {start} vorhandenen), Bild bleibt")
+        else:
+            bild(p).save(os.path.join(ziel, f"{s}.bmp"))
+            print(f"Seite {s}: {len(neu)} Tasten, {len(vars_)} Anzeigen, Bild {s}.bmp")
 
     # Pruefen: alles ausser den neuen Seiten unveraendert
     rest = [t for t in touch if t[0] not in seiten]
-    if [t[1] for t in rest] != [t[1] for t in alt_touch]:
+    if [t[1] for t in rest] != [t[1] for t in alt_touch if t[0] not in seiten]:
         raise SystemExit("Touch-Tabelle: andere Seiten veraendert, Abbruch")
-    for s in range(300):
+    for s in seiten:  # vorhandene Tasten der Seite: unveraendert und in alter Reihenfolge vorn
+        alt = [t[1] for t in alt_touch if t[0] == s]
+        if [t[1] for t in touch if t[0] == s][:len(alt)] != alt:
+            raise SystemExit(f"Seite {s}: vorhandene Tasten veraendert, Abbruch")
+    for s in range(SEITEN):
         if s not in seiten and lib14[s * SEITE14:(s + 1) * SEITE14] != alt14[s * SEITE14:(s + 1) * SEITE14]:
             raise SystemExit(f"Variablen Seite {s} veraendert, Abbruch")
 
     if seiten:
-        open(os.path.join(ziel, "13.bin"), "wb").write(b"".join(t[1] for t in touch) + b"\xff" * 16)
+        tab = b"".join(t[1] for t in touch) + b"\xff" * 16
+        ende_alt = sum(len(t[1]) for t in alt_touch) + 16
+        if any(b not in (0x00, 0xFF) for b in lib13[ende_alt:len(tab)]):
+            raise SystemExit("Hinter der Touch-Tabelle liegen Daten, die die neuen Tasten ueberschreiben wuerden")
+        open(os.path.join(ziel, "13.bin"), "wb").write(tab + lib13[len(tab):])
         open(os.path.join(ziel, "14.bin"), "wb").write(bytes(lib14))
     cfg = dict(CONFIG)
     for c in a.config:
