@@ -496,6 +496,17 @@ grün an ESP32 **5V**, braun an GND, gelb an GPIO15, weiß an GPIO18.
 
 Der Modus wird gespeichert und gilt auch nach einem Neustart; Standard ist 0.
 
+**Die meisten brauchen nur Modus 0** (Bridge). Damit läuft alles, was die
+Weboberfläche bietet: Ein/Aus, Profile, Waage, Verlauf, Zeitplan,
+Benachrichtigungen. Er ist ab Werk eingestellt, es gibt nichts umzustellen.
+
+Umstellen, falls nötig:
+
+- **Weboberfläche:** Reiter *Diagnose* → *Steuerung* → *Betriebsart*.
+- **USB:** `python3 tools/bridge.py "e 0"` (bzw. `e 1`, `e 2`); `?` zeigt den
+  aktuellen Modus (`emulation=`).
+- `tools/display_sichern.py` schaltet für die Sicherung selbst auf 1 und danach zurück.
+
 **Modus 0 reicht wirklich nur durch:** Das Display zeigt genau, was das
 Mainboard schickt, und das Mainboard bekommt nur die Antworten des Displays.
 Fragt die Bridge selbst etwas beim Display ab (Weboberfläche, `d`,

@@ -264,6 +264,8 @@ details.gruppe>summary .hinweis{font-weight:400}
 </form>
   <section data-tab="diagnose">
     <h2>Steuerung</h2>
+    <div class="form">Betriebsart <select id="f_modus" onchange="modusSetzen(this.value)"><option value="0">0 · Bridge (durchreichen, Standard)</option><option value="2">2 · Hybrid</option><option value="1">1 · Emulation (ohne Display)</option></select></div>
+    <p class="hinweis">Für den Alltag reicht 0: Display und Mainboard reden wie ohne Bridge, Weboberfläche, Profile und Waage funktionieren trotzdem. 1 und 2 nur zum Entwickeln; die Wahl bleibt nach einem Neustart erhalten.</p>
     <div class="form">Seite <input id="f_seite" type="number" min="0" max="299" value="101"><button onclick="cmd('p '+v('f_seite'))">zeigen</button></div>
     <div class="form">Tastendruck: VP <select id="f_ovp"><option value="0x0000">0x0000</option><option value="0x0001">0x0001</option></select>
       Wert <input id="f_owert" value="5"> ×<input id="f_oanz" value="1" style="width:50px">
@@ -311,6 +313,8 @@ let seit=0;
 
 function seitenname(s){if(s<0)return "–";const b=s%100;return SEITEN[b]||("Seite "+b)}
 async function cmd(z){await fetch("/api/cmd",{method:"POST",body:z});}
+async function modusSetzen(m){if(m!="0"&&!confirm(m=="1"?"Emulation: Der ESP32 antwortet dem Mainboard statt des Displays. Nur ohne angeschlossenes Display oder zum Sichern sinnvoll. Umschalten?":"Hybrid: per Web gesetzte Werte ersetzen die des Displays. Umschalten?")){$("f_modus").value=modusAktuell;return;}await cmd("e "+m);}
+let modusAktuell="0";
 function hex(n){return "0x"+n.toString(16).toUpperCase().padStart(4,"0")}
 
 function katalog(){
@@ -329,6 +333,7 @@ async function hole(){
     const mb=j.mainboard.still_ms>=0&&j.mainboard.still_ms<2000, dp=j.display.still_ms>=0&&j.display.still_ms<2000;
     $("l_mb").classList.toggle("an",mb); $("l_dp").classList.toggle("an",dp); 
     $("uhr").textContent=j.rtc?("Display-Uhr "+j.rtc):"";
+    if(j.emulation!=null){modusAktuell=String(j.emulation);if(document.activeElement!==$("f_modus"))$("f_modus").value=modusAktuell;}
     $("seitenname").textContent=seitenname(j.seite);
     $("seitenname").className=ALARM.has(j.seite%100)?"alarm":"";
     $("seitennr").textContent=j.seite>=0?("Seite "+j.seite+" · "+SPRACHE[Math.floor(j.seite/100)]):"";

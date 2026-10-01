@@ -89,6 +89,8 @@ class Demo:
         teile = zeile.split()
         if teile and teile[0] == "p" and len(teile) > 1:
             self.seite = int(teile[1], 0)
+        if teile and teile[0] == "e" and len(teile) > 1:
+            self.emulation = int(teile[1])
         self.ereignisse.append(f"{int(time.time() * 1000)} - Web: {zeile}")
 
     def status(self, seit: str) -> bytes:
@@ -102,7 +104,7 @@ class Demo:
                      {"vp": 0x63, "alter_ms": 5000, "w": [21]},  # Firmware 2.1
                      {"vp": 0x76, "alter_ms": 900, "w": [45]}, {"vp": 0x77, "alter_ms": 900, "w": [25]},
                      {"vp": 0x78, "alter_ms": 900, "w": [10]}],  # PID Kaffee 4.5 / 0.25 / 1.0
-             "overrides": [], "ereignis_nr": nr, "ereignisse": self.ereignisse[ab:], "emulation": 0}
+             "overrides": [], "ereignis_nr": nr, "ereignisse": self.ereignisse[ab:], "emulation": getattr(self, "emulation", 0)}
         return json.dumps(j).encode()
 
     def zusatz(self, pfad: str, rumpf: str = "") -> bytes:

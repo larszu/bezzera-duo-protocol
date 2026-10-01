@@ -150,6 +150,11 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  Lib {lib} unvollstaendig, nicht gespeichert")
                     continue
                 speichern(f"lib_{lib:03d}.bin", d, f"Bibliothek {lib}")
+                alt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "flash", f"lib{lib}.bin")
+                if os.path.exists(alt):  # frueherer Teilauszug: muss mit dem Anfang uebereinstimmen
+                    v = open(alt, "rb").read()
+                    print(f"  Abgleich mit flash/lib{lib}.bin ({len(v)} Byte): "
+                          f"{'gleich' if d[:len(v)] == v else 'ABWEICHUNG'}")
         if a.was == "alles":
             # Bildspeicher: Datenbank-Adresse 0 liegt laut Handbuch bei Bild 128.
             # 320x240x2 Byte = 75 KW passen in einen 128-KW-Platz (BILD_WORTE,
