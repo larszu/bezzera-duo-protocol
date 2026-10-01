@@ -410,8 +410,10 @@ static void rahmenVomDisplay(uint8_t *r, size_t n) {
 }
 
 static void anzeigeAnpassen(uint8_t *r, size_t n);  // zusatz.h: Werte der Bridge aufs Display
+static bool kurveHalten(const uint8_t *r, size_t n);  // eigene_seiten.h
 
 static void rahmenVomMainboard(uint8_t *r, size_t n) {
+  if (kurveHalten(r, n)) return;
   anzeigeAnpassen(r, n);
   uartB.write(r, n);
   logZeile('B', r, n);

@@ -27,6 +27,8 @@
 #include <WebServer.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <Update.h>
+#include <esp_wifi.h>
 
 #include "tasten.h"
 #include "web_ui.h"
@@ -284,6 +286,18 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
     }
   } else if (pfad == "/api/shots") {
     antwort = shotsJson();
+  } else if (pfad == "/api/bruehkurve") {  // laufender bzw. letzter Bezug, wie auf dem Display
+    antwort = "{\"laeuft\":";
+    antwort += shotLaeuft ? "true" : "false";
+    antwort += ",\"nr\":";
+    antwort += kurvenNr[shotSlot];
+    antwort += ",\"druck_max\":";
+    antwort += shotDruckMax;
+    antwort += ",\"temp_mittel\":";
+    antwort += shotTempN ? shotTempSumme / shotTempN : 0.0f;
+    antwort += ",\"p\":";
+    antwort += shotKurveJson(kurvenNr[shotSlot]);
+    antwort += '}';
   } else if (pfad == "/api/shot") {
     antwort = shotKurveJson(queryWert(query, "nr").toInt());
   } else if (pfad == "/api/shot_aktion") {
@@ -351,7 +365,7 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
   } else if (pfad == "/api/wlan") {
     if (queryWert(query, "suche") == "1" && WiFi.scanComplete() != WIFI_SCAN_RUNNING) {
       WiFi.scanDelete();
-      WiFi.scanNetworks(true);  // asynchron
+      WiFi.scanNetworks(true, true, false, 400);  // asynchron, auch versteckte, 400 ms je Kanal
     }
     antwort = wlanJson();
   } else if (pfad == "/api/wlan_setzen") {
@@ -459,6 +473,7 @@ void webSetup() {
   Network.onEvent(netzEreignis);
   ETH.begin(ETH_PHY_W5500, 1, ETH_CS, ETH_IRQ, ETH_RST, SPI2_HOST, ETH_SCK, ETH_MISO, ETH_MOSI);
   WiFi.mode(WIFI_AP_STA);
+  esp_wifi_set_country_code("DE", true);  // Kanaele 1-13 (Router auf 12/13 sonst unsichtbar)
   netzLaden();
   WiFi.softAP("duo-bridge", apPass.c_str());
   Preferences pref;
@@ -493,10 +508,37 @@ void webSetup() {
   });
   dns.start(53, "*", WiFi.softAPIP());
   for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage",
-                        "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion",
+                        "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion", "/api/bruehkurve",
                         "/api/ble_suche", "/api/ble_geraete", "/api/maschine", "/api/maschine_setzen", "/api/wlan", "/api/wlan_setzen",
                         "/api/sicherheit", "/api/zeitplan", "/api/matter", "/api/melden"})
     server.on(p, zusatzWeb);
+  // Firmware ueber die Weboberflaeche: duo_bridge.ino.bin (nur das Programm,
+  // nicht die Flash-Datei mit Bootloader) in den freien OTA-Platz, dann Neustart.
+  server.on(
+      "/api/firmware", HTTP_POST,
+      [] {
+        if (!zugang()) return;
+        bool ok = !Update.hasError();
+        server.send(ok ? 200 : 500, "text/plain", ok ? "ok, Neustart" : Update.errorString());
+        if (ok) {
+          delay(300);
+          ESP.restart();
+        }
+      },
+      [] {
+        if (!zugang()) return;
+        HTTPUpload &u = server.upload();
+        if (u.status == UPLOAD_FILE_START) {
+          ereignis("- Firmware-Update: %s", u.filename.c_str());
+          Update.begin(UPDATE_SIZE_UNKNOWN);
+        } else if (u.status == UPLOAD_FILE_WRITE) {
+          Update.write(u.buf, u.currentSize);
+        } else if (u.status == UPLOAD_FILE_END) {
+          Update.end(true);
+        } else if (u.status == UPLOAD_FILE_ABORTED) {
+          Update.abort();
+        }
+      });
   server.begin();
   zusatzSetup();
   profileLaden();

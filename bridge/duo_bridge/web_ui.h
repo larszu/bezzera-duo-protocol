@@ -161,6 +161,12 @@ details.gruppe>summary .hinweis{font-weight:400}
     <p class="hinweis" id="shot_info"></p>
   </section>
   <section data-tab="maschine" style="grid-column:1/-1">
+    <h2>Brühkurve</h2>
+    <p class="einheit" id="bk_info">–</p>
+    <canvas id="bk_kurve" width="600" height="240" style="height:240px"></canvas>
+    <p class="hinweis"><span style="color:#4cc9f0">■</span> Druck bar (rechts) <span style="color:#f4a261">■</span> Temperatur °C (links) <span style="color:#e6edf7">■</span> Gewicht g (links, mit Waage) · laufender Bezug live, sonst der letzte</p>
+  </section>
+  <section data-tab="maschine" style="grid-column:1/-1">
     <h2>Display</h2>
     <div id="dsp_wrap" style="max-width:640px;margin:0 auto"><svg id="dsp" viewBox="0 0 320 240" style="width:100%;display:block;border-radius:6px;box-shadow:0 0 0 6px #000,0 6px 30px #0008"></svg></div>
     <div class="form" style="margin-top:8px"><label><input type="checkbox" id="f_flaechen" style="width:auto"> Tastenflächen zeigen</label></div>
@@ -197,6 +203,8 @@ details.gruppe>summary .hinweis{font-weight:400}
     <p id="wl_status" class="einheit">–</p>
     <div class="form"><button onclick="wlSuchen()">Netze suchen</button></div>
     <div id="wl_liste"></div>
+    <div class="form"><input id="wl_eigen" placeholder="anderes Netz (Name)" style="width:180px"><button onclick="wlWaehlen(v('wl_eigen'),false)">auswählen</button></div>
+    <p class="hinweis">Die Bridge kann nur 2,4 GHz. Router mit 2,4 und 5 GHz unter einem Namen funktionieren.</p>
     <div class="form" id="wl_form" style="display:none"><b id="wl_name"></b> Passwort <input id="wl_pass" type="password" class="breit"><button onclick="wlVerbinden()">Verbinden</button></div>
     <h3>Zugang</h3>
     <div class="form">WLAN „duo-bridge“ Passwort <input id="sc_ap" type="password" style="width:140px" placeholder="mind. 8 Zeichen"><button onclick="sicherheit('ap_pass',v('sc_ap'))">Ändern</button></div>
@@ -274,6 +282,11 @@ details.gruppe>summary .hinweis{font-weight:400}
     <div class="form">Roh <select id="f_ziel"><option value="d">→ Display</option><option value="m">→ Mainboard</option></select>
       <input id="f_roh" class="breit" value="c6 a5 03 81 03 02"><button onclick="cmd(v('f_ziel')+' '+v('f_roh'))">senden</button></div>
     <p class="hinweis">Tastendruck: Die nächsten n Antworten des Displays auf „VP lesen“ werden überschrieben, das Mainboard sieht den Wert wie einen Druck. Welche Taste welchen Wert schickt, steht in der Tastentabelle aus dem Display-Flash (docs/tasten.json); ein Klick auf das Display oben nutzt sie direkt.</p>
+  </section>
+  <section data-tab="diagnose">
+    <h2>Firmware</h2>
+    <div class="form"><input type="file" id="fw_datei" accept=".bin"><button onclick="fwHochladen()">Aktualisieren</button><span class="hinweis" id="fw_status"></span></div>
+    <p class="hinweis">Datei <code>duo_bridge.ino.bin</code> von der Flash-Seite (nicht die Datei für USB). Die Bridge startet danach neu; bei einem Fehler bleibt die alte Firmware.</p>
   </section>
   <section data-tab="diagnose">
     <h2>Variablen</h2>
@@ -1323,6 +1336,25 @@ async function bnSpeichern(test){const d=new URLSearchParams({ntfy:v("bn_ntfy"),
   await fetch("/api/melden",{method:"POST",body:d.toString()}); holeMelden(true)}
 async function mtAktion(a){await fetch("/api/matter",{method:"POST",body:a}); if(a!="zuruecksetzen") $("mt_hinweis").textContent=a=="an"?"wird nach dem Neustart der Bridge aktiv":"aus nach dem Neustart"; setTimeout(()=>holeMelden(false),1000)}
 setInterval(()=>holeMelden(false),5000); holeMelden(false);
+
+// ─── Brühkurve ────────────────────────────────────────────────────────────
+let bkStand="";
+async function holeBruehkurve(){ if(!aktiv("maschine")) return setTimeout(holeBruehkurve,3000);
+  let b; try{b=await (await fetch("/api/bruehkurve")).json()}catch(e){return setTimeout(holeBruehkurve,3000)}
+  const s=b.nr+"/"+b.p.length; if(s!==bkStand){bkStand=s;
+    const t=b.p.length?b.p[b.p.length-1][0]:0;
+    $("bk_info").textContent=b.p.length?`${b.laeuft?"läuft":"Bezug "+b.nr}: ${t.toFixed(1)} s · max. ${b.druck_max.toFixed(1)} bar · Ø ${b.temp_mittel.toFixed(1)} °C`:"noch kein Bezug seit dem Start der Bridge";
+    const r=[{p:b.p.filter(q=>q[2]!=null).map(q=>[q[0],q[2]]),farbe:"#f4a261"},{p:b.p.filter(q=>q[1]!=null).map(q=>[q[0],q[1]]),farbe:"#4cc9f0",achse:1}];
+    if(b.p.some(q=>q[3]!=null)) r.push({p:b.p.filter(q=>q[3]!=null).map(q=>[q[0],q[3]]),farbe:"#e6edf7",breite:2.5});
+    kurve("bk_kurve",r,{x0:0,min1:0,spanne1:4,fmtX:s=>Math.round(s)+" s",leer:"noch kein Bezug"})}
+  setTimeout(holeBruehkurve,b.laeuft?700:3000)}
+holeBruehkurve();
+
+// ─── Firmware ────────────────────────────────────────────────────────────────
+async function fwHochladen(){const f=$("fw_datei").files[0]; if(!f) return; $("fw_status").textContent="lädt …";
+  const fd=new FormData(); fd.append("fw",f,f.name);
+  try{const r=await fetch("/api/firmware",{method:"POST",body:fd}); $("fw_status").textContent=await r.text()}
+  catch(e){$("fw_status").textContent="Verbindung weg (Neustart?)"}}
 
 // ─── Heim-WLAN und Zugang ─────────────────────────────────────────────────
 let wlGewaehlt="";
