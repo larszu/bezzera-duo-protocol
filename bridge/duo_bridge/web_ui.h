@@ -164,7 +164,7 @@ details.gruppe>summary .hinweis{font-weight:400}
     <h2>Brühkurve</h2>
     <p class="einheit" id="bk_info">–</p>
     <canvas id="bk_kurve" width="600" height="240" style="height:240px"></canvas>
-    <p class="hinweis"><span style="color:#4cc9f0">■</span> Druck bar (rechts) <span style="color:#f4a261">■</span> Temperatur °C (links) <span style="color:#e6edf7">■</span> Gewicht g (links, mit Waage) · laufender Bezug live, sonst der letzte</p>
+    <p class="hinweis"><span style="color:#4cc9f0">■</span> Druck 0–12 bar (rechts) <span style="color:#f4a261">■</span> Temperatur 80–100 °C (links) · wie am Display · laufender Bezug live, sonst der letzte</p>
   </section>
   <section data-tab="maschine" style="grid-column:1/-1">
     <h2>Display</h2>
@@ -1084,6 +1084,7 @@ function kurve(id,reihen,o={}){
   if(!xs.length){g.fillStyle="#8b9bb8"; g.fillText(o.leer||"keine Daten",L,H/2); return}
   let x0=o.x0??Math.min(...xs), x1=o.x1??Math.max(...xs); if(x1<=x0) x1=x0+1;
   const bereich=a=>{const ys=reihen.filter(r=>(r.achse||0)==a).flatMap(r=>r.p.map(q=>q[1])).filter(y=>y!=null&&!isNaN(y));
+    if(o["fest"+a]) return ys.length?o["fest"+a]:null;  // feste Achse wie am Display, Werte werden abgeschnitten
     if(!ys.length) return null; let lo=Math.min(...ys,o["min"+a]??Infinity), hi=Math.max(...ys,o["max"+a]??-Infinity);
     if(hi-lo<(o["spanne"+a]||1)) hi=lo+(o["spanne"+a]||1); const r=(hi-lo)*.06; return [lo-r,hi+r]};
   const ach=[bereich(0),bereich(1)];
@@ -1096,7 +1097,8 @@ function kurve(id,reihen,o={}){
   }
   if(o.linie!=null&&ach[0]){g.setLineDash([4*dpr,4*dpr]); g.strokeStyle="#f94144"; g.lineWidth=1.5*dpr; g.beginPath(); g.moveTo(L,Y(o.linie,0)); g.lineTo(W-R,Y(o.linie,0)); g.stroke(); g.setLineDash([])}
   for(const r of reihen){const a=r.achse||0; if(!ach[a]) continue; g.strokeStyle=r.farbe; g.lineWidth=(r.breite||2)*dpr; g.beginPath(); let an=false;
-    for(const [x,y] of r.p){if(y==null||isNaN(y)){an=false; continue} an?g.lineTo(X(x),Y(y,a)):g.moveTo(X(x),Y(y,a)); an=true} g.stroke()}
+    const kl=y=>o["fest"+a]?Math.min(o["fest"+a][1],Math.max(o["fest"+a][0],y)):y;
+    for(const [x,y] of r.p){if(y==null||isNaN(y)){an=false; continue} an?g.lineTo(X(x),Y(kl(y),a)):g.moveTo(X(x),Y(kl(y),a)); an=true} g.stroke()}
 }
 
 // Verlauf aus dem Ringpuffer des ESP32 (1 Wert je Sekunde, auch ohne offene Seite)
@@ -1343,10 +1345,11 @@ async function holeBruehkurve(){ if(!aktiv("maschine")) return setTimeout(holeBr
   let b; try{b=await (await fetch("/api/bruehkurve")).json()}catch(e){return setTimeout(holeBruehkurve,3000)}
   const s=b.nr+"/"+b.p.length; if(s!==bkStand){bkStand=s;
     const t=b.p.length?b.p[b.p.length-1][0]:0;
-    $("bk_info").textContent=b.p.length?`${b.laeuft?"läuft":"Bezug "+b.nr}: ${t.toFixed(1)} s · max. ${b.druck_max.toFixed(1)} bar · Ø ${b.temp_mittel.toFixed(1)} °C`:"noch kein Bezug seit dem Start der Bridge";
+    const g=b.p.length?b.p[b.p.length-1][3]:null;
+    $("bk_info").textContent=b.p.length?`${b.laeuft?"läuft":"Bezug "+b.nr}: ${t.toFixed(1)} s · max. ${b.druck_max.toFixed(1)} bar · Ø ${b.temp_mittel.toFixed(1)} °C${g!=null?` · ${g.toFixed(1)} g`:""}`:"noch kein Bezug seit dem Start der Bridge";
+    // dieselben Achsen wie die Display-Seite: 0-45 s, 80-100 °C links, 0-12 bar rechts
     const r=[{p:b.p.filter(q=>q[2]!=null).map(q=>[q[0],q[2]]),farbe:"#f4a261"},{p:b.p.filter(q=>q[1]!=null).map(q=>[q[0],q[1]]),farbe:"#4cc9f0",achse:1}];
-    if(b.p.some(q=>q[3]!=null)) r.push({p:b.p.filter(q=>q[3]!=null).map(q=>[q[0],q[3]]),farbe:"#e6edf7",breite:2.5});
-    kurve("bk_kurve",r,{x0:0,min1:0,spanne1:4,fmtX:s=>Math.round(s)+" s",leer:"noch kein Bezug"})}
+    kurve("bk_kurve",r,{x0:0,x1:Math.max(45,t),fest0:[80,100],fest1:[0,12],fmtX:s=>Math.round(s)+" s",leer:"noch kein Bezug"})}
   setTimeout(holeBruehkurve,b.laeuft?700:3000)}
 holeBruehkurve();
 
