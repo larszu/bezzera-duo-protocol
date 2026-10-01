@@ -45,7 +45,7 @@ project share an **implicit contract** that nothing checks:
 2. **Key codes.** Every key writes a fixed value to VP `0x0000` (e.g. 7 = coffee settings, 20 = menu). New mainboard functions need new codes and new pages in the display; old displays never send them.
 3. **Variable addresses.** Temperatures, setpoints and settings live at fixed VPs (`0x0050`, `0x005A`–`0x005F`, `0x0070`–`0x007E` …). If one version moves a VP, the other side reads or shows the wrong value.
 4. **Sequences.** Mainboard 2.0 starts by itself after 5 s instead of waiting for the standby press; display project 2.0 adapts its page flow. A display 1.1 on a mainboard 2.x expects a different sequence.
-5. **Header `C6 A5` instead of `5A A5`.** A stock DWIN display does not talk to this mainboard at all; the frame header is part of the display project's configuration. Whether older versions used a different header or baud rate is unknown.
+5. **Header `C6 A5` instead of `5A A5`.** A stock DWIN display does not talk to this mainboard at all; the frame header is part of the display project's configuration. A replacement display 2.2 (version `0x25` in register `0x00`) uses `5A A5` instead and stays silent on mainboard 2.1: pages appear, touch beeps, but no values, because the mainboard never gets an answer to its connection test (item 6). The bridge detects the display header itself and translates in both directions (`?` shows `display_kopf=5A`).
 6. **Connection test VP `0x0063`.** The mainboard writes its version there and reads it back. From everything captured, it only checks that a display answers, not its version. A mismatched pair therefore probably boots and only then misbehaves.
 
 Displays 2.0 and 2.2 probably differ in pages and keys for the new functions

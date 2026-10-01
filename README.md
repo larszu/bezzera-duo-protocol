@@ -313,7 +313,7 @@ einen stillen Vertrag, den keine Seite prüft:
 2. **Tastencodes:** Jede Taste schreibt einen festen Wert (7 = Kaffee-Einstellungen, 20 = Menü); neue Funktionen brauchen neue Codes und Seiten, die ein altes Display nicht hat.
 3. **Variablenadressen:** Temperaturen und Einstellungen liegen auf festen VPs; verschiebt eine Version eine, liest die Gegenseite falsche Werte.
 4. **Abläufe:** Ab Mainboard 2.0 startet die Maschine nach 5 s von selbst; Display 2.0 passt seine Seitenfolge an, ein Display 1.1 erwartet den alten Ablauf.
-5. **Rahmenkopf `C6 A5`:** steckt im Display-Projekt; ein DWIN-Display ab Werk spricht gar nicht mit diesem Mainboard.
+5. **Rahmenkopf `C6 A5`:** steckt im Display-Projekt; ein DWIN-Display ab Werk spricht gar nicht mit diesem Mainboard. Ersatz-Displays 2.2 sprechen `5A A5`; mit der Bridge dazwischen laufen sie trotzdem, sie übersetzt den Kopf.
 
 Der Verbindungstest beim Start (VP `0x0063` schreiben und zurücklesen) prüft
 nach allem, was mitgeschnitten ist, nur *ob* ein Display antwortet, nicht
