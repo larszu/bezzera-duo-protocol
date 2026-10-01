@@ -52,9 +52,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cp build/duo_bridge.ino.merged.bin "duo_bridge-${GITHUB_REF_NAME}.bin"
-          gh release create "$GITHUB_REF_NAME" "duo_bridge-${GITHUB_REF_NAME}.bin" \
-            --title "Bridge $GITHUB_REF_NAME" --notes "Firmware für den Waveshare ESP32-S3-ETH. Flashen: docs/flashen.md" \
-            || gh release upload "$GITHUB_REF_NAME" "duo_bridge-${GITHUB_REF_NAME}.bin" --clobber
+          cp build/duo_bridge.ino.bin "duo_bridge-update-${GITHUB_REF_NAME}.bin"
+          cp site/display_kopf_c6.zip "display_kopf_c6.zip"
+          DATEIEN=("duo_bridge-${GITHUB_REF_NAME}.bin" "duo_bridge-update-${GITHUB_REF_NAME}.bin" "display_kopf_c6.zip")
+          gh release create "$GITHUB_REF_NAME" "${DATEIEN[@]}" --title "Bridge $GITHUB_REF_NAME" --notes-file docs/release-notes.md \
+            || gh release upload "$GITHUB_REF_NAME" "${DATEIEN[@]}" --clobber
 
   pages:
     needs: bauen
