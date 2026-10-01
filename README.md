@@ -60,6 +60,16 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 
 ---
 
+## 🩹 Ersatz-Display zeigt keine Werte?
+
+Neues Display (Ersatzteil 2.2) eingebaut, Seiten erscheinen, Touch piept, aber **keine Temperaturen, keine Uhr**? Dann spricht das Display einen anderen Rahmenkopf (`5A A5`) als das Mainboard (`C6 A5`). Eine SD-Karte stellt es um, ohne Bridge, ohne Programm:
+
+1. **[display_kopf_c6.zip](https://larszu.github.io/bezzera-duo-protocol/display_kopf_c6.zip)** laden, den Ordner `DWIN_SET` auf eine leere microSD kopieren (FAT32, 4-KB-Cluster, höchstens 8 GB).
+2. Maschine einschalten, Karte ins Display stecken, nach einigen Sekunden ziehen.
+3. Maschine am Hauptschalter aus und wieder ein. Jetzt erscheinen die Werte.
+
+Die Karte ändert nur eine Einstellung des Displays (Register R3 von `5A` auf `C6`), keine Seiten und Bilder. **Nur anwenden, wenn das Display keine Werte zeigt:** An einem Mainboard, das selbst `5A A5` spricht, würde sie das Display stumm machen (rückgängig mit `R3=5A`). Erprobt mit Display 2.2 an Mainboard 2.1, Hintergrund und Sicherung vorher in [docs/versionen.md](docs/versionen.md). Ohne Gewähr.
+
 ## 📸 Screenshots
 
 <table>

@@ -60,6 +60,16 @@ speak it yourself. The goal is the same as in the Reddit project by
 
 ---
 
+## 🩹 Replacement display shows no values?
+
+Fitted a new display (spare part 2.2), pages appear, touch beeps, but **no temperatures, no clock**? Then the display uses a different frame header (`5A A5`) than the mainboard (`C6 A5`). An SD card switches it over, no bridge, no software:
+
+1. Download **[display_kopf_c6.zip](https://larszu.github.io/bezzera-duo-protocol/display_kopf_c6.zip)**, copy the folder `DWIN_SET` onto an empty microSD (FAT32, 4 KB clusters, at most 8 GB).
+2. Switch the machine on, insert the card into the display, pull it after a few seconds.
+3. Switch the machine off and on at the main switch. The values now appear.
+
+The card only changes one display setting (register R3 from `5A` to `C6`), no pages or images. **Only use it if the display shows no values:** on a mainboard that itself speaks `5A A5` it would make the display silent (undo with `R3=5A`). Tested with display 2.2 on mainboard 2.1, background and backup first in [docs/versionen.en.md](docs/versionen.en.md). No warranty.
+
 ## 📸 Screenshots
 
 <table>
