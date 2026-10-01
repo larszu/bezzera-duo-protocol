@@ -187,7 +187,7 @@ static bool imStandby() {
 // eine grosse Zahl. Laut Handbuch (5.4.4) erscheint waehrend der Ausgabe ein
 // Bildschirm mit Pumpendruck und Ausgabedauer. Vermutung: das ist x06, und das
 // Mainboard schaltet ihn wie die Alarmseiten selbst. Noch nicht mitgeschnitten.
-static bool ausgabeSeite() { return mainboardLebt() && leitung.seite >= 0 && leitung.seite % 100 == 6; }
+static bool ausgabeSeite() { return mainboardLebt() && leitung.seiteMb >= 0 && leitung.seiteMb % 100 == 6; }
 
 // Kurzer Zustand fuer Weboberflaeche und Home Assistant.
 static String maschinenStatus() {
