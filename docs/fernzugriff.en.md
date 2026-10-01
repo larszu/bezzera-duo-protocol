@@ -39,6 +39,25 @@ sudo tailscale up --advertise-routes=192.168.0.0/24    # your home network
 
 Tip: give the bridge a fixed IP in the router so the bookmark keeps working.
 
+## Option 1b: the machine as its own device in Tailscale (Docker)
+
+Instead of exposing the whole home network, the bridge appears as its own
+device "bezzera" in the Tailscale app, with a fixed address for a home-screen
+icon. On a computer in the home network with Docker:
+
+```bash
+sudo docker run -d --name bezzera-tailscale --restart unless-stopped \
+  -e TS_HOSTNAME=bezzera -e TS_STATE_DIR=/var/lib/tailscale -e TS_USERSPACE=true \
+  -v /opt/bezzera-tailscale/state:/var/lib/tailscale tailscale/tailscale:latest
+sudo docker logs bezzera-tailscale          # open the login link and confirm
+sudo docker exec bezzera-tailscale tailscale serve --bg --tcp 80 tcp://<bridge IP>:80
+sudo docker exec bezzera-tailscale tailscale ip -4   # address for the phone
+```
+
+`--tcp` instead of `--http` so the page answers under the name and the 100.x
+address. On the iPhone: connect Tailscale, open the address in Safari, Share →
+Add to Home Screen. Give the bridge a fixed IP in the router.
+
 ## Option 2: Home Assistant
 
 If Home Assistant has remote access (Nabu Casa or your own tunnel), the bridge

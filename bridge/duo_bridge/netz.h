@@ -12,12 +12,14 @@
 
 static String apPass = "espresso1";  // bis zur Einrichtung; danach eigenes
 static String webPass;               // leer = ohne Passwort (nur im eigenen Netz!)
+static String webUser = "duo";        // Benutzername fuer HTTP Basic
 
 static void netzLaden() {
   Preferences p;
   p.begin("netz", true);
   apPass = p.getString("ap_pass", "espresso1");
   webPass = p.getString("web_pass", "");
+  webUser = p.getString("web_user", "duo");
   p.end();
   if (apPass.length() < 8) apPass = "espresso1";
 }
@@ -37,9 +39,9 @@ static void heimWlanSpeichern(const String &ssid, const String &pass) {
   ereignis("- Heim-WLAN %s gespeichert", ssid.c_str());
 }
 
-// HTTP Basic: Benutzer "duo", Passwort aus der Einrichtung. Ohne Passwort offen.
+// HTTP Basic: Benutzer (Standard "duo") und Passwort aus der Einrichtung. Ohne Passwort offen.
 static bool zugang() {
-  if (!webPass.length() || server.authenticate("duo", webPass.c_str())) return true;
+  if (!webPass.length() || server.authenticate(webUser.c_str(), webPass.c_str())) return true;
   server.requestAuthentication(BASIC_AUTH, "Bezzera Duo Bridge");
   return false;
 }
