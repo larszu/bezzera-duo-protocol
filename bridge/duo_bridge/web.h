@@ -56,6 +56,8 @@ static void ereignis(const char *fmt, ...);
 #include "matter_home.h"
 #include "benachrichtigung.h"
 #include "sichern.h"
+#include "doom.h"
+#include "eigene_seiten.h"
 
 static void netzEreignis(arduino_event_id_t e) {
   if (e == ARDUINO_EVENT_ETH_GOT_IP) {
@@ -386,6 +388,14 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
       if (queryWert(rumpf, "test") == "1") melden("Bezzera Duo", "Probemeldung: %s", kurzStatus().c_str());
     }
     antwort = benJson();
+  } else if (pfad == "/api/doom") {
+    String a = rumpf;
+    a.trim();
+    if (a.length() && !doomAktion(a)) {
+      antwort = "unbekannt";
+      return 400;
+    }
+    antwort = doomJson();
   } else if (pfad == "/api/matter") {
     if (rumpf.length() && !matterAktion(rumpf)) {
       antwort = "unbekannt";
@@ -494,10 +504,19 @@ void webSetup() {
   for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage",
                         "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion",
                         "/api/ble_suche", "/api/ble_geraete", "/api/maschine", "/api/maschine_setzen", "/api/wlan", "/api/wlan_setzen",
-                        "/api/sicherheit", "/api/zeitplan", "/api/matter", "/api/melden"})
+                        "/api/sicherheit", "/api/zeitplan", "/api/matter", "/api/melden", "/api/doom"})
     server.on(p, zusatzWeb);
+  server.on(
+      "/api/doom_wad", HTTP_POST, [] {
+        if (!zugang()) return;
+        server.send(200, "application/json", doomJson());
+      },
+      [] {
+        if (zugang()) doomWadHochladen();
+      });
   server.begin();
   zusatzSetup();
+  doomLaden();
   profileLaden();
   shotsSetup();
   zeitplanSetup();
@@ -535,6 +554,8 @@ void webLoop() {
   matterLoop();
   benLoop();
   sichernLoop();
+  doomLoop();
+  eigeneSeitenLoop();
   verlaufLoop();
   bezugLoop();
   mqttLoop();

@@ -156,6 +156,18 @@ class Demo:
         if u.path == "/api/melden":
             return json.dumps({"ntfy": "", "tg_token_gesetzt": False, "tg_chats": "", "bereit": True, "shot": True,
                                "wartung": True, "alarm": True, "status": "aus"}).encode()
+        if u.path == "/api/doom":
+            d = getattr(self, "doom", None) or {"aktiv": False, "status": "bereit", "wad": False, "frei": 6160384,
+                                                  "bilder": 0, "seite": 299, "zoom": True, "turbo": False}
+            self.doom = d
+            a = (rumpf or "").strip() if isinstance(rumpf, str) else ""
+            if a == "start":
+                d.update(aktiv=True, status="Feuer (keine WAD-Datei)")
+            elif a == "stop":
+                d.update(aktiv=False, status="bereit")
+            if d["aktiv"]:
+                d["bilder"] += 1
+            return json.dumps(d).encode()
         if u.path == "/api/matter":
             return json.dumps({"an": True, "gestartet": True, "eingerichtet": False, "code": "34970112332",
                                "qr": "https://project-chip.github.io/connectedhomeip/qrcode.html?data=MT:Y.K9042C00KA0648G00"}).encode()

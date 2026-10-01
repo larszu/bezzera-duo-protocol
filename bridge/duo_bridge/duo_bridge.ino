@@ -329,9 +329,14 @@ static void seite(uint16_t s) {
 // Ein vollstaendiger Rahmen vom Display: ggf. Antwort ueberschreiben, dann
 // an das Mainboard weiterreichen.
 static void sichernAntwort(const uint8_t *r, size_t n);  // sichern.h
+static void doomAntwort(const uint8_t *r, size_t n);     // doom.h
+static bool doomVomMainboard(const uint8_t *r, size_t n);
+static void eigeneSeitenAntwort(const uint8_t *r, size_t n);  // eigene_seiten.h
 
 static void rahmenVomDisplay(uint8_t *r, size_t n) {
   sichernAntwort(r, n);
+  doomAntwort(r, n);
+  eigeneSeitenAntwort(r, n);
   if (emulation == 1) {  // das Mainboard bekommt nur die Antworten des Emulators
     if (eigeneAntwort(r, n)) logZeile('A', r, n);  // eigene Anfrage: sichtbar machen
     else beobachte('A', r, n);
@@ -385,6 +390,11 @@ static void rahmenVomDisplay(uint8_t *r, size_t n) {
 static void anzeigeAnpassen(uint8_t *r, size_t n);  // zusatz.h: Werte der Bridge aufs Display
 
 static void rahmenVomMainboard(uint8_t *r, size_t n) {
+  if (doomVomMainboard(r, n)) {  // Doom laeuft: Display gehoert der Doom-Task
+    logZeile('B', r, n);
+    if (emulation == 1) emuliereAntwort(r, n);
+    return;
+  }
   anzeigeAnpassen(r, n);
   uartB.write(r, n);
   logZeile('B', r, n);

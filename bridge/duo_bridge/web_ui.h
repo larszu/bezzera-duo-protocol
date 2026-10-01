@@ -275,6 +275,18 @@ details.gruppe>summary .hinweis{font-weight:400}
       <input id="f_roh" class="breit" value="c6 a5 03 81 03 02"><button onclick="cmd(v('f_ziel')+' '+v('f_roh'))">senden</button></div>
     <p class="hinweis">Tastendruck: Die nächsten n Antworten des Displays auf „VP lesen“ werden überschrieben, das Mainboard sieht den Wert wie einen Druck. Welche Taste welchen Wert schickt, steht in der Tastentabelle aus dem Display-Flash (docs/tasten.json); ein Klick auf das Display oben nutzt sie direkt.</p>
   </section>
+  <section data-tab="diagnose" id="doom_bereich">
+    <h2>Doom</h2>
+    <p class="hinweis">Easter Egg: zehnmal schnell auf den Schriftzug der Startseite tippen, am Display oder hier im Nachbau. Braucht die Doom-Seite aus dem Seitenbauer (SD-Karte) und eine WAD-Datei, sonst brennt nur das Doom-Feuer. Während Doom läuft, beantwortet die Bridge das Mainboard selbst; ein Alarm der Maschine beendet Doom sofort.</p>
+    <div class="form">Status <b id="dm_status">–</b> <span class="hinweis" id="dm_wad"></span></div>
+    <div class="form"><button onclick="dmAktion('start')">Starten</button><button onclick="dmAktion('stop')">Zurück zur Maschine</button></div>
+    <div class="form">WAD-Datei <input type="file" id="dm_datei" accept=".wad,.WAD"><button onclick="dmHochladen()">Hochladen</button><span class="hinweis" id="dm_upload"></span></div>
+    <div class="form">Doom-Seite <input id="dm_seite" type="number" min="0" max="299" style="width:70px">
+      <label><input type="checkbox" id="dm_zoom"> vergrößern</label>
+      <label><input type="checkbox" id="dm_turbo"> Turbo (921600 Baud, 🧪)</label>
+      <button onclick="dmSpeichern()">Speichern</button></div>
+    <p class="hinweis">Tastatur, solange Doom läuft: Pfeile, Strg = Feuer, Leertaste = Benutzen, Enter, Esc, Y, 1–7 Waffen, Shift = rennen, Alt = seitwärts. Touch am Display: oben links Menü (3 s halten = zurück), oben Mitte Enter, oben rechts Benutzen; links/rechts drehen, Mitte vor, darunter Feuer, unten zurück.</p>
+  </section>
   <section data-tab="diagnose">
     <h2>Variablen</h2>
     <table><thead><tr><th>VP</th><th>Worte</th><th>Alter</th></tr></thead><tbody id="vps"></tbody></table>
@@ -1037,7 +1049,9 @@ async function beruehre(x,y){
 }
 $("dsp").addEventListener("click",ev=>{
   const r=$("dsp").getBoundingClientRect();
-  beruehre(Math.round((ev.clientX-r.left)/r.width*320),Math.round((ev.clientY-r.top)/r.height*240));
+  const x=Math.round((ev.clientX-r.left)/r.width*320), y=Math.round((ev.clientY-r.top)/r.height*240);
+  if(letzterStatus&&[1,5,6].includes(letzterStatus.seite%100)&&x>=90&&x<=150&&y<=50){logoTipp(); return}
+  beruehre(x,y);
 });
 $("dsp").style.cursor="pointer";
 const _zeige=zeigeDisplay;
@@ -1322,6 +1336,27 @@ async function bnSpeichern(test){const d=new URLSearchParams({ntfy:v("bn_ntfy"),
   await fetch("/api/melden",{method:"POST",body:d.toString()}); holeMelden(true)}
 async function mtAktion(a){await fetch("/api/matter",{method:"POST",body:a}); if(a!="zuruecksetzen") $("mt_hinweis").textContent=a=="an"?"wird nach dem Neustart der Bridge aktiv":"aus nach dem Neustart"; setTimeout(()=>holeMelden(false),1000)}
 setInterval(()=>holeMelden(false),5000); holeMelden(false);
+
+// ─── Doom (doom.h) ────────────────────────────────────────────────────────
+let dmAn=false, logoTipps=0, logoZeit=0;
+function logoTipp(){const t=Date.now(); logoTipps=t-logoZeit<1500?logoTipps+1:1; logoZeit=t; if(logoTipps>=10){logoTipps=0; dmAktion("start"); zeigeReiter("diagnose"); setTimeout(()=>$("doom_bereich").scrollIntoView({behavior:"smooth"}),100)}}
+async function holeDoom(){ if(!aktiv("diagnose")&&!dmAn) return;
+  try{const d=await (await fetch("/api/doom")).json(); dmAn=d.aktiv; $("dm_status").textContent=d.status+(d.aktiv?` · ${d.bilder} Bilder`:"");
+    $("dm_wad").textContent=d.wad?`WAD ${(d.wad_bytes/1048576).toFixed(1)} MB`:`keine WAD-Datei · ${(d.frei/1048576).toFixed(1)} MB frei`;
+    if(document.activeElement!==$("dm_seite")){$("dm_seite").value=d.seite; $("dm_zoom").checked=d.zoom; $("dm_turbo").checked=d.turbo}}catch(e){}}
+async function dmAktion(a){await fetch("/api/doom",{method:"POST",body:a}); holeDoom()}
+function dmSpeichern(){dmAktion(`seite=${v("dm_seite")}&zoom=${$("dm_zoom").checked?1:0}&turbo=${$("dm_turbo").checked?1:0}`)}
+async function dmHochladen(){const f=$("dm_datei").files[0]; if(!f) return; $("dm_upload").textContent="lädt …";
+  const fd=new FormData(); fd.append("wad",f,f.name);
+  const r=await fetch("/api/doom_wad",{method:"POST",body:fd}); const d=await r.json();
+  $("dm_upload").textContent=d.wad?"gespeichert":"abgelehnt (keine IWAD-Datei oder zu groß)"; holeDoom()}
+const DM_TASTEN={ArrowUp:0xad,ArrowDown:0xaf,ArrowLeft:0xac,ArrowRight:0xae,Control:0xa3," ":0xa2,Enter:13,Escape:27,Shift:0xb6,Alt:0xb8,y:121,n:110,Tab:9};
+function dmTaste(ev,gedrueckt){ if(!dmAn||ev.target.tagName==="INPUT") return;
+  let k=DM_TASTEN[ev.key]; if(k==null&&/^[1-7]$/.test(ev.key)) k=ev.key.charCodeAt(0); if(k==null) return;
+  ev.preventDefault(); if(ev.repeat) return; fetch("/api/doom",{method:"POST",body:`taste ${k} ${gedrueckt?1:0}`})}
+addEventListener("keydown",e=>dmTaste(e,true)); addEventListener("keyup",e=>dmTaste(e,false));
+document.querySelector("header h1").addEventListener("click",logoTipp);
+setInterval(holeDoom,2000); holeDoom();
 
 // ─── Heim-WLAN und Zugang ─────────────────────────────────────────────────
 let wlGewaehlt="";

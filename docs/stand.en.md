@@ -111,6 +111,7 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 |---|---|
 | 🧪 | Web UI password, own Wi-Fi password, Wi-Fi setup in the portal and via Improv, weekly schedule, calendar, idle timeout, shot log, ready, weight on the display | built 2026-10-01, UI checked in simulation |
 | ✅ | Settings and counters from the mainboard: open menu pages by key code, the mainboard writes `0x0020`–`0x002D`, auto on/off block `0x0007`–`0x000E`, in the technician menu (factory password 1906) PID, probes, loading time and **total shots 22,263** (`0x0082`) | bridge 2026-09-30 |
+| 🧪 | display backup (the bridge reads by itself), page builder for custom pages (13/14.bin + BMP via SD card), bridge actions on custom pages, Matter, ntfy, Telegram, Doom easter egg | built 2026-10-01, touch file rebuilt byte for byte, untested on the display |
 | 💡 | OTA, power from the machine |
 | 💡 | Read the variable configuration `14.bin` from flash (shows which VP is displayed where) |
 | 💡 | Capture the SiS9252 touch controller over I²C and emulate it |

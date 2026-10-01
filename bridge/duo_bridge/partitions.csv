@@ -1,10 +1,8 @@
-# 16 MB Flash (Waveshare ESP32-S3-ETH): zwei App-Bereiche fuer spaeteres OTA,
-# genug Platz fuer Matter. nvs bleibt an derselben Stelle wie bei min_spiffs,
-# gespeicherte Einstellungen ueberleben den Wechsel.
-# Name,   Type, SubType, Offset,   Size
-nvs,      data, nvs,     0x9000,   0x5000
-otadata,  data, ota,     0xe000,   0x2000
-app0,     app,  ota_0,   0x10000,  0x600000
-app1,     app,  ota_1,   0x610000, 0x600000
-spiffs,   data, spiffs,  0xc10000, 0x3e0000
-coredump, data, coredump,0xff0000, 0x10000
+# Name,   Type, SubType, Offset,   Size,     Flags
+# 16 MB: zwei App-Plaetze a 5 MB (OTA), 6 MB Dateisystem (Doom-WAD), Rest NVS/Coredump
+nvs,      data, nvs,     0x9000,   0x5000,
+otadata,  data, ota,     0xe000,   0x2000,
+app0,     app,  ota_0,   0x10000,  0x500000,
+app1,     app,  ota_1,   0x510000, 0x500000,
+spiffs,   data, spiffs,  0xa10000, 0x5e0000,
+coredump, data, coredump,0xff0000, 0x10000,
