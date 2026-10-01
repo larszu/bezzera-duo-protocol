@@ -46,6 +46,14 @@ teilen sich aber einen **stillen Vertrag**, der nirgends geprüft wird:
 3. **Variablenadressen.** Temperaturen, Sollwerte und Einstellungen liegen auf festen VPs (`0x0050`, `0x005A`–`0x005F`, `0x0070`–`0x007E` …). Verschiebt eine Version eine VP, liest oder zeigt die andere Seite den falschen Wert.
 4. **Abläufe.** Mainboard 2.0 startet nach 5 s von selbst statt auf den Standby-Druck zu warten; das Display-Projekt 2.0 passt seine Seitenfolge dazu. Ein Display 1.1 an einem Mainboard 2.x erwartet einen anderen Ablauf.
 5. **Kopf `C6 A5` statt `5A A5`.** Ein DWIN-Display „ab Werk“ spricht mit diesem Mainboard gar nicht; der Rahmenkopf steckt in der Konfiguration des Display-Projekts. Ein Ersatz-Display 2.2 (Version `0x25` in Register `0x00`) spricht dagegen `5A A5` und bleibt am Mainboard 2.1 stumm: Seiten erscheinen, Touch piept, aber keine Werte, weil das Mainboard beim Verbindungstest (Punkt 6) nie eine Antwort bekommt. Die Bridge erkennt den Kopf des Displays selbst und übersetzt in beide Richtungen (`?` zeigt `display_kopf=5A`).
+
+   | | Display 2.0 | Ersatz-Display 2.2 |
+   |---|---|---|
+   | Rahmenkopf (R3, RA) | `C6 A5` | `5A A5` |
+   | Register `0x10`–`0x1C` | – | `07 07 04 5A 00 FF 40 20 0A FF A5 00 00` |
+   | Baud (R1) | 115200 | 115200 (`07`) |
+
+   R3 lässt sich im Betrieb nicht umschreiben (Schreiben auf `0x13` und CONFIG_EN `0x1D` wirken nicht, gemessen). Ohne Bridge braucht ein 2.2-Display deshalb eine geänderte Konfiguration per SD-Karte (`DWIN_SET`, R3 = `C6`); das schreibt den Display-Flash und ist noch nicht erprobt.
 6. **Verbindungstest VP `0x0063`.** Das Mainboard schreibt seine Version dorthin und liest sie zurück. Nach allem, was mitgeschnitten ist, prüft es damit nur, ob überhaupt ein Display antwortet, nicht dessen Version. Eine unpassende Kombination startet deshalb vermutlich und verhält sich erst dann falsch.
 
 Die Displays 2.0 und 2.2 unterscheiden sich vermutlich in Seiten und Tasten
