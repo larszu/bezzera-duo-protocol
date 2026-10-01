@@ -141,7 +141,9 @@ def main(argv: list[str] | None = None) -> int:
             print("Suche Bibliotheken mit Inhalt (je 64 Byte am Anfang, in der Mitte, am Ende) …")
             for lib in range(128):
                 inhalt = False
-                for adr in (0, LIB_WORTE // 2, LIB_WORTE - 32):
+                # 16 Stichproben: duenn belegte Bibliotheken (z. B. 15/16 mit den
+                # Variablen der Seiten ab 128) haben an Anfang/Mitte/Ende oft nichts
+                for adr in range(0, LIB_WORTE, LIB_WORTE // 16):
                     d = br.lesen(f"S lib {lib} {adr} 32", 32, 10)
                     if d and not leer(d):
                         inhalt = True
