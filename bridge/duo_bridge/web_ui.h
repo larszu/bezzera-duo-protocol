@@ -220,8 +220,8 @@ details.gruppe>summary .hinweis{font-weight:400}
     <div class="form" id="wl_form" style="display:none"><b id="wl_name"></b> Passwort <input id="wl_pass" type="password" class="breit"><button onclick="wlVerbinden()">Verbinden</button></div>
     <h3>Zugang</h3>
     <div class="form">WLAN „duo-bridge“ Passwort <input id="sc_ap" type="password" style="width:140px" placeholder="mind. 8 Zeichen"><button onclick="sicherheit('ap_pass',v('sc_ap'))">Ändern</button></div>
-    <div class="form">Passwort für diese Seite <input id="sc_web" type="password" style="width:140px"><button onclick="sicherheit('web_pass',v('sc_web'))">Setzen</button><button onclick="sicherheit('web_pass','-')">Entfernen</button></div>
-    <p class="hinweis" id="sc_info">Mit Passwort fragt der Browser beim Öffnen nach Benutzer „duo“ und Passwort. Für den Zugriff von unterwegs nötig.</p>
+    <div class="form">Benutzer <input id="sc_user" style="width:90px" placeholder="duo"> Passwort für diese Seite <input id="sc_web" type="password" style="width:140px"><button onclick="if(v('sc_user'))sicherheit('web_user',v('sc_user'));sicherheit('web_pass',v('sc_web'))">Setzen</button><button onclick="sicherheit('web_pass','-')">Entfernen</button></div>
+    <p class="hinweis" id="sc_info">Mit Passwort fragt der Browser beim Öffnen nach Benutzer (ohne Eingabe „duo“) und Passwort. Für den Zugriff von unterwegs nötig.</p>
   </section>
   <section data-tab="einstellungen">
     <h2>Benachrichtigungen</h2>

@@ -387,6 +387,11 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
       webPass = web == "-" ? "" : web;
       pr.putString("web_pass", webPass);
     }
+    String benutzer = queryWert(rumpf, "web_user");
+    if (benutzer.length()) {
+      webUser = benutzer;
+      pr.putString("web_user", webUser);
+    }
     pr.end();
     antwort = ap.length() && ap.length() < 8 ? "WLAN-Passwort braucht mindestens 8 Zeichen" : "ok";
     if (ap.length() >= 8) WiFi.softAP("duo-bridge", apPass.c_str());  // gilt sofort
@@ -477,7 +482,7 @@ void webSetup() {
   Network.onEvent(netzEreignis);
   ETH.begin(ETH_PHY_W5500, 1, ETH_CS, ETH_IRQ, ETH_RST, SPI2_HOST, ETH_SCK, ETH_MISO, ETH_MOSI);
   WiFi.mode(WIFI_AP_STA);
-  esp_wifi_set_country_code("DE", true);  // Kanaele 1-13 (Router auf 12/13 sonst unsichtbar)
+  esp_wifi_set_country_code("DE", false);  // Kanaele 1-13 fest, nicht von Nachbar-Routern (802.11d) einschraenken lassen
   netzLaden();
   WiFi.softAP("duo-bridge", apPass.c_str());
   Preferences pref;
@@ -608,10 +613,13 @@ void heimWlan(char *s) {
     Serial.printf("# WLAN-Status %d, sichtbare Netze:\n", (int)WiFi.status());
     WiFi.disconnect();  // laufende Verbindungsversuche stoeren den Scan
     delay(100);
-    int n = WiFi.scanNetworks();
+    // "n ?6" nur Kanal 6, passiv und lange (findet auch Netze, die auf Proben nicht antworten)
+    int kanal = atoi(s + 1);
+    int n = kanal ? WiFi.scanNetworks(false, true, true, 1500, kanal) : WiFi.scanNetworks(false, true, false, 400);
     Serial.printf("#   (%d Netze)\n", n);
     for (int i = 0; i < n; i++)
-      Serial.printf("#   %-32s %4d dBm  Kanal %d\n", WiFi.SSID(i).c_str(), WiFi.RSSI(i), WiFi.channel(i));
+      Serial.printf("#   %-32s %4d dBm  Kanal %d  %s\n", WiFi.SSID(i).length() ? WiFi.SSID(i).c_str() : "(versteckt)", WiFi.RSSI(i),
+                    WiFi.channel(i), WiFi.BSSIDstr(i).c_str());
     WiFi.scanDelete();
     return;
   }

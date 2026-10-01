@@ -42,6 +42,26 @@ sudo tailscale up --advertise-routes=192.168.0.0/24    # eigenes Heimnetz eintra
 
 Tipp: Im Router der Bridge eine feste IP geben, dann bleibt das Lesezeichen gültig.
 
+## Weg 1b: Maschine als eigenes Gerät im Tailscale-Netz (Docker)
+
+Statt das ganze Heimnetz freizugeben, steht die Bridge als eigenes Gerät
+„bezzera“ in der Tailscale-App, mit fester Adresse für ein Symbol auf dem
+Home-Bildschirm. Auf einem Rechner im Heimnetz mit Docker:
+
+```bash
+sudo docker run -d --name bezzera-tailscale --restart unless-stopped \
+  -e TS_HOSTNAME=bezzera -e TS_STATE_DIR=/var/lib/tailscale -e TS_USERSPACE=true \
+  -v /opt/bezzera-tailscale/state:/var/lib/tailscale tailscale/tailscale:latest
+sudo docker logs bezzera-tailscale          # Anmeldelink öffnen und bestätigen
+sudo docker exec bezzera-tailscale tailscale serve --bg --tcp 80 tcp://<IP der Bridge>:80
+sudo docker exec bezzera-tailscale tailscale ip -4   # Adresse für das Handy
+```
+
+`--tcp` statt `--http`, damit die Seite unter dem Namen und unter der
+100.x-Adresse antwortet. Auf dem iPhone: Tailscale verbinden, Adresse in
+Safari öffnen, Teilen → Zum Home-Bildschirm. Der Bridge im Router eine feste
+IP geben.
+
 ## Weg 2: Home Assistant
 
 Läuft Home Assistant mit Fernzugriff (Nabu Casa oder eigener Tunnel), ist die
