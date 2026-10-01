@@ -61,6 +61,8 @@ project share an **implicit contract** that nothing checks:
    4. Insert the card into the display with the machine on, pull it after a few seconds, switch the machine off and on.
 
    Afterwards register `0x13` reads `C6`, also after the restart, and display and mainboard talk without the bridge.
+
+   Occasionally a start without the bridge hangs at the boot screen ("RFT 1.1 / FW 2.1"). Presumably the mainboard misses the first connection test; on retries the first byte often arrives corrupted (`E2`/`E6` instead of `C6`) and the display drops the frame. Remedy: switch the machine off and on. The bridge repairs such frames, with it the machine starts reliably.
 6. **Connection test VP `0x0063`.** The mainboard writes its version there and reads it back. From everything captured, it only checks that a display answers, not its version. A mismatched pair therefore probably boots and only then misbehaves.
 
 Displays 2.0 and 2.2 probably differ in pages and keys for the new functions
