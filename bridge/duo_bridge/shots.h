@@ -263,3 +263,5 @@ static bool shotAktion(const String &a) {
   }
   return false;
 }
+
+static bool shotLaeuftExtern() { return shotLaeuft; }

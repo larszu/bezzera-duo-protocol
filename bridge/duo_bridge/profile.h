@@ -66,7 +66,7 @@ struct Schritt {
   uint32_t wartenMs;
   char befehl[48];
 };
-static Schritt ablauf[24];
+static Schritt ablauf[48];
 static int ablaufN = 0, ablaufPos = 0;
 static uint32_t ablaufNaechster = 0;
 static char ablaufName[40] = "";
@@ -83,7 +83,7 @@ static void ablaufNeu(const char *name, void (*fertig)() = nullptr) {
 }
 
 static void ablaufDazu(uint32_t wartenMs, const char *fmt, ...) {
-  if (ablaufN >= 24) return;
+  if (ablaufN >= 48) return;
   va_list ap;
   va_start(ap, fmt);
   vsnprintf(ablauf[ablaufN].befehl, sizeof ablauf[0].befehl, fmt, ap);
@@ -96,8 +96,22 @@ static void ablaufLoop() {
   Schritt &s = ablauf[ablaufPos++];
   char b[48];
   strlcpy(b, s.befehl, sizeof b);
+  unsigned vp, ziel;
   if (!strcmp(b, "#kontrolle")) kontrolleStart();
-  else if (b[0]) befehl(b);
+  else if (sscanf(b, "#stufen %x %u", &vp, &ziel) == 2) {
+    // Temperatur: das Mainboard aendert sie selbst auf ±; je Druck ein Grad.
+    // Aktuellen Wert hat das Mainboard beim Oeffnen der Seite geschrieben.
+    int diff = (int)ziel - (int)vpRam[vp];
+    int n = min(abs(diff), 12);
+    for (int i = n - 1; i >= 0; i--) {  // hinter dem aktuellen Schritt einfuegen, rueckwaerts
+      if (ablaufN >= 46) break;
+      memmove(&ablauf[ablaufPos + 2], &ablauf[ablaufPos], sizeof(Schritt) * (ablaufN - ablaufPos));
+      ablaufN += 2;
+      ablauf[ablaufPos] = {350, ""};
+      snprintf(ablauf[ablaufPos].befehl, sizeof ablauf[0].befehl, "w 0x0015 %d", diff > 0 ? 2 : 1);
+      ablauf[ablaufPos + 1] = {250, "w 0x0015 0"};  // loslassen
+    }
+  } else if (b[0]) befehl(b);
   if (ablaufPos < ablaufN) ablaufNaechster = millis() + ablauf[ablaufPos].wartenMs;
   else if (ablaufFertig) ablaufFertig();
 }
@@ -155,15 +169,15 @@ static const char *profilAnwenden(int i) {
   // Kaffee: Seite x07 betreten, Werte des Mainboards abwarten, ueberschreiben, OK
   ablaufDazu(0, "w 0x0000 7");
   ablaufDazu(0, "p %d", s + 7);
-  ablaufDazu(800, "w 0x0060 %u", p.temp);
-  ablaufDazu(50, "w 0x005C %u", p.vorb);
+  ablaufDazu(800, "#stufen 60 %u", p.temp);
+  ablaufDazu(100, "w 0x005C %u", p.vorb);
   if (p.prio != 255) ablaufDazu(50, "w 0x005A %u", p.prio);
   ablaufDazu(150, "w 0x0002 1");
   // Dampfkessel: Seite x08
   if (p.dampf) {
     ablaufDazu(1200, "w 0x0000 8");
     ablaufDazu(0, "p %d", s + 8);
-    ablaufDazu(800, "w 0x0061 %u", p.dampf);
+    ablaufDazu(800, "#stufen 61 %u", p.dampf);
     ablaufDazu(150, "w 0x0002 1");
   }
   // Kontrolle: Seite x07 erneut betreten, das Mainboard schreibt seine Werte,
@@ -183,6 +197,8 @@ static const char *profilAnwenden(int i) {
   ereignis("- Profil %s wird geschrieben", p.name);
   return nullptr;
 }
+
+static bool shotLaeuftExtern();  // shots.h
 
 static void uhrStellen(int jj, int mm, int tt, int hh, int mi) {
   if (ablaufLaeuft()) return;
@@ -253,4 +269,102 @@ static void profilFeld(Profil &p, const String &k, const String &v) {
   else if (k == "vorb") p.vorb = constrain(lroundf(zahlAus(v, p.vorb / 10.0f) * 10), 0L, 50L);
   else if (k == "dampf") p.dampf = v.toInt() <= 0 ? 0 : constrain(v.toInt(), 100, 135);
   else if (k == "prio") p.prio = v.toInt() < 0 ? 255 : constrain(v.toInt(), 0, 2);
+}
+
+// ─── Einzelne Maschinendaten aendern (Weboberflaeche, Akkordeon) ──────────
+// Weg je Variable: welche Seite sie fuehrt und wie man hinkommt.
+//   KAFFEE   Startbildschirm -> Tastencode 7 (Seite x07), OK
+//   TEE      Startbildschirm -> Tastencode 8 (Seite x08), OK
+//   EINST    Startbildschirm -> Tastencode 68 (Einstellungen, Seite x16), OK
+//   TECHNIK  Standby -> Schluessel (Tastencode 53, Seite x35) -> Passwort in
+//            VP 0x0004 -> Mainboard oeffnet das Technikmenue und schreibt alle
+//            Werte -> Wert setzen -> OK -> OK (zurueck in den Standby); war die
+//            Maschine an, schaltet die Bridge sie danach wieder ein.
+// Temperaturen gehen ueber ± (VP 0x0015), alles andere wird direkt geschrieben.
+enum { W_KAFFEE = 1, W_TEE, W_EINST, W_TECHNIK };
+struct EditWeg {
+  uint16_t vp;
+  uint8_t weg;
+  int16_t min, max;
+};
+static const EditWeg EDIT_WEGE[] = {
+    {0x60, W_KAFFEE, 89, 96},   {0x5E, W_KAFFEE, 0, 1},    {0x5B, W_KAFFEE, 0, 1},    {0x5A, W_KAFFEE, 0, 2},
+    {0x5C, W_KAFFEE, 0, 50},    {0x61, W_TEE, 100, 135},   {0x5F, W_TEE, 0, 1},       {0x20, W_EINST, 0, 1},
+    {0x25, W_EINST, 0, 1},      {0x2B, W_EINST, 0, 1},     {0x2A, W_EINST, 0, 1},     {0x2C, W_EINST, 0, 1},
+    {0x2D, W_EINST, 0, 1},      {0x21, W_EINST, 1, 5},     {0x29, W_EINST, 1, 5},     {0x27, W_EINST, 0, 9000},
+    {0x28, W_EINST, 0, 350},    {0x70, W_TECHNIK, 0, 1},   {0x71, W_TECHNIK, 10, 99}, {0x72, W_TECHNIK, 0, 999},
+    {0x73, W_TECHNIK, 0, 999},  {0x74, W_TECHNIK, 0, 10},  {0x76, W_TECHNIK, 10, 99}, {0x77, W_TECHNIK, 0, 999},
+    {0x78, W_TECHNIK, 0, 999},  {0x79, W_TECHNIK, 0, 10},  {0x7B, W_TECHNIK, 10, 99}, {0x7C, W_TECHNIK, 0, 999},
+    {0x7D, W_TECHNIK, 0, 999},  {0x7E, W_TECHNIK, 0, 10},  {0x80, W_TECHNIK, 1, 4},   {0x81, W_TECHNIK, 1, 3},
+};
+static uint16_t editVp = 0, editZiel = 0;
+static char editErgebnis[96] = "";
+static String technikPasswort = "1906";
+
+static void editKontrolle() {
+  bool gesehen = vomMainboard(editVp);
+  if (!gesehen) snprintf(editErgebnis, sizeof editErgebnis, "VP 0x%04X = %u gesendet, Mainboard hat nicht zurückgeschrieben", editVp, editZiel);
+  else snprintf(editErgebnis, sizeof editErgebnis, "VP 0x%04X: %s (Mainboard meldet %u)", editVp,
+                vpRam[editVp] == editZiel ? "übernommen" : "NICHT übernommen", vpRam[editVp]);
+  ereignis("- Einstellung %s", editErgebnis);
+}
+static void editTechnikFertig() {
+  snprintf(editErgebnis, sizeof editErgebnis, "VP 0x%04X = %u im Technikmenü gespeichert", editVp, editZiel);
+  ereignis("- Einstellung %s", editErgebnis);
+}
+
+static const char *maschinendatumSetzen(uint16_t vp, int wert) {
+  const EditWeg *w = nullptr;
+  for (const auto &e : EDIT_WEGE)
+    if (e.vp == vp) w = &e;
+  if (!w) return "dieser Wert lässt sich nicht ändern";
+  if (wert < w->min || wert > w->max) return "Wert außerhalb des erlaubten Bereichs";
+  if (ablaufLaeuft()) return "es läuft schon ein Ablauf";
+  if (!mainboardLebt()) return "Mainboard antwortet nicht";
+  if (bezugZustand == BZ_LAEUFT || shotLaeuftExtern()) return "während eines Bezugs nicht";
+  int b = leitung.seite >= 0 ? leitung.seite % 100 : -1;
+  int s = spracheBasis();
+  editVp = vp;
+  editZiel = wert;
+  snprintf(editErgebnis, sizeof editErgebnis, "VP 0x%04X wird auf %d gesetzt …", vp, wert);
+  if (w->weg == W_TECHNIK) {
+    if (b != 1 && b != 0) return "nur vom Startbildschirm oder Standby aus";
+    bool warAn = b == 1;
+    ablaufNeu("Technik", editTechnikFertig);
+    if (warAn) {
+      ablaufDazu(0, "w 0x0000 0");
+      ablaufDazu(0, "p %d", s);
+    }
+    ablaufDazu(warAn ? 2000 : 0, "w 0x0000 53");
+    ablaufDazu(0, "p %d", s + 35);
+    ablaufDazu(900, "w 0x0004 %s", technikPasswort.c_str());
+    ablaufDazu(2500, "p %d", s + 20);
+    ablaufDazu(300, "w 0x%04X %d", vp, wert);
+    ablaufDazu(200, "w 0x0002 1");
+    ablaufDazu(1500, "w 0x0002 1");
+    if (warAn) {
+      ablaufDazu(2000, "w 0x0000 1");
+      ablaufDazu(0, "p %d", s + 1);
+    }
+    ablaufDazu(500, "");
+    return nullptr;
+  }
+  if (b != 1) return "nur vom Startbildschirm aus";
+  int code = w->weg == W_KAFFEE ? 7 : w->weg == W_TEE ? 8 : 68;
+  int seite = w->weg == W_KAFFEE ? 7 : w->weg == W_TEE ? 8 : 16;
+  bool stufen = vp == 0x60 || vp == 0x61;
+  ablaufNeu("Einstellung", editKontrolle);
+  ablaufDazu(0, "w 0x0000 %d", code);
+  ablaufDazu(0, "p %d", s + seite);
+  if (stufen) ablaufDazu(900, "#stufen %x %d", vp, wert);
+  else ablaufDazu(900, "w 0x%04X %d", vp, wert);
+  ablaufDazu(300, "w 0x0002 1");
+  // Kontrolle: Seite neu oeffnen, Mainboard schreibt, mit OK unveraendert verlassen
+  ablaufDazu(1500, "#kontrolle");
+  ablaufDazu(0, "w 0x0000 %d", code);
+  ablaufDazu(0, "p %d", s + seite);
+  ablaufDazu(900, "");
+  ablaufDazu(0, "w 0x0002 1");
+  ablaufDazu(300, "");
+  return nullptr;
 }

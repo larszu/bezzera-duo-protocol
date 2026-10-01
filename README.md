@@ -566,6 +566,7 @@ Weboberfläche und liegen im NVS des ESP32, nie im Quelltext.
 | **Ein/Aus aus der Ferne** | VP `0x0000` = 1 und Seite x01 („Für Start drücken“) bzw. 0 und Seite x00 („Standby“), wie die Tasten | ✅ |
 | **Uhr vom Handy stellen** | über die Seite Datum/Uhrzeit mit OK | ✅ |
 | **Einstellungen und Zähler lesen** | Menüseiten per Tastencode öffnen, das Mainboard schreibt seine Werte (`tools/menue_lesen.py`); Bezüge gesamt aus dem Technikmenü | ✅ 22.263 Bezüge |
+| **Maschinendaten ändern** | im Reiter Maschine je Wert: Seite öffnen (Tastencode), Wert setzen (Temperaturen per ±, sonst direkt), OK, danach Kontrolle; Technikwerte über das Technikmenü mit Werkspasswort, Maschine kurz in Standby | 🧪 |
 | **Brühprofile** | je Kaffee Temperatur, Vorbrühen, Dampf, Priorität, Ziel; auf die Maschine über die Einstellungsseiten mit Kontrolle | 🧪 |
 | **Shot-Log** | jeder Bezug über den Ausgabezähler (Seite x06): Dauer, max. Druck, Temperatur, Gewicht, Profil; Sterne und Notiz; Kurven der letzten 10 | 🧪 |
 | **Bereit-Anzeige** | Kaffeekessel 60 s innerhalb 1 °C am Sollwert | 🧪 |

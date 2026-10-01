@@ -79,6 +79,7 @@ details.gruppe>summary::after{content:"▸";color:var(--leise)} details.gruppe[o
 details.gruppe>summary .hinweis{font-weight:400}
 .md-zeile{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 12px;border-top:1px solid var(--linie)}
 .md-zeile small{display:block;color:var(--leise);font-size:11px}
+.md-wert{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .shot-karten{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr))}
 .shot-karte{border:1px solid var(--linie);border-radius:8px;padding:8px 10px;cursor:pointer}
 .shot-karte.an{border-color:var(--akzent)}
@@ -173,8 +174,9 @@ details.gruppe>summary .hinweis{font-weight:400}
       <div><div class="wert klein" id="md_rueck">–</div><div class="einheit">seit dem letzten Rückspülen</div></div></div>
     <div class="form" style="margin-top:10px"><button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button><button onclick="shotAktion('rueckspuelen_erledigt')">Rückspülen erledigt</button>
       Erinnern alle <input id="md_rueck_alle" style="width:55px" onchange="shotAktion('rueckspuelen_alle '+this.value)"> Bezüge</div>
+    <p class="einheit" id="md_ergebnis"></p>
     <div id="md_gruppen" style="margin-top:8px"></div>
-    <p class="hinweis">Werte schreibt das Mainboard nur, wenn die zugehörige Seite geöffnet wird; „Bezüge gesamt“ beim Öffnen des Technikmenüs.</p>
+    <p class="hinweis">Werte schreibt das Mainboard nur, wenn die zugehörige Seite geöffnet wird; „Bezüge gesamt“ beim Öffnen des Technikmenüs. Ändern geht nur vom Startbildschirm aus: Die Bridge öffnet die Seite, setzt den Wert, drückt OK und prüft danach, was das Mainboard gespeichert hat.</p>
   </section>
   <section data-tab="maschine">
     <h2>Ein- und Ausschalten</h2>
@@ -1216,7 +1218,7 @@ setInterval(holeShots,3000); holeShots();
 const MD={0x20:"Wassereingang (0 Tank, 1 Festwasser)",0x21:"LED Helligkeit",0x25:"LED Körper an",0x26:"Sprache (0 EN, 1 DE, 2 IT)",0x27:"Bezüge seit Wartung",0x28:"Tage seit Filterwechsel",
  0x29:"Lichter Helligkeit",0x2A:"Lichter an",0x2B:"Einheit (0 °C, 1 °F)",0x2C:"Auto Ein/Aus an",0x2D:"Passwort Einstellungen an",0x5A:"Kesselpriorität (0 Kaffee, 1 Services, 2 keine)",
  0x5B:"CRONO (Ausgabezähler) an",0x5C:"Vorbrühen (Zehntelsekunden)",0x5E:"Kaffeekessel an",0x5F:"Dampfkessel an",0x60:"Sollwert Kaffee °C",0x61:"Sollwert Dampf °C",0x63:"Firmware Mainboard ×10",
- 0x70:"Maschinentyp (0 E61, 1 BZ)",0x71:"Gruppe",0x76:"PID Kaffee P ×10",0x77:"PID Kaffee I ×100",0x78:"PID Kaffee D ×10",0x79:"PID Kaffee Band",0x7B:"PID Dampf P ×10",0x7C:"PID Dampf I ×100",0x7D:"PID Dampf D ×10",
+ 0x70:"Maschinentyp (0 E61, 1 BZ)",0x71:"PID Gruppe P ×10",0x72:"PID Gruppe I ×100",0x73:"PID Gruppe D ×10",0x74:"PID Gruppe Band",0x7E:"PID Dampf Band",0x76:"PID Kaffee P ×10",0x77:"PID Kaffee I ×100",0x78:"PID Kaffee D ×10",0x79:"PID Kaffee Band",0x7B:"PID Dampf P ×10",0x7C:"PID Dampf I ×100",0x7D:"PID Dampf D ×10",
  0x80:"Füllstandsonde (Stufe)",0x81:"Ladezeit-Limit (Stufe)",0x82:"Bezüge gesamt"};
 function mdWert(vp,w){
   const janein=[0x25,0x2A,0x2C,0x2D,0x5B,0x5E,0x5F], liste={0x20:["Tank","Festwasser"],0x26:["Englisch","Deutsch","Italienisch"],0x2B:["°C","°F"],0x5A:["Kaffee","Services","keine"],0x70:["E61","BZ"],0x81:["","60 s","90 s","120 s"],0x80:["","50K","150K","400K","1M"]};
@@ -1225,14 +1227,32 @@ function mdWert(vp,w){
   if(vp==0x5C) return (w/10).toFixed(1)+" s"; if(vp==0x63) return (w/10).toFixed(1); if(vp==0x60||vp==0x61) return w+" °C"; if(vp==0x82) return w.toLocaleString("de-DE"); return w}
 // Gruppen fuer das Akkordeon; geoeffnete Gruppen bleiben beim Aktualisieren offen
 const MD_GRUPPEN=[["Brühen und Kessel",[0x60,0x61,0x5E,0x5F,0x5A,0x5C,0x5B]],["Zähler und Wartung",[0x82,0x27,0x28]],
- ["Maschine und Anzeige",[0x20,0x26,0x2B,0x25,0x21,0x2A,0x29,0x2C,0x2D,0x63]],["Technik (PID, Sonden)",[0x70,0x71,0x76,0x77,0x78,0x79,0x7B,0x7C,0x7D,0x80,0x81]]];
-async function holeMaschine(){ if(!aktiv("maschine")) return;
-  try{const m=await (await fetch("/api/maschine")).json(), offen=new Set([...document.querySelectorAll("#md_gruppen details[open]")].map(d=>d.dataset.g));
+ ["Maschine und Anzeige",[0x20,0x26,0x2B,0x25,0x21,0x2A,0x29,0x2C,0x2D,0x63]],["Technik (PID, Sonden)",[0x70,0x76,0x77,0x78,0x79,0x7B,0x7C,0x7D,0x7E,0x71,0x72,0x73,0x74,0x80,0x81]]];
+// Anzeige-Faktor je VP (Rohwert / Faktor) und Auswahllisten
+const MD_FAKTOR={0x76:10,0x78:10,0x7B:10,0x7D:10,0x71:10,0x73:10,0x77:100,0x7C:100,0x72:100,0x5C:10};
+const MD_LISTE={0x20:["Tank","Festwasser"],0x26:["Englisch","Deutsch","Italienisch"],0x2B:["°C","°F"],0x5A:["Kaffee","Services","keine"],0x70:["E61","BZ"],0x81:{1:"60 s",2:"90 s",3:"120 s"},0x80:{1:"50K",2:"150K",3:"400K",4:"1M"}};
+let mdJ=null, mdAenderung={};
+function mdEingabe(vp,w,[min,max]){
+  const liste=MD_LISTE[vp]||(min==0&&max==1?["nein","ja"]:null), f=MD_FAKTOR[vp]||1, wert=mdAenderung[vp]??w;
+  if(liste){const opt=Array.isArray(liste)?liste.map((t,i)=>[i,t]):Object.entries(liste); return `<select onchange="mdAendern(${vp},+this.value)">${opt.filter(([i])=>i>=min&&i<=max).map(([i,t])=>`<option value="${i}"${+i==wert?" selected":""}>${t}</option>`).join("")}</select>`}
+  return `<input type="number" style="width:84px" min="${min/f}" max="${max/f}" step="${1/f}" value="${(wert/f).toFixed(f==100?2:f==10?1:0)}" onchange="mdAendern(${vp},Math.round(this.value*${f}))">${vp==0x60||vp==0x61?" °C":vp==0x5C?" s":""}`}
+function mdAendern(vp,w){mdAenderung[vp]=w; holeMaschine(true)}
+async function mdUebernehmen(vp){
+  const technik=mdJ.aenderbar[vp][2]==4;
+  if(technik&&!confirm("Technikwert ändern? Die Maschine geht dafür kurz in Standby (Technikmenü mit Passwort) und schaltet danach wieder ein. Falsche PID-Werte verschlechtern die Temperaturregelung.")) return;
+  const r=await fetch("/api/maschine_setzen",{method:"POST",body:new URLSearchParams({vp,wert:mdAenderung[vp]}).toString()});
+  const t=await r.text(); if(r.ok) delete mdAenderung[vp]; $("md_ergebnis").textContent=r.ok?"wird gesetzt …":"Nicht möglich: "+t; holeMaschine(true)}
+async function holeMaschine(neu){ if(!aktiv("maschine")) return;
+  if(!neu&&document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#md_gruppen")) return;  // nicht beim Tippen neu zeichnen
+  try{const m=mdJ=await (await fetch("/api/maschine")).json(), offen=new Set([...document.querySelectorAll("#md_gruppen details[open]")].map(d=>d.dataset.g));
     const alt=a=>a<120?a+" s":a<7200?Math.round(a/60)+" min":Math.round(a/3600)+" h";
     const html=MD_GRUPPEN.map(([name,vps])=>{const z=vps.filter(vp=>m.vps[vp]);
       return `<details class="gruppe" data-g="${name}"${offen.has(name)?" open":""}><summary>${name} <span class="hinweis">${z.length?z.length+" Werte":"noch nicht gelesen"}</span></summary>
-        ${z.map(vp=>{const [w,a]=m.vps[vp]; return `<div class="md-zeile"><span>${MD[vp].replace(/ \(.*\)| ×\d+/g,"")}<small>vor ${alt(a)} gelesen</small></span><b>${mdWert(vp,w)}</b></div>`}).join("")||'<p class="hinweis" style="padding:0 12px">Seite an der Maschine öffnen, dann schreibt das Mainboard die Werte.</p>'}</details>`}).join("");
+        ${z.map(vp=>{const [w,a]=m.vps[vp], ae=m.aenderbar[vp], geaendert=mdAenderung[vp]!=null&&mdAenderung[vp]!=w;
+          return `<div class="md-zeile"><span>${MD[vp].replace(/ \(.*\)| ×\d+/g,"")}<small>vor ${alt(a)} gelesen${ae&&ae[2]==4?" · Technikmenü":""}</small></span>
+            <span class="md-wert">${ae?mdEingabe(vp,w,ae):`<b>${mdWert(vp,w)}</b>`}${geaendert?`<button onclick="mdUebernehmen(${vp})" ${m.ablauf?"disabled":""}>Übernehmen</button>`:""}</span></div>`}).join("")||'<p class="hinweis" style="padding:0 12px">Seite an der Maschine öffnen, dann schreibt das Mainboard die Werte.</p>'}</details>`}).join("");
     if($("md_gruppen").dataset.h!==html){$("md_gruppen").innerHTML=html; $("md_gruppen").dataset.h=html}
+    $("md_ergebnis").textContent=m.ablauf?"läuft: "+m.ergebnis:m.ergebnis;
   }catch(e){}
 }
 setInterval(holeMaschine,4000); holeMaschine();

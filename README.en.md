@@ -563,6 +563,7 @@ web UI and are stored in the ESP32's NVS, never in the source code.
 | **Remote on/off** | VP `0x0000` = 1 and page x01 („Für Start drücken“, press to start) or 0 and page x00 („Standby“), like the buttons | ✅ |
 | **Set the clock from the phone** | via the date/time page with OK | ✅ |
 | **Read settings and counters** | open menu pages by key code, the mainboard writes its values (`tools/menue_lesen.py`); total shots from the technician menu | ✅ 22,263 shots |
+| **Change machine data** | in the Maschine tab per value: open the page (key code), set the value (temperatures via ±, otherwise directly), OK, then check; technician values via the technician menu with the factory password, machine briefly in standby | 🧪 |
 | **Brew profiles** | per coffee temperature, pre-infusion, steam, priority, target; written to the machine via the settings pages and checked | 🧪 |
 | **Shot log** | every shot via the dispensing counter (page x06): duration, max pressure, temperature, weight, profile; stars and note; curves of the last 10 | 🧪 |
 | **Ready indicator** | coffee boiler within 1 °C of the setpoint for 60 s | 🧪 |

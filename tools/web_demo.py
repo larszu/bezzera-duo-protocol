@@ -136,7 +136,14 @@ class Demo:
             vps = {0x20: 0, 0x25: 1, 0x26: 1, 0x27: 0, 0x28: 0, 0x2C: 1, 0x5A: 0, 0x5B: 1, 0x5C: 20, 0x5E: 1, 0x5F: 1, 0x60: 93,
                    0x61: 130, 0x63: 21, 0x70: 1, 0x76: 90, 0x77: 100, 0x78: 50, 0x79: 5, 0x7B: 82, 0x7C: 15, 0x7D: 100,
                    0x80: 3, 0x81: 3, 0x82: 22263}
-            return json.dumps({"vps": {str(k): [v, 3600] for k, v in vps.items()}, "bezuege_maschine": 22263}).encode()
+            aend = {0x60: [89, 96, 1], 0x5E: [0, 1, 1], 0x5B: [0, 1, 1], 0x5A: [0, 2, 1], 0x5C: [0, 50, 1], 0x61: [100, 135, 2],
+                    0x5F: [0, 1, 2], 0x20: [0, 1, 3], 0x25: [0, 1, 3], 0x2C: [0, 1, 3], 0x27: [0, 9000, 3], 0x28: [0, 350, 3],
+                    0x70: [0, 1, 4], 0x76: [10, 99, 4], 0x77: [0, 999, 4], 0x78: [0, 999, 4], 0x79: [0, 10, 4], 0x7B: [10, 99, 4],
+                    0x7C: [0, 999, 4], 0x7D: [0, 999, 4], 0x80: [1, 4, 4], 0x81: [1, 3, 4]}
+            return json.dumps({"vps": {str(k): [v, 3600] for k, v in vps.items()}, "aenderbar": {str(k): v for k, v in aend.items()},
+                               "ablauf": False, "ergebnis": "", "bezuege_maschine": 22263}).encode()
+        if u.path == "/api/maschine_setzen":
+            return b"ok"
         if u.path == "/api/wlan":
             return json.dumps({"verbunden": False, "ssid": "", "ip": "", "eth": "", "ap": "duo-bridge",
                                "ap_eigenes_passwort": False, "web_passwort": False, "sucht": False,
