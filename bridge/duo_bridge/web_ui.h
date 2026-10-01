@@ -160,6 +160,18 @@ details.gruppe>summary .hinweis{font-weight:400}
     <canvas id="shot_kurve" width="600" height="200" style="height:200px;margin-top:10px;display:none"></canvas>
     <p class="hinweis" id="shot_info"></p>
   </section>
+  <section data-tab="espresso">
+    <h2>Bezugstasten an der Maschine</h2>
+    <table class="karten"><tbody>
+      <tr><td><b>1</b></td><td>ein Espresso, normal</td></tr>
+      <tr><td><b>2</b></td><td>ein Kaffee, lang</td></tr>
+      <tr><td><b>3</b></td><td>doppelte Menge, normal</td></tr>
+      <tr><td><b>4</b></td><td>doppelte Menge, lang</td></tr>
+      <tr><td><b>5</b></td><td>Dauerbezug: läuft, bis die Taste noch einmal gedrückt wird; auch zum Programmieren der Mengen</td></tr>
+    </tbody></table>
+    <p class="hinweis">Tasten 1–4 stoppen von selbst, sobald die programmierte Wassermenge durch ist; jede Taste stoppt einen laufenden Bezug. Die Mengen programmiert man an der Maschine, siehe <a href="https://www.bedienungsanleitu.ng/bezzera/duo/anleitung" target="_blank" rel="noopener">Bedienungsanleitung</a>.
+      Die Bridge sieht nur, <i>dass</i> ein Bezug läuft (Seite „Ausgabe“, Zeit, Druck, Temperatur), nicht welche Taste gedrückt wurde: Die Tasten hängen direkt am Mainboard (gemessen 02.10.2026).</p>
+  </section>
   <section data-tab="maschine" style="grid-column:1/-1">
     <h2>Brühkurve</h2>
     <p class="einheit" id="bk_info">–</p>
@@ -178,7 +190,7 @@ details.gruppe>summary .hinweis{font-weight:400}
     <h2>Maschinendaten</h2>
     <div class="gross"><div><div class="wert klein" id="md_bezuege">–</div><div class="einheit">Bezüge gesamt</div></div>
       <div><div class="wert klein" id="md_rueck">–</div><div class="einheit">seit dem letzten Rückspülen</div></div></div>
-    <div class="form" style="margin-top:10px"><button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button><button onclick="shotAktion('rueckspuelen_erledigt')">Rückspülen erledigt</button>
+    <div class="form" style="margin-top:10px"><button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button><span class="hinweis" id="uhr_info"></span><button onclick="shotAktion('rueckspuelen_erledigt')">Rückspülen erledigt</button>
       Erinnern alle <input id="md_rueck_alle" style="width:55px" onchange="shotAktion('rueckspuelen_alle '+this.value)"> Bezüge</div>
     <p class="einheit" id="md_ergebnis"></p>
     <div id="md_gruppen" style="margin-top:8px"></div>
@@ -1069,7 +1081,9 @@ let zj=null, bezugNr=-1, einstGeladen=false;
 async function aktion(a){await fetch("/api/aktion",{method:"POST",body:a}); holeZusatz()}
 // Uhr des Mainboards auf die Zeit dieses Geraets (Handy/Rechner) stellen: die
 // Bridge geht denselben Weg wie die Seite "Datum und Uhrzeit" mit OK.
-function uhrStellen(){const d=new Date(); aktion(`uhr ${d.getFullYear()%100} ${d.getMonth()+1} ${d.getDate()} ${d.getHours()} ${d.getMinutes()}`)}
+async function uhrStellen(){const d=new Date(), p=n=>String(n).padStart(2,"0");
+  const r=await fetch("/api/aktion",{method:"POST",body:`uhr ${d.getFullYear()%100} ${d.getMonth()+1} ${d.getDate()} ${d.getHours()} ${d.getMinutes()}`});
+  $("uhr_info").textContent=r.ok?`gestellt auf ${p(d.getHours())}:${p(d.getMinutes())}`:await r.text(); holeZusatz()}
 function zielAendern(d){const z=Math.max(1,(parseFloat(v("bw_ziel"))||36)+d); $("bw_ziel").value=z; aktion("ziel "+z)}
 const f1=(x,n=1)=>x==null||isNaN(x)?"–":(+x).toFixed(n);
 const uhrzeit=ms=>new Date(ms).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});

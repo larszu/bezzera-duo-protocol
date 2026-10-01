@@ -208,6 +208,10 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
   else if (pfad == "/api/aktion") {
     String a = rumpf;
     a.trim();
+    if (a.startsWith("uhr ") && !statusAktuell()) {  // im Standby nimmt das Mainboard keine Einstellungen an (gemessen)
+      antwort = "Uhr stellen geht nur bei eingeschalteter Maschine";
+      return 409;
+    }
     if (!aktion(a)) {
       antwort = "unbekannte Aktion";
       return 400;
