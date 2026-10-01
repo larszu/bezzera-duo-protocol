@@ -18,7 +18,7 @@ header h1{font-size:17px;margin:0;font-weight:600}
 .lampe{display:inline-flex;align-items:center;gap:6px;color:var(--leise);font-size:13px}
 .lampe i{width:9px;height:9px;border-radius:50%;background:#555;display:inline-block}
 .lampe.an i{background:var(--ok)}
-main{display:grid;gap:14px;padding:14px 16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));max-width:1200px}
+main{display:grid;gap:14px;padding:14px 16px;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));max-width:1200px}
 section{background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:14px}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--leise);margin:0 0 10px;font-weight:600}
 .gross{display:flex;gap:18px;flex-wrap:wrap}
@@ -59,6 +59,32 @@ button.gross{font-size:17px;padding:9px 20px} button.start{background:#1f5d4c;bo
 .stern{cursor:pointer;color:#55627d;font-size:18px} .stern.an{color:#f9c74f}
 .liste-zeile{display:flex;align-items:center;gap:10px;padding:6px 8px;border-bottom:1px solid var(--linie);cursor:pointer} .liste-zeile:hover{background:#18243d}
 h3{font-size:13px;color:var(--leise);margin:14px 0 6px;font-weight:600}
+/* Tabellen als Karten auf schmalen Bildschirmen: jede Zelle mit ihrer Spaltenueberschrift (data-l) */
+@media (max-width:700px){
+  table.karten thead{display:none}
+  table.karten,table.karten tbody{display:block}
+  table.karten tr{display:block;border:1px solid var(--linie);border-radius:8px;padding:6px 10px;margin:8px 0}
+  table.karten td{display:flex;justify-content:space-between;align-items:center;gap:10px;border:none;padding:4px 0;text-align:right}
+  table.karten td::before{content:attr(data-l);color:var(--leise);text-align:left;flex:none}
+  table.karten td:empty{display:none}
+  main{padding:10px 8px} section{padding:12px}
+  .wert{font-size:40px} .wert.klein{font-size:26px}
+}
+@media (max-width:560px){nav#reiter{display:grid;grid-template-columns:repeat(3,1fr);padding:6px 6px 0} nav#reiter button{padding:8px 2px;font-size:14px}}
+html,body{overflow-x:hidden}
+input,select{max-width:100%}
+details.gruppe{border:1px solid var(--linie);border-radius:8px;margin:8px 0}
+details.gruppe>summary{cursor:pointer;padding:9px 12px;font-weight:600;list-style:none;display:flex;justify-content:space-between}
+details.gruppe>summary::after{content:"▸";color:var(--leise)} details.gruppe[open]>summary::after{content:"▾"}
+details.gruppe>summary .hinweis{font-weight:400}
+.md-zeile{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 12px;border-top:1px solid var(--linie)}
+.md-zeile small{display:block;color:var(--leise);font-size:11px}
+.shot-karten{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr))}
+.shot-karte{border:1px solid var(--linie);border-radius:8px;padding:8px 10px;cursor:pointer}
+.shot-karte.an{border-color:var(--akzent)}
+.sk-kopf{display:flex;justify-content:space-between;gap:8px;font-size:14px} .sk-kopf span{color:var(--leise);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sk-werte{display:flex;gap:14px;margin:6px 0;font-variant-numeric:tabular-nums;color:var(--leise);font-size:14px} .sk-werte b{color:var(--text);font-size:17px}
+.sk-fuss{display:flex;align-items:center;gap:8px} .sk-fuss input{flex:1;min-width:0;width:auto}
 </style>
 </head>
 <body>
@@ -100,12 +126,12 @@ h3{font-size:13px;color:var(--leise);margin:14px 0 6px;font-weight:600}
     <div id="bw_meldung" class="einheit"></div>
     <canvas id="bw_kurve" width="600" height="220" style="height:220px;margin-top:8px"></canvas>
     <p class="hinweis"><span style="color:#e6edf7">■</span> Gewicht <span style="color:var(--ok)">■</span> Durchfluss g/s <span style="color:var(--akzent)">■</span> Druck bar (rechte Achse, sobald das Druckwort zugeordnet ist) · Waage: <span id="bw_waage">–</span></p>
-    <table style="margin-top:8px"><thead><tr><th>vor</th><th>Gewicht</th><th>Ziel</th><th>Dauer</th><th></th></tr></thead><tbody id="bw_liste"></tbody></table>
+    <table class="karten" style="margin-top:8px"><thead><tr><th>vor</th><th>Gewicht</th><th>Ziel</th><th>Dauer</th><th></th></tr></thead><tbody id="bw_liste"></tbody></table>
   </section>
   <section data-tab="profile" style="grid-column:1/-1">
     <h2>Brühprofile</h2>
     <p class="hinweis">Je Kaffeesorte gespeichert in der Bridge. „Auf die Maschine“ stellt Brühtemperatur, Vorbrühen, Kesselpriorität und Dampfkessel am Mainboard ein (wie am Display mit OK) und setzt das Zielgewicht für Brew by Weight. Nur vom Startbildschirm aus.</p>
-    <table><thead><tr><th>Name</th><th>Röster / Sorte</th><th>Mahlgrad</th><th>Dosis → Ziel</th><th>°C</th><th>Vorbrühen</th><th>Dampf</th><th></th></tr></thead><tbody id="pr_liste"></tbody></table>
+    <table class="karten"><thead><tr><th>Name</th><th>Röster / Sorte</th><th>Mahlgrad</th><th>Dosis → Ziel</th><th>°C</th><th>Vorbrühen</th><th>Dampf</th><th></th></tr></thead><tbody id="pr_liste"></tbody></table>
     <p id="pr_ergebnis" class="einheit"></p>
     <form id="pr_form" onsubmit="profilSpeichern(event)" style="margin-top:10px">
       <input type="hidden" name="nr" value="">
@@ -128,8 +154,8 @@ h3{font-size:13px;color:var(--leise);margin:14px 0 6px;font-weight:600}
   </section>
   <section data-tab="verlauf" style="grid-column:1/-1">
     <h2>Shots</h2>
-    <p class="hinweis">Jeder Bezug, den die Maschine anzeigt (Ausgabezähler, CRONO an). Sterne und Notiz zum Einstellen der Mühle; Klick auf eine Zeile zeigt die Kurve.</p>
-    <div style="overflow-x:auto"><table style="min-width:560px"><thead><tr><th>Zeit</th><th>Profil</th><th>Dauer</th><th>Gewicht</th><th>max. Druck</th><th>°C</th><th>Bewertung</th><th>Notiz</th></tr></thead><tbody id="shot_liste"></tbody></table></div>
+    <p class="hinweis">Jeder Bezug, den die Maschine anzeigt (Ausgabezähler, CRONO an). Sterne und Notiz zum Einstellen der Mühle; Antippen zeigt die Kurve.</p>
+    <div id="shot_liste" class="shot-karten"></div>
     <canvas id="shot_kurve" width="600" height="200" style="height:200px;margin-top:10px;display:none"></canvas>
     <p class="hinweis" id="shot_info"></p>
   </section>
@@ -147,7 +173,7 @@ h3{font-size:13px;color:var(--leise);margin:14px 0 6px;font-weight:600}
       <div><div class="wert klein" id="md_rueck">–</div><div class="einheit">seit dem letzten Rückspülen</div></div></div>
     <div class="form" style="margin-top:10px"><button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button><button onclick="shotAktion('rueckspuelen_erledigt')">Rückspülen erledigt</button>
       Erinnern alle <input id="md_rueck_alle" style="width:55px" onchange="shotAktion('rueckspuelen_alle '+this.value)"> Bezüge</div>
-    <table style="margin-top:8px"><thead><tr><th>Wert</th><th>Einstellung</th><th>gelesen vor</th></tr></thead><tbody id="md_tabelle"></tbody></table>
+    <div id="md_gruppen" style="margin-top:8px"></div>
     <p class="hinweis">Werte schreibt das Mainboard nur, wenn die zugehörige Seite geöffnet wird; „Bezüge gesamt“ beim Öffnen des Technikmenüs.</p>
   </section>
   <section data-tab="maschine">
@@ -1101,7 +1127,7 @@ async function holeZusatz(){
     $("bw_meldung").textContent=b.laeuft?(b.stopp_gesendet?"Ziel erreicht – Bezug stoppen!":"Bezug läuft"):zj.cfg.waage_art?"bereit: Bezug startet, sobald es in die Tasse tropft":"Waage ist aus (Einstellungen)";
     $("bw_meldung").className=b.laeuft&&b.stopp_gesendet?"alarm einheit":"einheit";
     $("bw_stopp").style.display=zj.cfg.stopp_pin>=0&&b.laeuft?"":"none";  // nur waehrend eines Bezugs, sonst startet der Druck einen
-    $("bw_liste").innerHTML=b.liste.map(x=>`<tr><td>${x.alter_s<3600?Math.round(x.alter_s/60)+" min":Math.round(x.alter_s/3600)+" h"}</td><td>${f1(x.g)} g</td><td>${f1(x.ziel)} g</td><td>${f1(x.dauer)} s</td><td>${x.gestoppt?"Stopp bei Ziel":""}</td></tr>`).join("");
+    $("bw_liste").innerHTML=b.liste.map(x=>`<tr><td data-l="vor">${x.alter_s<3600?Math.round(x.alter_s/60)+" min":Math.round(x.alter_s/3600)+" h"}</td><td data-l="Gewicht">${f1(x.g)} g</td><td data-l="Ziel">${f1(x.ziel)} g</td><td data-l="Dauer">${f1(x.dauer)} s</td><td data-l="">${x.gestoppt?"Stopp bei Ziel":""}</td></tr>`).join("");
     if(!einstGeladen&&!$("einst").contains(document.activeElement)){einstellungenFuellen(zj.cfg,letzterStatus&&letzterStatus.vps.find(x=>x.vp==0x50)); einstGeladen=true}
     if(b.laeuft||b.nr!=bezugNr) holeBezug();
   }catch(e){}
@@ -1113,9 +1139,9 @@ let profJ=null;
 const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 async function holeProfile(){
   try{profJ=await (await fetch("/api/profile")).json();
-    $("pr_liste").innerHTML=profJ.profile.map(({nr,p})=>`<tr${nr==profJ.aktiv?' style="background:#1c3355"':""}><td><b>${esc(p.name)}</b>${p.notiz?`<br><span class="hinweis">${esc(p.notiz)}</span>`:""}</td><td>${esc(p.roester)}</td><td>${esc(p.mahlgrad)}</td>
-      <td>${p.dosis?f1(p.dosis)+" g":"–"} → ${p.ziel?f1(p.ziel)+" g":"–"}</td><td>${p.temp}</td><td>${(p.vorb/10).toFixed(1)} s</td><td>${p.dampf||"–"}</td>
-      <td><button onclick="profilAnwenden(${nr})" ${profJ.ablauf?"disabled":""}>Auf die Maschine</button> <button onclick="profilBearbeiten(${nr})">Bearbeiten</button> <button onclick="profilLoeschen(${nr})">Löschen</button></td></tr>`).join("")||`<tr><td colspan="8" class="hinweis">noch keine Profile</td></tr>`;
+    $("pr_liste").innerHTML=profJ.profile.map(({nr,p})=>`<tr${nr==profJ.aktiv?' style="background:#1c3355"':""}><td data-l="Name"><b>${esc(p.name)}</b>${p.notiz?`<br><span class="hinweis">${esc(p.notiz)}</span>`:""}</td><td data-l="Röster / Sorte">${esc(p.roester)}</td><td data-l="Mahlgrad">${esc(p.mahlgrad)}</td>
+      <td data-l="Dosis → Ziel">${p.dosis?f1(p.dosis)+" g":"–"} → ${p.ziel?f1(p.ziel)+" g":"–"}</td><td data-l="°C">${p.temp}</td><td data-l="Vorbrühen">${(p.vorb/10).toFixed(1)} s</td><td data-l="Dampf">${p.dampf||"–"}</td>
+      <td style="flex-wrap:wrap;justify-content:flex-end"><button onclick="profilAnwenden(${nr})" ${profJ.ablauf?"disabled":""}>Auf die Maschine</button> <button onclick="profilBearbeiten(${nr})">Bearbeiten</button> <button onclick="profilLoeschen(${nr})">Löschen</button></td></tr>`).join("")||`<tr><td colspan="8" class="hinweis">noch keine Profile</td></tr>`;
     $("pr_ergebnis").textContent=profJ.ergebnis;
   }catch(e){}
 }
@@ -1172,13 +1198,14 @@ async function holeShots(){
     $("md_bezuege").textContent=shotsJ.bezuege_maschine?shotsJ.bezuege_maschine.toLocaleString("de-DE"):"–";
     $("md_rueck").textContent=shotsJ.seit_rueckspuelen; if(document.activeElement!==$("md_rueck_alle")) $("md_rueck_alle").value=shotsJ.rueckspuelen_alle;
     if(!aktiv("verlauf")||document.activeElement&&document.activeElement.classList.contains("shot_notiz")) return;
-    $("shot_liste").innerHTML=shotsJ.log.map(e=>`<tr class="liste-zeile" style="display:table-row" onclick="zeigeShot(${e.nr},event)"><td style="white-space:nowrap">${esc(e.zeit.slice(8,10)+"."+e.zeit.slice(5,7)+". "+e.zeit.slice(11))}</td><td>${esc(e.profil||"–")}</td><td>${f1(e.dauer,0)} s</td>
-      <td>${e.gewicht==null?"–":f1(e.gewicht)+" g"}</td><td>${f1(e.druck_max)} bar</td><td>${f1(e.temp,0)}</td>
-      <td>${[1,2,3,4,5].map(n=>`<span class="stern${n<=e.sterne?" an":""}" onclick="event.stopPropagation();shotAktion('bewerten ${e.nr} ${n==e.sterne?0:n}')">★</span>`).join("")}</td>
-      <td><input class="shot_notiz" value="${esc(e.notiz)}" onclick="event.stopPropagation()" onchange="shotAktion('bewerten ${e.nr} ${e.sterne} '+this.value)" style="width:140px"></td></tr>`).join("")||'<tr><td colspan="8" class="hinweis">noch keine Shots erkannt</td></tr>';
+    $("shot_liste").innerHTML=shotsJ.log.map(e=>`<div class="shot-karte${e.nr==shotGezeigt?" an":""}" onclick="zeigeShot(${e.nr})">
+      <div class="sk-kopf"><b>${esc(e.zeit.slice(8,10)+"."+e.zeit.slice(5,7)+". "+e.zeit.slice(11))}</b><span>${esc(e.profil||"ohne Profil")}</span></div>
+      <div class="sk-werte"><span><b>${f1(e.dauer,0)}</b> s</span><span><b>${e.gewicht==null?"–":f1(e.gewicht)}</b> g</span><span><b>${f1(e.druck_max)}</b> bar</span><span><b>${f1(e.temp,0)}</b> °C</span></div>
+      <div class="sk-fuss"><span>${[1,2,3,4,5].map(n=>`<span class="stern${n<=e.sterne?" an":""}" onclick="event.stopPropagation();shotAktion('bewerten ${e.nr} ${n==e.sterne?0:n}')">★</span>`).join("")}</span>
+        <input class="shot_notiz" placeholder="Notiz (Mahlgrad, Geschmack …)" value="${esc(e.notiz)}" onclick="event.stopPropagation()" onchange="shotAktion('bewerten ${e.nr} ${e.sterne} '+this.value)"></div></div>`).join("")||'<p class="hinweis">noch keine Shots erkannt</p>';
   }catch(e){}
 }
-async function zeigeShot(nr){
+async function zeigeShot(nr){ shotGezeigt=nr; holeShots();
   const p=await (await fetch("/api/shot?nr="+nr)).json(); $("shot_kurve").style.display=p.length?"":"none";
   $("shot_info").textContent=p.length?`Shot ${nr}: Druck (bar, rechts), Temperatur (°C) und Gewicht (g, links)`:"Für diesen Shot ist keine Kurve mehr gespeichert (nur die letzten 10).";
   if(p.length) kurve("shot_kurve",[{p:p.map(q=>[q[0],q[2]]),farbe:"#f4a261"},{p:p.map(q=>[q[0],q[3]]),farbe:"#e6edf7",breite:2.5},{p:p.map(q=>[q[0],q[1]]),farbe:"#4cc9f0",achse:1}],{x0:0,min1:0,spanne1:4,fmtX:s=>Math.round(s)+" s"});
@@ -1196,9 +1223,17 @@ function mdWert(vp,w){
   if(janein.includes(vp)) return w?"ja":"nein"; if(liste[vp]&&liste[vp][w]!=null&&liste[vp][w]!=="") return liste[vp][w];
   if([0x76,0x78,0x7B,0x7D].includes(vp)) return (w/10).toFixed(1); if([0x77,0x7C].includes(vp)) return (w/100).toFixed(2);
   if(vp==0x5C) return (w/10).toFixed(1)+" s"; if(vp==0x63) return (w/10).toFixed(1); if(vp==0x60||vp==0x61) return w+" °C"; if(vp==0x82) return w.toLocaleString("de-DE"); return w}
+// Gruppen fuer das Akkordeon; geoeffnete Gruppen bleiben beim Aktualisieren offen
+const MD_GRUPPEN=[["Brühen und Kessel",[0x60,0x61,0x5E,0x5F,0x5A,0x5C,0x5B]],["Zähler und Wartung",[0x82,0x27,0x28]],
+ ["Maschine und Anzeige",[0x20,0x26,0x2B,0x25,0x21,0x2A,0x29,0x2C,0x2D,0x63]],["Technik (PID, Sonden)",[0x70,0x71,0x76,0x77,0x78,0x79,0x7B,0x7C,0x7D,0x80,0x81]]];
 async function holeMaschine(){ if(!aktiv("maschine")) return;
-  try{const m=await (await fetch("/api/maschine")).json();
-    $("md_tabelle").innerHTML=Object.entries(m.vps).filter(([vp])=>MD[+vp]).map(([vp,[w,alter]])=>`<tr><td>${MD[+vp].replace(/ \(.*\)| ×\d+/g,"")}</td><td>${mdWert(+vp,w)}</td><td>${alter<120?alter+" s":alter<7200?Math.round(alter/60)+" min":Math.round(alter/3600)+" h"}</td></tr>`).join("")||'<tr><td colspan="3" class="hinweis">noch nichts gelesen: Seiten an der Maschine öffnen</td></tr>'}catch(e){}
+  try{const m=await (await fetch("/api/maschine")).json(), offen=new Set([...document.querySelectorAll("#md_gruppen details[open]")].map(d=>d.dataset.g));
+    const alt=a=>a<120?a+" s":a<7200?Math.round(a/60)+" min":Math.round(a/3600)+" h";
+    const html=MD_GRUPPEN.map(([name,vps])=>{const z=vps.filter(vp=>m.vps[vp]);
+      return `<details class="gruppe" data-g="${name}"${offen.has(name)?" open":""}><summary>${name} <span class="hinweis">${z.length?z.length+" Werte":"noch nicht gelesen"}</span></summary>
+        ${z.map(vp=>{const [w,a]=m.vps[vp]; return `<div class="md-zeile"><span>${MD[vp].replace(/ \(.*\)| ×\d+/g,"")}<small>vor ${alt(a)} gelesen</small></span><b>${mdWert(vp,w)}</b></div>`}).join("")||'<p class="hinweis" style="padding:0 12px">Seite an der Maschine öffnen, dann schreibt das Mainboard die Werte.</p>'}</details>`}).join("");
+    if($("md_gruppen").dataset.h!==html){$("md_gruppen").innerHTML=html; $("md_gruppen").dataset.h=html}
+  }catch(e){}
 }
 setInterval(holeMaschine,4000); holeMaschine();
 
