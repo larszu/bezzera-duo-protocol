@@ -115,7 +115,8 @@ static VpWert vpTabelle[96];
 static size_t vpAnzahl = 0;
 
 struct Leitung {
-  int32_t seite = -1;
+  int32_t seite = -1;     // Seite, die das Display zeigt
+  int32_t seiteMb = -1;   // Seite, die das Mainboard zuletzt wollte (Bezug x06 auch, wenn die Bruehkurve stehen bleibt)
   uint8_t rtc[7] = {0};
   bool rtcGueltig = false;
   uint32_t rtcMs = 0;  // wann die Uhr zuletzt gestellt oder gelesen wurde
@@ -196,6 +197,7 @@ static void beobachte(char quelle, const uint8_t *r, size_t n) {
     int32_t s = (p[1] << 8) | p[2];
     if (s != leitung.seite) ereignis("%c Seite %ld", quelle, (long)s);
     leitung.seite = s;
+    if (quelle == 'B') leitung.seiteMb = s;
   } else if (cmd == 0x80 && pn >= 9 && p[0] == 0x1F && p[1] == 0x5A && zumDisplay) {
     // Im Standby stellt das Mainboard die Uhr jede Sekunde; ins Protokoll nur,
     // wenn die Zeit springt (nicht im Sekundentakt weiterlaeuft)

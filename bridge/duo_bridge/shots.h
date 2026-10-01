@@ -123,7 +123,7 @@ static void shotsLoop() {
     zaehler.seitBasis = 0;
     shotsSpeichern();
   }
-  bool aufAusgabe = mainboardLebt() && leitung.seite >= 0 && leitung.seite % 100 == 6;
+  bool aufAusgabe = mainboardLebt() && leitung.seiteMb >= 0 && leitung.seiteMb % 100 == 6;
   static uint32_t wegSeit = 0;
   if (aufAusgabe) wegSeit = 0;
   if (!shotLaeuft && aufAusgabe) shotBeginnen();

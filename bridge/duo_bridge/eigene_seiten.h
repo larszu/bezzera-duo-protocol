@@ -64,6 +64,7 @@ static bool kurveHalten(const uint8_t *r, size_t n) {
   if (n != 7 || r[3] != 0x80 || r[4] != 0x03 || leitung.seite != BK_SEITE) return false;
   uint16_t s = (r[5] << 8) | r[6];
   if (s % 100 != 6 && s % 100 != 1) return false;
+  leitung.seiteMb = s;  // Bezugserkennung (shots.h, zusatz.h) folgt dem Mainboard
   ereignis("- Bruehkurve bleibt (Mainboard wollte Seite %u)", s);
   return true;
 }
