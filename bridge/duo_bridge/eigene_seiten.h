@@ -20,12 +20,12 @@
 static const uint16_t ES_VP_AKTION = 0x0300, ES_VP_WERTE = 0x0310;
 
 // Aktionen (Wert der Taste): siehe auch ES_AKTIONEN in tools/seitenbau/index.html
-//   1 Ein   2 Standby   3 Bezug stoppen   4 Waage tarieren   5 Doom
+//   1 Ein   2 Standby   3 Bezug stoppen   4 Waage tarieren
 //   10-29 Profil 1-20 anwenden
 static bool eigeneSeite(int32_t s) {
   if (s < 0) return false;
   int r = s % 100;
-  return r >= 96 && r <= 99 && s != doomEinst.seite;
+  return r >= 96 && r <= 99;
 }
 
 static void esAktion(uint16_t w) {
@@ -34,7 +34,6 @@ static void esAktion(uint16_t w) {
   else if (w == 2) aktion("aus");
   else if (w == 3) aktion("stopp");
   else if (w == 4) aktion("tara");
-  else if (w == 5) doomStarten("eigene Seite");
   else if (w >= 10 && w < 10 + PROFILE_MAX) profilAnwenden(w - 10);
 }
 
@@ -130,7 +129,7 @@ static void startSymbol() {
 }
 
 static void eigeneSeitenLoop() {
-  if (doomAktiv || emulation == 1) return;
+  if (emulation == 1) return;
   startSymbol();
   if (!eigeneSeite(leitung.seite)) return;
   static uint32_t lesen = 0, schreiben = 0;

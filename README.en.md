@@ -597,7 +597,6 @@ web UI and are stored in the ESP32's NVS, never in the source code.
 | **Brew by weight** | Bluetooth or Wi-Fi scale, stop at target minus learned stop offset via the stop button | 🧪 · 💡 stop via the keypad |
 | **Setup without a computer** | search and join Wi-Fi in the sign-in portal; after flashing in the browser via Improv | 🧪 |
 | **Custom display pages** | [page builder](https://larszu.github.io/bezzera-duo-protocol/seitenbau/) in the browser (Windows/Mac/Linux): image, buttons, numbers on the free slots 96–99/196–199/296–299, via SD card to the display; buttons trigger bridge actions ([guide](docs/seitenbau.en.md)) | 🧪 |
-| **Doom** 🕹️ | easter egg: tap the logo text on the home page 10×; Doom runs on the ESP32 and draws into the display via bitmap command | 🧪 |
 
 <p align="center">
   <img src="docs/screenshots/zusatz_rohworte.png" alt="History with all nine raw words of VP 0x0050; in the simulation word 1 rises while the pump runs" width="800" /><br />
@@ -839,7 +838,7 @@ All links by topic, including scales and grind by weight: [`docs/links.en.md`](d
 
 ## ⚖️ License
 
-GPL-2.0 ([LICENSE](LICENSE)). Doom comes from [doomgeneric](https://github.com/ozkl/doomgeneric) (GPL-2.0).
+GPL-2.0 ([LICENSE](LICENSE)).
 
 ## 👤 Author
 

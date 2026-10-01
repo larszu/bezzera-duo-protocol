@@ -1,4 +1,4 @@
-# Custom display pages and Doom
+# Custom display pages
 
 Status: 🧪 built, untested on the display. Formats from the DGUS guide V4.3 and
 the dumped display flash. The page builder reproduces the touch file byte for byte.
@@ -23,10 +23,10 @@ The ZIP holds the background (`<page>.bmp`, 24-bit) and complete `13.bin`
 |---|---|---|
 | text, shape, button graphic | background image | static, any font on the computer |
 | button: change page | 13.bin `Pic_Next` | the display switches itself |
-| button: bridge action | 13.bin key code `FD05` on VP `0x0300` | the bridge picks it up: 1 on, 2 standby, 3 stop brew, 4 tare, 5 Doom, 10–29 profile 1–20 |
+| button: bridge action | 13.bin key code `FD05` on VP `0x0300` | the bridge picks it up: 1 on, 2 standby, 3 stop brew, 4 tare, 10–29 profile 1–20 |
 | button: key code | 13.bin `FD05` on VP `0x0000` | like an original button, to the mainboard |
 | number | 14.bin data variable `0x10`, font copied from an existing display | mainboard values (`0x0053` …) or bridge values (`0x0310` …) |
-| drawing area | 14.bin basic graphics `0x21` | the bridge draws into it (Doom) |
+| drawing area | 14.bin basic graphics `0x21` | the bridge draws into it (lines `0x0002`, frames `0x0003`, filled areas `0x0004`; image cut `0x0006` does not work) |
 
 Bridge values (only while a custom page is shown, every 500 ms):
 `0x0310` weight g×10, `0x0311` brew time s×10, `0x0312` shots since backflush,
@@ -36,32 +36,23 @@ Bridge values (only while a custom page is shown, every 500 ms):
 page. If 13/14.bin come from a bad backup, the original pages suffer too.
 Restore from the unmodified backup.
 
-## Doom
+## Brew curve (example, tested on display 2.2)
 
-Tap the logo text on the home page (right of the menu button) ten times quickly,
-on the display or in the web UI replica.
+Page 196 shows pressure and temperature of the running or last shot, plus weight,
+shot time, peak pressure and mean brew temperature. On the home page (1/101/201) a
+button at the top right leads there; the bridge draws it in the style of the menu
+button. Build from your own backup:
 
-Requirements:
-- **Doom page:** page builder → *Vorlage: Doom-Seite* → slot 299 → ZIP → SD card.
-  It holds two drawing areas: VP `0x0800` (96×62 bitmap) and `0x1FC0` (zoom).
-- **WAD file:** web UI → Diagnose → Doom → upload, e.g. the shareware `doom1.wad`
-  (4 MB). It lives on the ESP32 only, never in the repo. Without a WAD you get the Doom fire.
+```
+B=tools/seitenbau/beispiele
+python3 tools/sd_paket.py flash/sicherung-… --ziel /Volumes/DWIN \
+  --seite $B/bruehkurve.json --seite $B/start_1.json --seite $B/start_101.json \
+  --seite $B/start_201.json --config R2=05
+```
 
-Touch: top left menu (hold 3 s = back to the machine), top middle Enter, top
-right Use; left/right turn, middle forward, below fire, bottom back. Keyboard in the web UI.
-
-While Doom runs, the bridge answers the mainboard itself and remembers the page
-it wants. A machine alarm, 3 minutes without touch, or "Zurück zur Maschine" ends
-Doom. The game stays paused and the next easter egg resumes it. "Quit" in the
-Doom menu needs a bridge restart afterwards.
-
-| Item | Status |
-|---|---|
-| Doom (doomgeneric) on the ESP32-S3, tables in PSRAM | 🧪 compiles |
-| bitmap command `0x000F`, zoom `0x0010` | 💡 per the guide; zoom behaviour needs a test |
-| frame rate at 115200 baud | 💡 roughly 0.5–2 fps (only changed pixels are sent) |
-| turbo: display briefly at 921600 baud (register R1, `0xA5` = not saved) | 🧪 off; power cycle restores 115200 |
-| touch via registers `0x05`–`0x0A` | 💡 per the guide |
+`R2=05` turns off the touch beep. Only VPs up to `0x1FFF` are usable (receive
+buffer from `0x2000`, mirrored above `0x3FFF`); the bridge uses `0x0300` (buttons),
+`0x0310`–`0x0317` (values), `0x0400`/`0x0480` (curve), `0x0500`/`0x0580` (home button).
 
 ## DGUS SDK on a Mac
 
@@ -70,6 +61,4 @@ Not needed for custom pages. To build fonts or icon libraries:
 
 ## License
 
-Doom comes from [doomgeneric](https://github.com/ozkl/doomgeneric) (GPL-2.0,
-`bridge/duo_bridge/src/doom`, adapted: palette, PSRAM, exit). The whole project
-is GPL-2.0 ([LICENSE](../LICENSE)).
+GPL-2.0 ([LICENSE](../LICENSE)).

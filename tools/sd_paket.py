@@ -5,7 +5,7 @@ Gleiche Logik wie der Seitenbau im Browser (tools/seitenbau/index.html), aber
 fuer mehrere Seiten auf einmal und mit Konfiguration:
 
     python3 sd_paket.py flash/sicherung-20261001-2120 --ziel /Volumes/DWIN \\
-        --seite seiten/doom.json --seite seiten/test.json --config R2=05
+        --seite tools/seitenbau/beispiele/bruehkurve.json --config R2=05
 
 Erzeugt DWIN_SET/<seite>.bmp je Seite, 13.bin (Touch, 128 KB = Bibliothek 13),
 14.bin (Variablen der Seiten 0-299, 600 KB ab Bibliothek 14, je 64 Seiten

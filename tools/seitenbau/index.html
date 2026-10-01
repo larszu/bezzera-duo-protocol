@@ -59,8 +59,8 @@ code{font-size:12px}
     <div class="reihe"><label>Platz <select id="seite"></select></label>
       <label>Hintergrund <input type="color" id="bg_farbe" value="#101418"></label>
       <label>Bild <input type="file" id="bg_bild" accept="image/*"></label><button id="bg_weg">Bild entfernen</button></div>
-    <div class="reihe"><button id="vorlage_doom">Vorlage: Doom-Seite</button><button id="vorlage_leiste">Vorlage: Espresso-Leiste</button></div>
-    <p class="hinweis">Frei sind 96–99 (Englisch), 196–199 (Deutsch) und 296–299 (Italienisch). Die Doom-Seite gehört standardmäßig auf 299.</p>
+    <div class="reihe"><button id="vorlage_leiste">Vorlage: Espresso-Leiste</button></div>
+    <p class="hinweis">Frei sind 96–99 (Englisch), 196–199 (Deutsch) und 296–299 (Italienisch).</p>
   </section>
   <section>
     <h2>Hinzufügen</h2>
@@ -94,11 +94,11 @@ const FREI=[96,97,98,99,196,197,198,199,296,297,298,299];
 const VPS=[["0x0053","Kaffeekessel °C"],["0x0054","Dampfkessel °C"],["0x0055","Pumpendruck (× 0,5 bar)"],["0x0056","Dampfkessel Druck (× 0,25 bar)"],
   ["0x0059","Bezugszeit s (Ausgabeseite)"],["0x0082","Bezüge gesamt"],["0x0310","Bridge: Gewicht g × 10"],["0x0311","Bridge: Bezugszeit s × 10"],
   ["0x0312","Bridge: Bezüge seit Rückspülen"],["0x0313","Bridge: Bezüge gesamt"],["0x0314","Bridge: Uhrzeit hhmm"],["0x0315","Bridge: aktives Profil"]];
-const ES_AKTIONEN=[[1,"Maschine ein"],[2,"Standby"],[3,"Bezug stoppen"],[4,"Waage tarieren"],[5,"Doom"],
+const ES_AKTIONEN=[[1,"Maschine ein"],[2,"Standby"],[3,"Bezug stoppen"],[4,"Waage tarieren"],
   ...Array.from({length:20},(_,i)=>[10+i,`Profil ${i+1} anwenden`])];
 const TASTENCODES=[[7,"Einstellungen Kaffee (wie Original)"],[8,"Einstellungen Tee"],[20,"Menü"],[68,"Einstellungen"],[1,"Ein (VP 0 = 1)"]];
 
-let p={seite:299,bg:"#101418",bild:null,el:[]};   // Projekt
+let p={seite:196,bg:"#101418",bild:null,el:[]};   // Projekt
 let gewaehlt=-1, bildObj=null, lib13=null, lib14=null, vorlagen=[];
 
 // ── Speichern im Browser (nur Bequemlichkeit) ──
@@ -190,7 +190,7 @@ function eigenschaften(){
       <div class="reihe">${feld("stellen","Stellen")}${feld("nachkomma","Nachkomma")}${feld("farbe","Farbe","color")}</div>
       <div class="reihe">${vorlagen.length?auswahl("vorlage","Schrift wie",vorlagen.map((v,i)=>[i,v.name])):'<span class="hinweis warn">Schriftvorlagen kommen aus lib_014.bin: erst die Sicherung laden.</span>'}</div>`;
   }
-  if(e.typ==="flaeche") h+=`<div class="reihe">${feld("vp","VP","text")}</div><p class="hinweis">Zeichenfläche (Basic Graphics 0x21): die Bridge zeichnet hinein, z. B. Doom (VP 0x0800) oder Kurven.</p>`;
+  if(e.typ==="flaeche") h+=`<div class="reihe">${feld("vp","VP","text")}</div><p class="hinweis">Zeichenfläche (Basic Graphics 0x21): die Bridge zeichnet hinein, z. B. die Brühkurve (VP 0x0400/0x0480).</p>`;
   h+=`<div class="reihe"><button onclick="loeschen()">Löschen</button><button onclick="kopieren()">Duplizieren</button></div>`;
   z.innerHTML=h;
   z.querySelectorAll("[data-k]").forEach(n=>n.addEventListener(n.type==="checkbox"||n.tagName==="SELECT"?"change":"input",()=>{
@@ -217,10 +217,6 @@ $("bg_bild").onchange=()=>{const f=$("bg_bild").files[0]; if(!f) return; const r
     const s=Math.max(W/i.width,H/i.height); g.drawImage(i,(W-i.width*s)/2,(H-i.height*s)/2,i.width*s,i.height*s); p.bild=c.toDataURL("image/png"); bildLaden(p.bild)}; i.src=r.result};
   r.readAsDataURL(f)};
 $("bg_weg").onclick=()=>{p.bild=null; bildLaden(null)};
-$("vorlage_doom").onclick=()=>{p={seite:299,bg:"#000000",bild:null,el:[
-  {typ:"flaeche",x:0,y:0,b:W,h:H,vp:"0x0800"},{typ:"flaeche",x:0,y:0,b:W,h:H,vp:"0x1FC0"},
-  {typ:"text",x:6,y:4,b:60,h:12,text:"DOOM",groesse:12,farbe:"#8a1a1a",fett:true}]};
-  $("seite").value=299; $("bg_farbe").value="#000000"; bildLaden(null); gewaehlt=-1; zeichne(); eigenschaften()};
 $("vorlage_leiste").onclick=()=>{p.el.push(
   {typ:"text",x:16,y:12,b:100,h:22,text:"Espresso",groesse:22,farbe:"#ffffff",fett:true},
   {typ:"zahl",x:16,y:60,b:90,h:36,vp:"0x0053",stellen:3,nachkomma:0,farbe:"#ffffff",vorlage:0},
@@ -328,7 +324,6 @@ $("projekt_laden").onchange=async()=>{const f=$("projekt_laden").files[0]; if(!f
 
 bildLaden(p.bild); zeichne();
 if(location.hash==="#beispiel"){p={seite:196,bg:"#101418",bild:null,el:[]}; $("seite").value=196; $("vorlage_leiste").click(); waehle(5)}
-if(location.hash==="#doom") $("vorlage_doom").click();
 </script>
 </body>
 </html>
