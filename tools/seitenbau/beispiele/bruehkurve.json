@@ -1,0 +1,382 @@
+{
+ "seite": 196,
+ "bg": "#0d1116",
+ "bild": null,
+ "el": [
+  {
+   "typ": "text",
+   "x": 8,
+   "y": 6,
+   "b": 40,
+   "h": 17,
+   "text": "Brühkurve",
+   "groesse": 17,
+   "farbe": "#ffffff",
+   "fett": true
+  },
+  {
+   "typ": "form",
+   "x": 36,
+   "y": 184,
+   "b": 248,
+   "h": 1,
+   "farbe": "#5a6670",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 18,
+   "y": 178,
+   "b": 40,
+   "h": 11,
+   "text": "0",
+   "groesse": 11,
+   "farbe": "#5ea8ff",
+   "fett": false
+  },
+  {
+   "typ": "text",
+   "x": 289,
+   "y": 178,
+   "b": 40,
+   "h": 11,
+   "text": "80",
+   "groesse": 11,
+   "farbe": "#ff9a3c",
+   "fett": false
+  },
+  {
+   "typ": "form",
+   "x": 36,
+   "y": 146,
+   "b": 248,
+   "h": 1,
+   "farbe": "#2a3440",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 18,
+   "y": 140,
+   "b": 40,
+   "h": 11,
+   "text": "3",
+   "groesse": 11,
+   "farbe": "#5ea8ff",
+   "fett": false
+  },
+  {
+   "typ": "text",
+   "x": 289,
+   "y": 140,
+   "b": 40,
+   "h": 11,
+   "text": "85",
+   "groesse": 11,
+   "farbe": "#ff9a3c",
+   "fett": false
+  },
+  {
+   "typ": "form",
+   "x": 36,
+   "y": 109,
+   "b": 248,
+   "h": 1,
+   "farbe": "#2a3440",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 18,
+   "y": 103,
+   "b": 40,
+   "h": 11,
+   "text": "6",
+   "groesse": 11,
+   "farbe": "#5ea8ff",
+   "fett": false
+  },
+  {
+   "typ": "text",
+   "x": 289,
+   "y": 103,
+   "b": 40,
+   "h": 11,
+   "text": "90",
+   "groesse": 11,
+   "farbe": "#ff9a3c",
+   "fett": false
+  },
+  {
+   "typ": "form",
+   "x": 36,
+   "y": 72,
+   "b": 248,
+   "h": 1,
+   "farbe": "#2a3440",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 18,
+   "y": 66,
+   "b": 40,
+   "h": 11,
+   "text": "9",
+   "groesse": 11,
+   "farbe": "#5ea8ff",
+   "fett": false
+  },
+  {
+   "typ": "text",
+   "x": 289,
+   "y": 66,
+   "b": 40,
+   "h": 11,
+   "text": "95",
+   "groesse": 11,
+   "farbe": "#ff9a3c",
+   "fett": false
+  },
+  {
+   "typ": "form",
+   "x": 36,
+   "y": 34,
+   "b": 248,
+   "h": 1,
+   "farbe": "#2a3440",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 12,
+   "y": 28,
+   "b": 40,
+   "h": 11,
+   "text": "12",
+   "groesse": 11,
+   "farbe": "#5ea8ff",
+   "fett": false
+  },
+  {
+   "typ": "text",
+   "x": 289,
+   "y": 28,
+   "b": 40,
+   "h": 11,
+   "text": "100",
+   "groesse": 11,
+   "farbe": "#ff9a3c",
+   "fett": false
+  },
+  {
+   "typ": "form",
+   "x": 36,
+   "y": 34,
+   "b": 1,
+   "h": 150,
+   "farbe": "#5a6670",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 30,
+   "y": 187,
+   "b": 40,
+   "h": 11,
+   "text": "0",
+   "groesse": 11,
+   "farbe": "#9aa4ad",
+   "fett": false
+  },
+  {
+   "typ": "form",
+   "x": 119,
+   "y": 34,
+   "b": 1,
+   "h": 150,
+   "farbe": "#2a3440",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 113,
+   "y": 187,
+   "b": 40,
+   "h": 11,
+   "text": "15",
+   "groesse": 11,
+   "farbe": "#9aa4ad",
+   "fett": false
+  },
+  {
+   "typ": "form",
+   "x": 201,
+   "y": 34,
+   "b": 1,
+   "h": 150,
+   "farbe": "#2a3440",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 195,
+   "y": 187,
+   "b": 40,
+   "h": 11,
+   "text": "30",
+   "groesse": 11,
+   "farbe": "#9aa4ad",
+   "fett": false
+  },
+  {
+   "typ": "form",
+   "x": 284,
+   "y": 34,
+   "b": 1,
+   "h": 150,
+   "farbe": "#2a3440",
+   "radius": 0
+  },
+  {
+   "typ": "text",
+   "x": 274,
+   "y": 187,
+   "b": 40,
+   "h": 11,
+   "text": "45 s",
+   "groesse": 11,
+   "farbe": "#9aa4ad",
+   "fett": false
+  },
+  {
+   "typ": "text",
+   "x": 8,
+   "y": 47,
+   "b": 40,
+   "h": 11,
+   "text": "bar",
+   "groesse": 11,
+   "farbe": "#5ea8ff",
+   "fett": false
+  },
+  {
+   "typ": "text",
+   "x": 290,
+   "y": 47,
+   "b": 40,
+   "h": 11,
+   "text": "°C",
+   "groesse": 11,
+   "farbe": "#ff9a3c",
+   "fett": false
+  },
+  {
+   "typ": "zahl",
+   "x": 150,
+   "y": 4,
+   "b": 50,
+   "h": 24,
+   "vp": "0x0053",
+   "stellen": 3,
+   "nachkomma": 0,
+   "farbe": "#ff9a3c",
+   "vorlage": 0
+  },
+  {
+   "typ": "text",
+   "x": 204,
+   "y": 10,
+   "b": 40,
+   "h": 12,
+   "text": "°C",
+   "groesse": 12,
+   "farbe": "#ff9a3c",
+   "fett": false
+  },
+  {
+   "typ": "zahl",
+   "x": 234,
+   "y": 4,
+   "b": 60,
+   "h": 24,
+   "vp": "0x6111",
+   "stellen": 3,
+   "nachkomma": 1,
+   "farbe": "#ffffff",
+   "vorlage": 0
+  },
+  {
+   "typ": "text",
+   "x": 300,
+   "y": 10,
+   "b": 40,
+   "h": 12,
+   "text": "s",
+   "groesse": 12,
+   "farbe": "#ffffff",
+   "fett": false
+  },
+  {
+   "typ": "flaeche",
+   "x": 36,
+   "y": 34,
+   "b": 249,
+   "h": 151,
+   "vp": "0x6200"
+  },
+  {
+   "typ": "flaeche",
+   "x": 36,
+   "y": 34,
+   "b": 249,
+   "h": 151,
+   "vp": "0x6300"
+  },
+  {
+   "typ": "taste",
+   "x": 8,
+   "y": 204,
+   "b": 96,
+   "h": 32,
+   "art": "bridge",
+   "grafik": true,
+   "beschriftung": "Doom",
+   "farbe": "#8a1a1a",
+   "textfarbe": "#ffffff",
+   "groesse": 15,
+   "radius": 8,
+   "wert": 5
+  },
+  {
+   "typ": "taste",
+   "x": 112,
+   "y": 204,
+   "b": 96,
+   "h": 32,
+   "art": "bridge",
+   "grafik": true,
+   "beschriftung": "Standby",
+   "farbe": "#5a2a2a",
+   "textfarbe": "#ffffff",
+   "groesse": 15,
+   "radius": 8,
+   "wert": 2
+  },
+  {
+   "typ": "taste",
+   "x": 216,
+   "y": 204,
+   "b": 96,
+   "h": 32,
+   "art": "seite",
+   "grafik": true,
+   "beschriftung": "Zurück",
+   "farbe": "#2f7d4a",
+   "textfarbe": "#ffffff",
+   "groesse": 15,
+   "radius": 8,
+   "ziel": 101
+  }
+ ]
+}

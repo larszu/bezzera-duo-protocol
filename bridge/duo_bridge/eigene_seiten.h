@@ -45,6 +45,61 @@ static void eigeneSeitenAntwort(const uint8_t *r, size_t n) {
   esAktion(w);
 }
 
+// ─── Bruehkurve ────────────────────────────────────────────────────────────
+// Druck und Temperatur des laufenden bzw. letzten Bezugs (shots.h, 10 Punkte
+// je Sekunde) als zwei Linien. Die Seite braucht dafuer zwei Zeichenflaechen
+// (Basic Graphics 0x21) auf VP 0x6200 (Druck) und 0x6300 (Temperatur); Achsen
+// und Beschriftung stehen im Hintergrundbild (tools/seitenbau/beispiele/
+// bruehkurve.json). Linienbefehl 0x0002: Anzahl Strecken, Farbe, Punkte.
+static const uint16_t BK_VP_DRUCK = 0x6200, BK_VP_TEMP = 0x6300;
+static const int BK_X0 = 36, BK_Y0 = 34, BK_B = 248, BK_H = 150;  // Plotbereich, muss zum Bild passen
+static const int BK_SEK = 45, BK_PUNKTE = 60;
+static const float BK_DRUCK_MAX = 12, BK_T_MIN = 80, BK_T_MAX = 100;
+static const uint16_t BK_FARBE_DRUCK = 0x3D7F, BK_FARBE_TEMP = 0xFC60;  // Blau, Orange (RGB565)
+
+static void bkLinie(uint16_t vp, uint16_t farbe, const uint16_t *pkt, int n) {
+  uint8_t f[6 + 2 * (3 + 2 * BK_PUNKTE)] = {KOPF0, KOPF1, 0, 0x82, (uint8_t)(vp >> 8), (uint8_t)vp};
+  uint16_t w[3 + 2 * BK_PUNKTE] = {0x0002, (uint16_t)(n > 1 ? n - 1 : 0), farbe};
+  memcpy(w + 3, pkt, 4 * n);
+  int k = 3 + 2 * n;
+  for (int i = 0; i < k; i++) {
+    f[6 + 2 * i] = w[i] >> 8;
+    f[7 + 2 * i] = w[i];
+  }
+  f[2] = 3 + 2 * k;
+  uartB.write(f, 6 + 2 * k);
+}
+
+static void bruehkurveZeichnen(bool erzwingen) {
+  static uint32_t stand = UINT32_MAX;
+  int slot = shotSlot;
+  int len = kurven ? kurvenLaenge[slot] : 0;
+  uint32_t neu = (shotNr << 12) ^ len;
+  if (neu == stand && !erzwingen) return;  // nichts Neues: Display behaelt die Linien
+  stand = neu;
+  uint16_t druck[2 * BK_PUNKTE], temp[2 * BK_PUNKTE];
+  int nd = 0, nt = 0, letzt = -1000;
+  for (int i = 0; i < len && nd < BK_PUNKTE; i++) {
+    const ShotPunkt &p = kurven[slot * KURVE_MAX + i];
+    if (p.t10 > BK_SEK * 10) break;
+    if (p.t10 - letzt < BK_SEK * 10 / BK_PUNKTE && i != len - 1) continue;
+    letzt = p.t10;
+    uint16_t x = BK_X0 + p.t10 * BK_B / (BK_SEK * 10);
+    float d = constrain(p.druck10 / 10.0f, 0.0f, BK_DRUCK_MAX);
+    druck[2 * nd] = x;
+    druck[2 * nd + 1] = BK_Y0 + BK_H - lroundf(d * BK_H / BK_DRUCK_MAX);
+    nd++;
+    if (p.temp != INT16_MIN && nt < BK_PUNKTE) {
+      float t = constrain((float)p.temp, BK_T_MIN, BK_T_MAX);
+      temp[2 * nt] = x;
+      temp[2 * nt + 1] = BK_Y0 + BK_H - lroundf((t - BK_T_MIN) * BK_H / (BK_T_MAX - BK_T_MIN));
+      nt++;
+    }
+  }
+  bkLinie(BK_VP_DRUCK, BK_FARBE_DRUCK, druck, nd);
+  bkLinie(BK_VP_TEMP, BK_FARBE_TEMP, temp, nt);
+}
+
 static void eigeneSeitenLoop() {
   if (doomAktiv || emulation == 1 || !eigeneSeite(leitung.seite)) return;
   static uint32_t lesen = 0, schreiben = 0;
@@ -55,7 +110,13 @@ static void eigeneSeitenLoop() {
     eigeneAnfrageMerken(f, sizeof f);
     uartB.write(f, sizeof f);
   }
+  static int32_t seiteVorher = -1;
+  if (leitung.seite != seiteVorher) {  // neu auf der Seite: Linien neu schicken
+    seiteVorher = leitung.seite;
+    schreiben = 0;
+  }
   if (jetzt - schreiben >= 500) {
+    bruehkurveZeichnen(!schreiben);
     schreiben = jetzt;
     struct tm t;
     bool zeit = jetztLokal(t);
