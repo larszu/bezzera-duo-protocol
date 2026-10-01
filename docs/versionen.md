@@ -53,7 +53,14 @@ teilen sich aber einen **stillen Vertrag**, der nirgends geprüft wird:
    | Register `0x10`–`0x1C` | – | `07 07 04 5A 00 FF 40 20 0A FF A5 00 00` |
    | Baud (R1) | 115200 | 115200 (`07`) |
 
-   R3 lässt sich im Betrieb nicht umschreiben (Schreiben auf `0x13` und CONFIG_EN `0x1D` wirken nicht, gemessen). Ohne Bridge braucht ein 2.2-Display deshalb eine geänderte Konfiguration per SD-Karte (`DWIN_SET`, R3 = `C6`); das schreibt den Display-Flash und ist noch nicht erprobt.
+   R3 lässt sich im Betrieb nicht umschreiben (Schreiben auf `0x13` und CONFIG_EN `0x1D` wirken nicht, gemessen). Ohne Bridge braucht ein 2.2-Display deshalb eine geänderte Konfiguration per SD-Karte, erprobt am 01.10.2026:
+
+   1. Vorher sichern: `python3 tools/display_sichern.py alles` (braucht die Bridge, ~30 min).
+   2. SD-Karte FAT32 mit 4-KB-Clustern, höchstens 8 GB oder eine 4-GB-Partition (`diskutil partitionDisk diskN MBR FAT32 DWIN 4G "Free Space" LEER R`).
+   3. Ordner [`tools/display_kopf_c6/DWIN_SET`](../tools/display_kopf_c6/DWIN_SET/CONFIG.TXT) ins Wurzelverzeichnis kopieren. Er enthält nur `CONFIG.TXT`: die bisherigen Werte, R3 = `C6`. Seiten und Bilder bleiben unberührt.
+   4. Karte bei eingeschalteter Maschine ins Display, nach wenigen Sekunden ziehen, Maschine aus und ein.
+
+   Danach meldet Register `0x13` den Wert `C6`, auch nach dem Neustart, und Display und Mainboard sprechen ohne Bridge miteinander.
 6. **Verbindungstest VP `0x0063`.** Das Mainboard schreibt seine Version dorthin und liest sie zurück. Nach allem, was mitgeschnitten ist, prüft es damit nur, ob überhaupt ein Display antwortet, nicht dessen Version. Eine unpassende Kombination startet deshalb vermutlich und verhält sich erst dann falsch.
 
 Die Displays 2.0 und 2.2 unterscheiden sich vermutlich in Seiten und Tasten
