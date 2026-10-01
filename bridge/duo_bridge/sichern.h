@@ -62,9 +62,13 @@ static void sTeilHolen(uint32_t jetzt) {
   sSeit = jetzt;
 }
 
+static uint32_t sAktivMs = 0;
+static bool sichernStandby() { return sZ != S_AUS || (sAktivMs && millis() - sAktivMs < 10000); }
+
 static void sichernLoop() {
   if (sZ == S_AUS) return;
   uint32_t jetzt = millis();
+  sAktivMs = jetzt;
   switch (sZ) {
     case S_START: {
       uint32_t a = sAdresse;

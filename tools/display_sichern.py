@@ -81,9 +81,19 @@ class Bridge:
                     kb = len(daten) * 64 / 1024
                     print(f"\r  {kb:7.1f} KB  {kb / (letzte - start):5.1f} KB/s", end="", file=sys.stderr, flush=True)
         print(file=sys.stderr)
-        anfang = int(befehl.split()[-2]) if befehl.startswith("S lib") else int(befehl.split()[2])
+        anfang = int(befehl.split()[3]) if befehl.startswith("S lib") else int(befehl.split()[2])
         erwartet = range(anfang, anfang + worte, 32)
         fehlt = [a for a in erwartet if a not in daten]
+        if fehlt and len(fehlt) <= 64 and not befehl.endswith(" 32"):
+            # einzelne Zeilen gehen auf dem USB-Weg gelegentlich verloren: nachholen
+            kopf = " ".join(befehl.split()[:3]) if befehl.startswith("S lib") else "S db"
+            for adr in fehlt:
+                d = self.lesen(f"{kopf} {adr} 32", 32, 10)
+                if d is not None:
+                    daten[adr] = d
+            fehlt = [a for a in erwartet if a not in daten]
+            if not fehlt:
+                print("  fehlende Bloecke nachgeholt", file=sys.stderr)
         if fehlt:
             print(f"  {len(fehlt)} Bloecke fehlen (erster bei Wort {fehlt[0]})", file=sys.stderr)
             return None
