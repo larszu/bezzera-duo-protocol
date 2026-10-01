@@ -37,5 +37,6 @@ tmp=$(mktemp -d)
 curl -fL -o "$tmp/sdk.zip" "$SDK_URL"
 echo "$SDK_SHA256  $tmp/sdk.zip" | shasum -a 256 -c -
 unzip -oq "$tmp/sdk.zip" -d "$tmp"
-"$WINE" "$tmp/DGUS_5.10_Setup.exe"
+# Inno-Setup-Installer: still, ohne Fenster, nach C:\DGUS
+"$WINE" "$tmp/DGUS_5.10_Setup.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="C:\\DGUS"
 echo "Fertig. Starten mit: bash tools/dgus_sdk_mac.sh start"
