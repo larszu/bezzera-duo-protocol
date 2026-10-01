@@ -17,6 +17,14 @@ There is no mature Tailscale for the ESP32 itself (not enough memory for
 WireGuard plus the Tailscale control plane). A computer on the home network
 acting as a **subnet router** is enough, e.g. a home server, Raspberry Pi or NAS:
 
+Easiest with the script from this repo, it detects the home network itself:
+
+```bash
+sudo tools/tailscale_heimnetz.sh
+```
+
+Or by hand:
+
 ```bash
 # on the device in the home network (Linux)
 curl -fsSL https://tailscale.com/install.sh | sh

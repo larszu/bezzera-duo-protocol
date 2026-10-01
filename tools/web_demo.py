@@ -151,6 +151,12 @@ class Demo:
                                          {"ssid": "Gast", "rssi": -70, "offen": True}]}).encode()
         if u.path == "/api/sicherheit":
             return b"ok"
+        if u.path == "/api/melden":
+            return json.dumps({"ntfy": "", "tg_token_gesetzt": False, "tg_chats": "", "bereit": True, "shot": True,
+                               "wartung": True, "alarm": True, "status": "aus"}).encode()
+        if u.path == "/api/matter":
+            return json.dumps({"an": True, "gestartet": True, "eingerichtet": False, "code": "34970112332",
+                               "qr": "https://project-chip.github.io/connectedhomeip/qrcode.html?data=MT:Y.K9042C00KA0648G00"}).encode()
         if u.path == "/api/zeitplan":
             return json.dumps({"plan_aktiv": True, "kalender_aktiv": False, "vorlauf": 20, "leerlauf": 60,
                                "kalender_url": "", "stichwort": "Espresso", "kalender_status": "aus",

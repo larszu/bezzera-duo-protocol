@@ -32,7 +32,7 @@ jobs:
       - name: Kompilieren
         run: |
           arduino-cli compile \
-            --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs,PSRAM=opi \
+            --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom,PSRAM=opi \
             --output-dir build bridge/duo_bridge
           VERSION="${GITHUB_REF_NAME}"
           [[ "$GITHUB_REF_TYPE" == "tag" ]] || VERSION="main-$(git rev-parse --short HEAD)"

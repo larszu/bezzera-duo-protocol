@@ -22,13 +22,14 @@ GitHub rebuilds the page on every change to `bridge/`
 ```bash
 brew install arduino-cli                       # macOS; Linux/Windows: arduino.github.io/arduino-cli
 arduino-cli core install esp32:esp32@3.3.12
-FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs,PSRAM=opi
+FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom,PSRAM=opi
 arduino-cli compile --fqbn $FQBN bridge/duo_bridge
 arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge   # Windows: -p COM5
 ```
 
-- `PartitionScheme=min_spiffs`: with Bluetooth the firmware no longer fits the
-  default layout. The first change of layout clears stored settings.
+- `FlashSize=16M,PartitionScheme=custom`: the own layout
+  `bridge/duo_bridge/partitions.csv` (two 6 MB app slots, room for Bluetooth and
+  Matter). The settings storage stays where it was, stored settings survive the change.
 - `PSRAM=opi`: the ESP32-S3R8 on this board. Without PSRAM everything works,
   the history just covers 30 minutes instead of 24 hours.
 - `CDCOnBoot=cdc`: output and commands over the USB-C port.

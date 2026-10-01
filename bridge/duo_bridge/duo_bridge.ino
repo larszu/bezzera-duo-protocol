@@ -5,6 +5,8 @@
 //
 // Board: Waveshare ESP32-S3-ETH (Arduino-ESP32 3.x, "ESP32S3 Dev Module",
 // USB CDC On Boot: Enabled). Andere ESP32-S3 gehen auch, Pins unten pruefen.
+// FQBN: esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom,PSRAM=opi
+// (eigene Aufteilung in partitions.csv; Flashen: ../../docs/flashen.md)
 // Die Pins sind so gewaehlt, dass W5500 (9-14), SD (4-7), LED (21) und
 // GPIO33-37 frei bleiben. 15 und 18 sind Kamera-Datenpins, ohne Kamera frei.
 //
@@ -218,6 +220,7 @@ void webSetup();
 void webLoop();
 void heimWlan(char *s);
 void zusatzBefehl(char *s);
+void sichernBefehl(char *s);
 String statusText(uint32_t seit);
 
 // ─── Rahmen-Parser je Richtung ─────────────────────────────────────────────
@@ -325,7 +328,10 @@ static void seite(uint16_t s) {
 
 // Ein vollstaendiger Rahmen vom Display: ggf. Antwort ueberschreiben, dann
 // an das Mainboard weiterreichen.
+static void sichernAntwort(const uint8_t *r, size_t n);  // sichern.h
+
 static void rahmenVomDisplay(uint8_t *r, size_t n) {
+  sichernAntwort(r, n);
   if (emulation == 1) {  // das Mainboard bekommt nur die Antworten des Emulators
     if (eigeneAntwort(r, n)) logZeile('A', r, n);  // eigene Anfrage: sichtbar machen
     else beobachte('A', r, n);
@@ -531,6 +537,8 @@ static void befehl(char *z) {
     scanNaechster = 0;
   } else if (c == 'n') {
     heimWlan(s);
+  } else if (c == 'S') {  // Display-Flash sichern (sichern.h)
+    sichernBefehl(s);
   } else if (c == 'z') {  // Zusatz-API (Ein/Aus, Waage, Verlauf, Einstellungen)
     zusatzBefehl(s);
   } else if (c == 'j') {  // Zustand als JSON fuer die lokale Oberflaeche

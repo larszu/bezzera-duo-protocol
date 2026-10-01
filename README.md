@@ -449,7 +449,7 @@ oder mit Arduino CLI und esptool, alles in [`docs/flashen.md`](docs/flashen.md):
 
 ```bash
 arduino-cli core install esp32:esp32@3.3.12
-FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs,PSRAM=opi
+FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom,PSRAM=opi
 arduino-cli compile --fqbn $FQBN bridge/duo_bridge
 arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge
 ```
@@ -739,6 +739,8 @@ Alle Python-Skripte brauchen nur die Standardbibliothek.
 | [`tools/menue_lesen.py`](tools/menue_lesen.py) | Menüseiten per Tastencode öffnen und mitschreiben, was das Mainboard dabei schreibt |
 | [`tools/web_demo.py`](tools/web_demo.py) | simulierte Maschine und Waage für `--demo` |
 | [`tools/seiten_foto.py`](tools/seiten_foto.py) | alle Seiten durchschalten und per Webcam fotografieren (`brew install imagesnap`) |
+| [`tools/display_sichern.py`](tools/display_sichern.py) | Display-Flash komplett sichern, nur lesend; die Bridge liest selbst ([Anleitung](docs/display_sichern.md)) |
+| [`tools/seite_kopieren.py`](tools/seite_kopieren.py) | Bild einer Seite auf einen leeren Platz kopieren, mit Trockenlauf und Rücklesen — schreibt! |
 | [`tools/libop_lesen.py`](tools/libop_lesen.py) | Flash-Bereiche des Displays lesen — kennt nur den Lesemodus |
 | [`tools/touch13.py`](tools/touch13.py) | Touch-Konfiguration dekodieren → JSON und Header für die Bridge |
 | [`tools/tasten_scan.py`](tools/tasten_scan.py) | Tastencodes über Register `0x4F` probieren (an diesem Display ohne Wirkung) |
