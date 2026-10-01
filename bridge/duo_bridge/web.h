@@ -311,6 +311,12 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
       antwort += '}';
     }
     antwort += "]}";
+  } else if (pfad == "/api/maschine_setzen") {  // "vp=96&wert=94"
+    String vpT = queryWert(rumpf, "vp"), wT = queryWert(rumpf, "wert");
+    if (queryWert(rumpf, "technik_pw").length()) technikPasswort = queryWert(rumpf, "technik_pw");
+    const char *f = vpT.length() && wT.length() ? maschinendatumSetzen(vpT.toInt(), wT.toInt()) : "vp und wert fehlen";
+    antwort = f ? f : "ok";
+    if (f) return 409;
   } else if (pfad == "/api/maschine") {  // alles, was das Mainboard in den Variablenspeicher geschrieben hat
     antwort = "{\"vps\":{";
     bool erstes = true;
@@ -324,7 +330,18 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
       antwort += (millis() - vpMainboardMs[vp]) / 1000;
       antwort += ']';
     }
-    antwort += "},\"bezuege_maschine\":";
+    antwort += "},\"aenderbar\":{";
+    bool e1 = true;
+    for (const auto &e : EDIT_WEGE) {
+      if (!e1) antwort += ',';
+      e1 = false;
+      antwort += "\"" + String(e.vp) + "\":[" + String(e.min) + "," + String(e.max) + "," + String(e.weg) + "]";
+    }
+    antwort += "},\"ablauf\":";
+    antwort += ablaufLaeuft() ? "true" : "false";
+    antwort += ",\"ergebnis\":";
+    jsonText(antwort, editErgebnis);
+    antwort += ",\"bezuege_maschine\":";
     antwort += bezuegeMaschine();
     antwort += '}';
   } else if (pfad == "/api/wlan") {
@@ -452,7 +469,7 @@ void webSetup() {
   dns.start(53, "*", WiFi.softAPIP());
   for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage",
                         "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion",
-                        "/api/ble_suche", "/api/ble_geraete", "/api/maschine", "/api/wlan", "/api/wlan_setzen",
+                        "/api/ble_suche", "/api/ble_geraete", "/api/maschine", "/api/maschine_setzen", "/api/wlan", "/api/wlan_setzen",
                         "/api/sicherheit", "/api/zeitplan"})
     server.on(p, zusatzWeb);
   server.begin();

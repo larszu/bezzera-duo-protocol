@@ -95,6 +95,7 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 | 🧪 | Druckkurven | gebaut; Druckwort unbekannt (💡 oben) |
 | 🧪 | Home Assistant per MQTT-Discovery | gebaut; nie gegen einen Broker gelaufen |
 | 🧪 | Bluetooth-Waagen Acaia, Bookoo, Felicita, Decent | gebaut nach [AcaiaArduinoBLE](https://github.com/tatemazer/AcaiaArduinoBLE), BooKoo- und Decent-Doku; mit keiner echten Waage getestet |
+| 🧪 | Maschinendaten in der Weboberfläche ändern: Weg je Variable (Seite x07/x08/x16 oder Technikmenü), Temperaturen über ± (VP `0x0015` = 2/1, wie die Tasten auf Seite 107/108), Kontrolle durch erneutes Öffnen | gebaut 2026-10-01 |
 | 🧪 | Brühprofile: speichern in der Bridge, auf die Maschine schreiben über Seite x07/x08 + OK, Kontrolle durch erneutes Öffnen | gebaut, Test an der Maschine offen |
 | 🧪 | WLAN-Waagen (URL abfragen, `POST /api/waage`, MQTT) | gebaut |
 | 🧪 | Bezugserkennung an den ersten Tropfen, Vorlauf lernen | gebaut, in der Simulation geprüft |
