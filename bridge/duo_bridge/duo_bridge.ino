@@ -69,9 +69,34 @@ static const uint32_t BAUD = 115200;
 static const uint8_t KOPF0 = 0xC6;  // Duo: C6 A5 statt DWIN-Standard 5A A5
 static const uint8_t KOPF1 = 0xA5;
 
+// Rahmenkopf des Displays. Mainboard und Display 2.0 sprechen C6 A5, ein
+// Ersatz-Display 2.2 dagegen DWIN-Standard 5A A5 (beide Version 0x25 in
+// Register 0x00). Die Bridge erkennt den Kopf an den Antworten des Displays
+// und uebersetzt in beide Richtungen; intern ist alles C6 A5.
+static const uint8_t KOPF_DWIN = 0x5A;
+static uint8_t kopfDisplay = KOPF0;
+static uint32_t kopfUebersetzt = 0;  // Rahmen mit uebersetztem Kopf (Display -> Mainboard)
+static uint32_t kopfRepariert = 0;   // Mainboard-Rahmen mit gestoertem erstem Byte
+
+// Schreiben zum Display: Kopf C6 A5 bei Bedarf durch den des Displays ersetzen.
+class ZumDisplay : public HardwareSerial {
+ public:
+  using HardwareSerial::HardwareSerial;
+  using HardwareSerial::write;
+  size_t write(const uint8_t *b, size_t n) override {
+    if (n >= 2 && b[0] == KOPF0 && b[1] == KOPF1 && kopfDisplay != KOPF0) {
+      HardwareSerial::write(kopfDisplay);
+      return 1 + HardwareSerial::write(b + 1, n - 1);
+    }
+    return HardwareSerial::write(b, n);
+  }
+  size_t roh(const uint8_t *b, size_t n) { return HardwareSerial::write(b, n); }
+};
+static ZumDisplay uartBObj(2);
+
 // A: liest vom Display, sendet ans Mainboard. B: liest vom Mainboard, sendet ans Display.
 static HardwareSerial &uartA = Serial1;  // RX 15, TX 16
-static HardwareSerial &uartB = Serial2;  // RX 17, TX 18
+static HardwareSerial &uartB = uartBObj;  // RX 17, TX 18 (UART 2)
 
 static bool ausgabe = true;
 
@@ -405,26 +430,56 @@ static void rahmenVomMainboard(uint8_t *r, size_t n) {
 // sofort weitergereicht (z. B. das einzelne FD beim Einschalten).
 static void pumpe(HardwareSerial &quelle, Parser &p, HardwareSerial &ziel, char richtung,
                   void (*fertig)(uint8_t *, size_t)) {
+  const bool vomDisplay = richtung == 'A';
+  // Moeglicher Rahmenanfang. Vom Display C6 oder 5A (siehe kopfDisplay). Vom
+  // Mainboard jedes Byte: Mainboard 2.1 schickt das erste Byte nach einer
+  // Pause manchmal gestoert (E2/E6 statt C6); A5, Laenge und Befehl 80-83
+  // dahinter entscheiden, ob es ein Rahmen ist.
+  auto anfang = [&](uint8_t b) { return vomDisplay ? (b == KOPF0 || b == KOPF_DWIN) : true; };
   while (quelle.available()) {
     uint8_t b = quelle.read();
     p.letztesUs = micros();
-    if (p.n == 0 && b != KOPF0) {
+    if (p.n == 0 && !anfang(b)) {
       ziel.write(b);
       logZeile(richtung, &b, 1);
       continue;
     }
     if (p.n == 1 && b != KOPF1) {
       ziel.write(p.buf, 1);
+      logZeile(richtung, p.buf, 1);
       p.n = 0;
-      if (b == KOPF0) {
+      if (anfang(b)) {
         p.buf[p.n++] = b;
       } else {
         ziel.write(b);
+        logZeile(richtung, &b, 1);
       }
+      continue;
+    }
+    if (p.n == 3 && p.buf[0] != KOPF0 && !vomDisplay && (b < 0x80 || b > 0x83 || p.buf[2] < 2)) {
+      p.buf[p.n++] = b;  // kein Rahmen: gestoertes Byte war doch nur ein Byte
+      ziel.write(p.buf, p.n);
+      logZeile(richtung, p.buf, p.n);
+      p.n = 0;
       continue;
     }
     p.buf[p.n++] = b;
     if (p.n >= 3 && p.n == (size_t)p.buf[2] + 3) {
+      if (p.buf[0] != KOPF0) {
+        if (vomDisplay) {
+          if (kopfDisplay != p.buf[0]) {
+            kopfDisplay = p.buf[0];
+            ereignis("- Display spricht Kopf %02X A5, Bridge uebersetzt", kopfDisplay);
+          }
+          kopfUebersetzt++;
+        } else {
+          kopfRepariert++;
+        }
+        p.buf[0] = KOPF0;
+      } else if (vomDisplay && kopfDisplay != KOPF0) {
+        kopfDisplay = KOPF0;
+        ereignis("- Display spricht Kopf C6 A5");
+      }
       fertig(p.buf, p.n);
       p.n = 0;
     } else if (p.n >= sizeof p.buf) {
@@ -471,6 +526,8 @@ static size_t hexBytes(char *s, uint8_t *out, size_t max) {
 static void zustand() {
   Serial.printf("# baud=%lu kopf=%02X %02X ausgabe=%d scan=%s emulation=%d\n", (unsigned long)BAUD, KOPF0, KOPF1,
                 ausgabe, scanAktiv ? "an" : "aus", emulation);
+  Serial.printf("# display_kopf=%02X uebersetzt=%lu repariert=%lu\n", kopfDisplay, (unsigned long)kopfUebersetzt,
+                (unsigned long)kopfRepariert);
   for (auto &o : overrides)
     if (o.aktiv) Serial.printf("# override vp=0x%04X wert=0x%04X rest=%ld\n", o.vp, o.wert, (long)o.rest);
 }
@@ -634,9 +691,26 @@ void setup() {
   webSetup();
 }
 
+// Schweigt das Display, obwohl das Mainboard fragt, abwechselnd mit beiden
+// Koepfen Register 0x00 (Version) lesen. Die Antwort stellt kopfDisplay ein
+// und geht nicht ans Mainboard (eigene Anfrage).
+static void kopfSuchen() {
+  static uint32_t zuletzt = 0;
+  static bool dwin = true;
+  uint32_t jetzt = millis();
+  if (jetzt - zuletzt < 2000 || jetzt - leitung.zuletztDisplay < 3000 || jetzt - leitung.zuletztMainboard > 1000) return;
+  zuletzt = jetzt;
+  uint8_t f[] = {KOPF0, KOPF1, 0x03, 0x81, 0x00, 0x01};
+  eigeneAnfrageMerken(f, sizeof f);
+  if (dwin) f[0] = KOPF_DWIN;
+  dwin = !dwin;
+  uartBObj.roh(f, sizeof f);
+}
+
 void loop() {
   pumpe(uartA, pDisplay, uartA, 'A', rahmenVomDisplay);
   pumpe(uartB, pMainboard, uartB, 'B', rahmenVomMainboard);
+  kopfSuchen();
   leseBefehle();
   webLoop();
   if (scanAktiv && millis() >= scanNaechster) {

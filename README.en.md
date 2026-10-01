@@ -311,7 +311,7 @@ implicit contract that neither side checks:
 2. **Key codes:** every key writes a fixed value (7 = coffee settings, 20 = menu); new functions need new codes and pages that an old display does not have.
 3. **Variable addresses:** temperatures and settings live at fixed VPs; if one version moves one, the other side reads wrong values.
 4. **Sequences:** from mainboard 2.0 the machine starts by itself after 5 s; display 2.0 adapts its page flow, a display 1.1 expects the old sequence.
-5. **Frame header `C6 A5`:** part of the display project; a stock DWIN display does not talk to this mainboard at all.
+5. **Frame header `C6 A5`:** part of the display project; a stock DWIN display does not talk to this mainboard at all. Replacement displays 2.2 use `5A A5`; with the bridge in between they work anyway, it translates the header.
 
 The connection test at startup (write and read back VP `0x0063`) only checks,
 from everything captured, *whether* a display answers, not *which* one. A
