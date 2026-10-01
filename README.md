@@ -42,9 +42,17 @@ selbst zu sprechen. Ziel ist dasselbe wie beim Reddit-Projekt von
 ✅ ESP32-Bridge: durchreichen und mitschneiden an der Maschine  
 🧪 ESP32-Bridge: Tastendrücke einschleusen, Display emulieren  
 ✅ Weboberfläche mit Display-Nachbau und Live-Werten, am echten Display gelaufen  
-🧪 Mehr als das Display: Ein/Aus aus der Ferne, Home Assistant, Brew by Weight, Verlauf über 24 h  
+✅ Ein/Aus aus der Ferne, Uhr vom Handy stellen, alle Einstellungen und Zähler aus dem Mainboard gelesen  
+🧪 Espresso-App im Browser: Brühprofile je Kaffee, Shot-Log mit Kurven und Bewertung, Wochenplan und Kalender, Brew by Weight mit Bluetooth-Waage, Home Assistant  
 
 ✅ getestet · 🧪 gebaut, noch nicht an der Maschine getestet · 💡 Idee/Vermutung — Details unter [Stand](#-stand)
+
+## 🚀 Schnellstart
+
+1. **Flashen im Browser:** https://larszu.github.io/bezzera-duo-protocol/ (Chrome/Edge, ESP32 per USB-C) – fragt danach gleich das Heim-WLAN ab. Andere Wege: [`docs/flashen.md`](docs/flashen.md).
+2. **Ohne Rechner einrichten:** Handy ins WLAN `duo-bridge` (Passwort `espresso1`), die Seite öffnet sich von selbst → Einstellungen → Heim-WLAN.
+3. **Einbauen:** Verkabelung unter [ESP32-Bridge](#-esp32-bridge).
+4. **Bedienen:** http://duo.local – von unterwegs über Tailscale oder Home Assistant: [`docs/fernzugriff.md`](docs/fernzugriff.md).
 
 > ⚠️ In der Maschine liegen **230 V**. Netzstecker ziehen, bevor du etwas
 > anklemmst. Mit laufender Maschine nur an bereits verlegte Messleitungen gehen.
@@ -118,9 +126,11 @@ Beleg je Aussage steht in [`docs/stand.md`](docs/stand.md).
 | Tastendruck von außen wirkt wie ein echter | ✅ 2026-09-30: Start, Standby, OK, Einstellungen-OK, Uhr stellen |
 | Ein/Aus, Uhr stellen, Weboberfläche mit Live-Werten | ✅ an der Maschine |
 | Home Assistant, Verlauf, Brew by Weight | 🧪 in der Simulation geprüft, mit keiner echten Waage |
+| Espresso-App: Reiter, Profile, Shot-Log, Wochenplan/Kalender, WLAN-Einrichtung, Improv | 🧪 kompiliert, Oberfläche in der Simulation geprüft |
 | Druckworte 5/6 und alle Variablen aus `14.bin` | 🧪 gelesen, [`docs/variablen.md`](docs/variablen.md); Bezug noch nicht mitgeschnitten |
 | Stopp über die Dauerausgabe-Taste | 💡 |
-| Dauerbetrieb (Passwort, OTA, Watchdog, Versorgung) | 💡 nicht gebaut |
+| Passwortschutz, eigenes WLAN-Passwort | 🧪 gebaut |
+| Dauerbetrieb (OTA, Versorgung aus der Maschine) | 💡 nicht gebaut |
 
 Alle Mitschnitte stammen von der kalten Maschine mit leerem Tank; ein Bezug war
 noch nie auf der Leitung.
@@ -434,16 +444,15 @@ Firmware [`bridge/duo_bridge/`](bridge/duo_bridge/) für den **Waveshare
 ESP32-S3-ETH**. Der ESP32 sitzt *in* der Leitung, reicht Rahmen durch,
 schneidet mit, schiebt eigene Rahmen ein oder beantwortet das Mainboard selbst.
 
+Flashen: im Browser über die [Flash-Seite](https://larszu.github.io/bezzera-duo-protocol/)
+oder mit Arduino CLI und esptool, alles in [`docs/flashen.md`](docs/flashen.md):
+
 ```bash
-arduino-cli core install esp32:esp32
+arduino-cli core install esp32:esp32@3.3.12
 FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs,PSRAM=opi
 arduino-cli compile --fqbn $FQBN bridge/duo_bridge
 arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge
 ```
-
-Mit Bluetooth passt die Firmware nicht mehr in die Standardpartition (1,2 MB),
-deshalb `min_spiffs` (1,9 MB). `PSRAM=opi` für den ESP32-S3R8 des Waveshare-Boards:
-Der Verlauf reicht damit 24 h statt 30 min. Ohne PSRAM läuft alles andere gleich.
 
 ### Verkabelung
 
@@ -525,18 +534,24 @@ kamen auch ohne Display gültige Rahmen. Ein „Startbyte“ des Displays gibt e
 - **Am Rechner, ohne WLAN:** `python3 tools/web_lokal.py` → http://localhost:8080,
   spricht per USB mit dem ESP32. Mit `--demo` ganz ohne ESP32: simulierte
   Maschine und Waage.
-- **Eigenes WLAN** `duo-bridge` → http://192.168.4.1, im Heimnetz http://duo.local
-  oder per Ethernet (W5500).
+- **Eigenes WLAN** `duo-bridge` (Anmeldeportal, jede Adresse führt hin), im
+  Heimnetz http://duo.local oder per Ethernet (W5500).
 
-Sie zeigt den **Nachbau des Displays** (320 × 240, SVG, alle Seitentypen) mit
-Live-Werten; ein Klick wirkt wie eine Berührung an dieser Stelle — Wert
-schreiben, ± mit den Grenzen aus dem Flash, Seite wechseln. Dazu Ein/Aus,
-Verlauf, Brew by Weight, Einstellungen, alle VPs, Ereignisprotokoll und Seitenkatalog. Die Lampe
-„Mainboard“ leuchtet nur bei gültigen Rahmen; Störbytes stehen im Protokoll.
+Sechs Reiter, am Handy bedienbar:
 
-> 🔒 Kein Login, und das Passwort des eigenen WLANs steht hier öffentlich —
-> nur zum Testen im eigenen Netz betreiben. Für den Dauerbetrieb kommt ein
-> eigenes Passwort auf dem ESP32 (siehe [Nächste Schritte](#-nächste-schritte)).
+| Reiter | Inhalt |
+|---|---|
+| **Espresso** | Zustand, „bereit“, Kessel- und Drucke, Ein/Standby, Profil-Schnellwahl, laufender Bezug mit Gewicht, Durchfluss, Zeit, Druck |
+| **Profile** | Brühprofile je Kaffee anlegen und auf die Maschine schreiben |
+| **Verlauf** | Temperatur und Druck mit wählbarem Zeitraum (5 min–24 h) und Auflösung (1 s–5 min), Shot-Log mit Kurve, Sternen und Notiz |
+| **Maschine** | Display-Nachbau (Klick = Berührung), alle aus dem Mainboard gelesenen Einstellungen und Zähler, Uhr stellen, Wochenplan, Kalender, Leerlauf |
+| **Einstellungen** | Heim-WLAN suchen und verbinden, Passwörter, Waage per Bluetooth-Suche, Stopp-Taste, Home Assistant |
+| **Diagnose** | Rohbefehle, alle VPs, Seitenkatalog, Ereignisprotokoll |
+
+> 🔒 Das Standardpasswort des WLANs `duo-bridge` (`espresso1`) steht hier
+> öffentlich. Nach der Einrichtung unter **Einstellungen → Zugang** ändern und
+> ein Passwort für die Seite setzen (Benutzer `duo`) – Pflicht vor dem
+> Fernzugriff.
 
 ---
 
@@ -548,12 +563,23 @@ Weboberfläche und liegen im NVS des ESP32, nie im Quelltext.
 
 | Funktion | wie | Stand |
 |---|---|---|
-| **Ein/Aus aus der Ferne** | schreibt VP `0x0000` = 1 und Seite x01 („Für Start drücken“) bzw. VP `0x0000` = 0 und Seite x00 („Standby“ im Seitenmenü), genau wie diese Tasten laut Touch-Konfiguration | 🧪 gebaut · 💡 Wirkung an der Maschine |
+| **Ein/Aus aus der Ferne** | VP `0x0000` = 1 und Seite x01 („Für Start drücken“) bzw. 0 und Seite x00 („Standby“), wie die Tasten | ✅ |
+| **Uhr vom Handy stellen** | über die Seite Datum/Uhrzeit mit OK | ✅ |
+| **Einstellungen und Zähler lesen** | Menüseiten per Tastencode öffnen, das Mainboard schreibt seine Werte (`tools/menue_lesen.py`); Bezüge gesamt aus dem Technikmenü | ✅ 22.263 Bezüge |
+| **Brühprofile** | je Kaffee Temperatur, Vorbrühen, Dampf, Priorität, Ziel; auf die Maschine über die Einstellungsseiten mit Kontrolle | 🧪 |
+| **Shot-Log** | jeder Bezug über den Ausgabezähler (Seite x06): Dauer, max. Druck, Temperatur, Gewicht, Profil; Sterne und Notiz; Kurven der letzten 10 | 🧪 |
+| **Bereit-Anzeige** | Kaffeekessel 60 s innerhalb 1 °C am Sollwert | 🧪 |
+| **Rückspül-Erinnerung** | nach einstellbar vielen Bezügen; Rückspülen an der Maschine wird erkannt | 🧪 |
+| **Wochenplan, Kalender, Leerlauf** | Ein/Aus nach Plan, nach iCal-Terminen mit Stichwort, Standby nach n Minuten ohne Bezug; Zeit per NTP, sonst vom Display | 🧪 |
+| **Gewicht im eingebauten Display** | mit Waage zeigt der Ausgabezähler Gramm statt Sekunden (die Bridge ändert den Wert im Rahmen ans Display) | 🧪 |
 | **Home Assistant** | MQTT mit Discovery, siehe unten | 🧪 |
-| **Verlauf** | VP `0x0050` einmal je Sekunde in einem Ringpuffer, 24 h mit PSRAM (sonst 30 min); Kurve 10 min bis 24 h | 🧪 Simulation |
-| **Druckkurven** | sobald bekannt ist, welches Wort in VP `0x0050` den Druck trägt: „Rohworte zeigen“ im Verlauf, Pumpe laufen lassen, steigendes Wort unter Einstellungen eintragen | 🧪 gebaut · 💡 Druckwort |
-| **Brew by Weight** | Bluetooth- oder WLAN-Waage, Bezug wird erkannt, Kurve aus Gewicht, Durchfluss und Druck, Stopp bei Ziel minus gelerntem Vorlauf über die Stopp-Taste des Tastenfelds | 🧪 gebaut · 💡 Stopp über das Tastenfeld |
-| **Bezüge zählen, Alarme melden** | Zähler im NVS, Alarmseiten (Tank, Wartung, Filter …) als Zustand und Alarm | 🧪 Simulation |
+| **Verlauf** | VP `0x0050` je Sekunde, 24 h mit PSRAM; Zeitraum und Auflösung wählbar | 🧪 |
+| **Druckkurven** | Wort 5 (Pumpe, ×0,5 bar) und 6 (Dampfkessel, ×0,25 bar) aus `14.bin` | 🧪 |
+| **Brew by Weight** | Bluetooth- oder WLAN-Waage, Stopp bei Ziel minus gelerntem Vorlauf über die Stopp-Taste | 🧪 · 💡 Stopp über das Tastenfeld |
+| **Einrichtung ohne Rechner** | WLAN suchen und verbinden im Anmeldeportal; nach dem Flashen im Browser per Improv | 🧪 |
+
+Eigene Seiten im eingebauten Display gehen nicht: Das Display-Projekt ist fest,
+die Bridge kann nur vorhandene Felder mit eigenen Werten füllen.
 
 <p align="center">
   <img src="docs/screenshots/zusatz_rohworte.png" alt="Verlauf mit allen neun Rohworten von VP 0x0050; in der Simulation steigt Wort 1 bei laufender Pumpe" width="800" /><br />
@@ -708,6 +734,8 @@ Alle Python-Skripte brauchen nur die Standardbibliothek.
 | [`tools/duo_live.py`](tools/duo_live.py) | Live-Anzeige im Terminal direkt vom Analyzer oder als Replay |
 | [`tools/bridge.py`](tools/bridge.py) | Befehle an die Bridge schicken und mitlesen |
 | [`tools/web_lokal.py`](tools/web_lokal.py) | Weboberfläche am Rechner über USB; `--demo` ohne ESP32 |
+| [`tools/vp_dump.py`](tools/vp_dump.py) | gesamten Variablenspeicher des Displays lesen, Unterschiede zeigen |
+| [`tools/menue_lesen.py`](tools/menue_lesen.py) | Menüseiten per Tastencode öffnen und mitschreiben, was das Mainboard dabei schreibt |
 | [`tools/web_demo.py`](tools/web_demo.py) | simulierte Maschine und Waage für `--demo` |
 | [`tools/seiten_foto.py`](tools/seiten_foto.py) | alle Seiten durchschalten und per Webcam fotografieren (`brew install imagesnap`) |
 | [`tools/libop_lesen.py`](tools/libop_lesen.py) | Flash-Bereiche des Displays lesen — kennt nur den Lesemodus |
@@ -720,24 +748,18 @@ Tests: `python3 -m unittest discover -s tests`
 
 ## 🧭 Nächste Schritte
 
-1. **Hybridmodus an der Maschine testen:** „OK“ auf „Bitte Tank füllen“ über
-   die Weboberfläche — reagiert das Mainboard wie auf einen echten Druck?
-2. **Emulation mit vollständigem Start:** ESP32 vor der Maschine einschalten,
-   Start mitschneiden, dann ohne Display betreiben.
-3. **Dauerbetrieb:** eigenes Passwort und Login, abschaltbares eigenes WLAN,
-   Firmware-Update per WLAN (OTA), Watchdog, Versorgung aus der Maschine
-   (5-V-Budget prüfen) und feste Verkabelung statt Breadboard.
-4. **Mehr als das Display an der Maschine prüfen:** Ein/Aus, Druckwort in VP
-   `0x0050` finden (Rohworte im Verlauf), Home Assistant gegen den Broker,
-   Brew by Weight mit einer echten Waage; einen Bezug mitschneiden (Seite und
-   Worte für Pumpendruck und Ausgabedauer); für den automatischen Stopp die
-   Dauerausgabe-Taste im Flachbandkabel des Tastenfelds durchmessen.
-5. **Variablen-Konfiguration (`14.bin`)** ebenfalls aus dem Flash lesen: Sie sagt,
-   welche VP an welcher Stelle angezeigt wird — damit auch die Sollwerte auf den
-   Kaffee- und Tee-Seiten.
+1. **Neue Firmware an der Maschine testen:** Profile schreiben, Shot-Log,
+   Wochenplan, Gewicht im Display, Einrichtung über Portal und Improv.
+2. **Einen Bezug mitschneiden:** bestätigt die Druckworte 5/6 und die
+   Shot-Erkennung über Seite x06.
+3. **Auto Ein/Aus des Mainboards entschlüsseln:** Block VP `0x0007`–`0x000E` je
+   Wochentag ist gelesen (z. B. `0 0 9 0 0 2 8 1`), die Bedeutung noch nicht.
+4. **Tastenfeld vermessen** für den automatischen Stopp (PhotoMOS an der
+   Dauerausgabe-Taste).
+5. **Dauerbetrieb:** Firmware-Update per WLAN (OTA), Versorgung aus der
+   Maschine (5-V-Budget prüfen), feste Verkabelung statt Breadboard.
 6. **Touch reparieren oder ersetzen:** Kontakt am 6-poligen Stecker reinigen
-   ([Anleitung](docs/bauteile.md));
-   alternativ den SiS9252 per I²C mitschneiden und vom ESP32 nachbilden lassen.
+   ([Anleitung](docs/bauteile.md)).
 
 <details>
 <summary><b>Frühere Annahmen, die sich nicht bestätigt haben</b></summary>

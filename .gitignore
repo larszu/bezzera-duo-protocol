@@ -8,3 +8,5 @@ captures/probe/
 captures/live.jpg
 # Flash-Auszuege des Displays (Werksprojekt), nicht veroeffentlichen
 flash/
+# Build-Ausgaben von arduino-cli
+build/

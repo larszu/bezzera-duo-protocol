@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Duo Bridge flashen</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+:root{--bg:#0b1220;--karte:#131d31;--linie:#22304d;--text:#e6edf7;--leise:#8b9bb8;--akzent:#4cc9f0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:720px;margin:0 auto;padding:24px 16px}
+h1{font-size:24px;margin:0 0 4px} h2{font-size:15px;color:var(--leise);text-transform:uppercase;letter-spacing:.05em;margin:28px 0 8px}
+.karte{background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:16px;margin:12px 0}
+ol{padding-left:20px} li{margin:6px 0} code{background:#0e1628;padding:1px 5px;border-radius:4px}
+a{color:var(--akzent)} .leise{color:var(--leise);font-size:14px}
+esp-web-install-button button{font:inherit;font-size:17px;padding:12px 22px;border-radius:8px;border:1px solid #2f8a70;background:#1f5d4c;color:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+  <h1>Bezzera Duo Bridge</h1>
+  <p class="leise">Firmware __VERSION__ für den Waveshare ESP32-S3-ETH · <a href="https://github.com/larszu/bezzera-duo-protocol">Projekt auf GitHub</a></p>
+
+  <div class="karte">
+    <ol>
+      <li>ESP32 per USB-C an diesen Rechner stecken.</li>
+      <li>Auf „Installieren“ klicken und den Anschluss wählen (meist „USB JTAG/serial debug unit“).</li>
+      <li>Nach dem Flashen fragt die Seite nach dem Heim-WLAN: Netz wählen, Passwort eingeben.</li>
+      <li>Fertig: Die Bridge ist unter <a href="http://duo.local">http://duo.local</a> erreichbar.</li>
+    </ol>
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate">Installieren</button>
+      <span slot="unsupported">Dieser Browser kann nicht flashen. Bitte Chrome oder Edge am Rechner verwenden (nicht Safari, nicht Firefox, nicht am Handy).</span>
+      <span slot="not-allowed">Flashen geht nur über https oder localhost.</span>
+    </esp-web-install-button>
+  </div>
+
+  <h2>Ohne Rechner einrichten</h2>
+  <div class="karte">
+    Ist die Firmware schon drauf: Handy mit dem WLAN <code>duo-bridge</code> verbinden (Passwort <code>espresso1</code>),
+    die Seite öffnet sich von selbst. Unter <b>Einstellungen → Heim-WLAN</b> das eigene Netz wählen, danach das
+    WLAN-Passwort der Bridge ändern.
+  </div>
+
+  <h2>Klappt nicht?</h2>
+  <div class="karte leise">
+    Kein Anschluss in der Liste: anderes USB-Kabel (viele sind nur Ladekabel) oder den Taster <b>BOOT</b> gedrückt
+    halten, kurz <b>RESET</b> drücken, BOOT loslassen, dann noch einmal „Installieren“.
+    Ausführlich: <a href="https://github.com/larszu/bezzera-duo-protocol/blob/main/docs/flashen.md">docs/flashen.md</a>.
+  </div>
+</main>
+</body>
+</html>

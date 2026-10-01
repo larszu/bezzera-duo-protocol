@@ -16,6 +16,7 @@ struct Einstellungen {
   String waageUrl, waageTopic, waageBle;  // waageBle: Adresse oder leer = erste bekannte Waage
   float ziel = 36, vorlauf = 2;
   bool lernen = true;
+  bool gewichtImDisplay = true;  // Ausgabezaehler zeigt mit Waage Gramm statt Sekunden
   int8_t stoppPin = -1;
   bool stoppHigh = true;
   uint16_t stoppPulsMs = 300;  // so lange "drueckt" der Ausgang die Taste
@@ -50,6 +51,7 @@ static void einstellungenLaden() {
   cfg.ziel = p.getFloat("ziel", 36);
   cfg.vorlauf = p.getFloat("vorlauf", 2);
   cfg.lernen = p.getBool("lernen", true);
+  cfg.gewichtImDisplay = p.getBool("gew_display", true);
   cfg.stoppPin = p.getChar("stopp_pin", -1);
   cfg.stoppHigh = p.getBool("stopp_high", true);
   cfg.stoppPulsMs = p.getUShort("stopp_puls", 300);
@@ -76,6 +78,7 @@ static void einstellungenSpeichern() {
   p.putFloat("ziel", cfg.ziel);
   p.putFloat("vorlauf", cfg.vorlauf);
   p.putBool("lernen", cfg.lernen);
+  p.putBool("gew_display", cfg.gewichtImDisplay);
   p.putChar("stopp_pin", cfg.stoppPin);
   p.putBool("stopp_high", cfg.stoppHigh);
   p.putUShort("stopp_puls", cfg.stoppPulsMs);
@@ -105,6 +108,7 @@ static bool setzeEinstellung(const String &k, const String &v) {
   else if (k == "ziel") cfg.ziel = constrain(zahlAus(v, cfg.ziel), 0.0f, 200.0f);
   else if (k == "vorlauf") cfg.vorlauf = constrain(zahlAus(v, cfg.vorlauf), 0.0f, 10.0f);
   else if (k == "lernen") cfg.lernen = v == "1" || v == "on" || v == "true";
+  else if (k == "gewicht_display") cfg.gewichtImDisplay = v == "1" || v == "on" || v == "true";
   else if (k == "stopp_pin") cfg.stoppPin = stoppPinErlaubt(v.toInt()) ? v.toInt() : -1;
   else if (k == "stopp_high") cfg.stoppHigh = v == "1" || v == "on" || v == "true";
   else if (k == "stopp_puls") cfg.stoppPulsMs = constrain(v.toInt(), 50, 3000);
@@ -559,4 +563,22 @@ static String bezugJson() {
   }
   j += "]}";
   return j;
+}
+
+// ─── Werte der Bridge auf dem eingebauten Display ─────────────────────────
+// Das Display-Projekt ist fest; eigene Seiten gehen nicht. Vorhandene Felder
+// lassen sich aber fuellen, indem die Bridge Rahmen des Mainboards anpasst:
+// Waehrend eines Bezugs mit Waage zeigt die grosse Zahl im Ausgabezaehler
+// (VP 0x0059, sonst Sekunden) das Gewicht in Gramm. Ohne Waage bleibt alles,
+// wie das Mainboard es schickt.
+static void anzeigeAnpassen(uint8_t *r, size_t n) {
+  if (!cfg.gewichtImDisplay || bezugZustand != BZ_LAEUFT || isnan(bezugG) || millis() - waageMs > 1500) return;
+  if (n < 9 || r[0] != KOPF0 || r[1] != KOPF1 || r[3] != 0x82) return;
+  uint16_t vp = (r[4] << 8) | r[5];
+  size_t worte = (n - 6) / 2;
+  if (vp > 0x59 || vp + worte <= 0x59) return;
+  size_t i = 6 + 2 * (0x59 - vp);
+  uint16_t g = bezugG < 0 ? 0 : (uint16_t)lroundf(bezugG);
+  r[i] = g >> 8;
+  r[i + 1] = g & 0xFF;
 }

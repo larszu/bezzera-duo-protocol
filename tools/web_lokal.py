@@ -118,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
             self.wfile.write(daten)
 
         def do_GET(self):
-            if self.path.startswith(("/api/zusatz", "/api/verlauf", "/api/bezug", "/api/waage")):
+            if self.path.startswith("/api/") and not self.path.startswith(("/api/status", "/api/cmd")):
                 a = usb.zusatz(self.path)
                 self._antwort("application/json" if a.startswith(b"{") else "text/plain", a)
             elif self.path.startswith("/api/status"):

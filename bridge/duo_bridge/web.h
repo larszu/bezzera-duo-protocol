@@ -48,6 +48,11 @@ static DNSServer dns;  // im eigenen WLAN: jeder Name fuehrt zur Bridge (Captive
 static volatile uint32_t heimWlanFehlschlaege = 0;
 static uint32_t heimWlanPause = 0;
 static bool heimWlanAn = false;
+static void ereignis(const char *fmt, ...);
+
+#include "netz.h"
+#include "zeitplan.h"
+#include "improv.h"
 
 static void netzEreignis(arduino_event_id_t e) {
   if (e == ARDUINO_EVENT_ETH_GOT_IP) {
@@ -144,12 +149,15 @@ String statusText(uint32_t seit) {
   return j;
 }
 
+static bool zugang();
 static void statusJson() {
+  if (!zugang()) return;
   uint32_t seit = server.hasArg("seit") ? server.arg("seit").toInt() : 0;
   server.send(200, "application/json", statusText(seit));
 }
 
 static void befehlWeb() {
+  if (!zugang()) return;
   String z = server.arg("plain");
   z.trim();
   if (!z.length() || z.length() > 380 || strchr("pwodmse", z[0]) == nullptr) {
@@ -319,6 +327,45 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
     antwort += "},\"bezuege_maschine\":";
     antwort += bezuegeMaschine();
     antwort += '}';
+  } else if (pfad == "/api/wlan") {
+    if (queryWert(query, "suche") == "1" && WiFi.scanComplete() != WIFI_SCAN_RUNNING) {
+      WiFi.scanDelete();
+      WiFi.scanNetworks(true);  // asynchron
+    }
+    antwort = wlanJson();
+  } else if (pfad == "/api/wlan_setzen") {
+    heimWlanSpeichern(queryWert(rumpf, "ssid"), queryWert(rumpf, "pass"));
+    antwort = "ok";
+  } else if (pfad == "/api/sicherheit") {  // ap_pass (mind. 8 Zeichen), web_pass ("-" = entfernen)
+    String ap = queryWert(rumpf, "ap_pass"), web = queryWert(rumpf, "web_pass");
+    Preferences pr;
+    pr.begin("netz", false);
+    if (ap.length() >= 8) {
+      apPass = ap;
+      pr.putString("ap_pass", ap);
+    }
+    if (web.length()) {
+      webPass = web == "-" ? "" : web;
+      pr.putString("web_pass", webPass);
+    }
+    pr.end();
+    antwort = ap.length() && ap.length() < 8 ? "WLAN-Passwort braucht mindestens 8 Zeichen" : "ok";
+    if (ap.length() >= 8) WiFi.softAP("duo-bridge", apPass.c_str());  // gilt sofort
+  } else if (pfad == "/api/zeitplan") {
+    if (rumpf.length()) {
+      int a = 0;
+      while (a < (int)rumpf.length()) {
+        int e = rumpf.indexOf('&', a);
+        if (e < 0) e = rumpf.length();
+        String paar = rumpf.substring(a, e);
+        a = e + 1;
+        int g = paar.indexOf('=');
+        if (g > 0) zeitplanFeld(urlDecode(paar.substring(0, g)), urlDecode(paar.substring(g + 1)));
+      }
+      planSpeichern();
+      kalenderNeuLaden = true;
+    }
+    antwort = zeitplanJson();
   } else if (pfad == "/api/waage") {
     float g = waageZahl((rumpf.length() ? rumpf : queryWert(query, "g")).c_str());
     if (isnan(g)) {
@@ -335,6 +382,7 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
 }
 
 static void zusatzWeb() {
+  if (server.uri() != "/api/waage" && !zugang()) return;  // WLAN-Waagen melden ohne Passwort
   String q, antwort;
   for (int i = 0; i < server.args(); i++) {
     if (server.argName(i) == "plain") continue;
@@ -369,7 +417,8 @@ void webSetup() {
   Network.onEvent(netzEreignis);
   ETH.begin(ETH_PHY_W5500, 1, ETH_CS, ETH_IRQ, ETH_RST, SPI2_HOST, ETH_SCK, ETH_MISO, ETH_MOSI);
   WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP("duo-bridge", "espresso1");
+  netzLaden();
+  WiFi.softAP("duo-bridge", apPass.c_str());
   Preferences pref;
   pref.begin("netz", true);
   String ssid = pref.getString("ssid", ""), pass = pref.getString("pass", "");
@@ -382,8 +431,12 @@ void webSetup() {
   Serial.printf("# WLAN duo-bridge: http://%s\n", WiFi.softAPIP().toString().c_str());
   MDNS.begin("duo");
   MDNS.addService("http", "tcp", 80);
-  server.on("/", HTTP_GET, [] { server.send_P(200, "text/html; charset=utf-8", WEB_UI); });
-  server.on("/tasten.js", HTTP_GET, [] { server.send_P(200, "text/javascript; charset=utf-8", TASTEN_JS); });
+  server.on("/", HTTP_GET, [] {
+    if (zugang()) server.send_P(200, "text/html; charset=utf-8", WEB_UI);
+  });
+  server.on("/tasten.js", HTTP_GET, [] {
+    if (zugang()) server.send_P(200, "text/javascript; charset=utf-8", TASTEN_JS);
+  });
   server.on("/api/status", HTTP_GET, statusJson);
   server.on("/api/cmd", HTTP_POST, befehlWeb);
   // Captive-Portal-Pruefadressen von Android, Apple und Windows und alles
@@ -399,12 +452,14 @@ void webSetup() {
   dns.start(53, "*", WiFi.softAPIP());
   for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage",
                         "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion",
-                        "/api/ble_suche", "/api/ble_geraete", "/api/maschine"})
+                        "/api/ble_suche", "/api/ble_geraete", "/api/maschine", "/api/wlan", "/api/wlan_setzen",
+                        "/api/sicherheit", "/api/zeitplan"})
     server.on(p, zusatzWeb);
   server.begin();
   zusatzSetup();
   profileLaden();
   shotsSetup();
+  zeitplanSetup();
   mqttSetup();
   waageSetup();
 }
@@ -431,6 +486,9 @@ void webLoop() {
   displayNachlesen();
   ablaufLoop();
   shotsLoop();
+  zeitLoop();
+  zeitplanLoop();
+  improvLoop();
   verlaufLoop();
   bezugLoop();
   mqttLoop();
@@ -485,12 +543,7 @@ void heimWlan(char *s) {
       (imNamen ? ssid : pass) += *c;
     }
   }
-  pref.putString("ssid", ssid);
-  pref.putString("pass", pass);
   pref.end();
   Serial.printf("# Heim-WLAN %s gespeichert, verbinde ...\n", ssid.c_str());
-  heimWlanAn = true;
-  heimWlanFehlschlaege = 0;
-  heimWlanPause = 0;
-  WiFi.begin(ssid.c_str(), pass.c_str());
+  heimWlanSpeichern(ssid, pass);
 }
