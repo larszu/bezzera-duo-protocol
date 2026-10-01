@@ -61,6 +61,8 @@ teilen sich aber einen **stillen Vertrag**, der nirgends geprüft wird:
    4. Karte bei eingeschalteter Maschine ins Display, nach wenigen Sekunden ziehen, Maschine aus und ein.
 
    Danach meldet Register `0x13` den Wert `C6`, auch nach dem Neustart, und Display und Mainboard sprechen ohne Bridge miteinander.
+
+   Gelegentlich bleibt der Start ohne Bridge am Startbild („RFT 1.1 / FW 2.1“) hängen. Vermutlich verpasst das Mainboard den ersten Verbindungstest; beim Wiederholen kommt das erste Byte oft verfälscht an (`E2`/`E6` statt `C6`), das Display verwirft den Rahmen. Abhilfe: Maschine aus und wieder ein. Die Bridge repariert solche Rahmen, mit ihr startet die Maschine zuverlässig.
 6. **Verbindungstest VP `0x0063`.** Das Mainboard schreibt seine Version dorthin und liest sie zurück. Nach allem, was mitgeschnitten ist, prüft es damit nur, ob überhaupt ein Display antwortet, nicht dessen Version. Eine unpassende Kombination startet deshalb vermutlich und verhält sich erst dann falsch.
 
 Die Displays 2.0 und 2.2 unterscheiden sich vermutlich in Seiten und Tasten
