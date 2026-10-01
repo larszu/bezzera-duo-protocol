@@ -13,8 +13,8 @@ braucht weder Installation noch SDK.
 ![Seitenbau](screenshots/seitenbau.png)
 
 1. Display sichern: `python3 tools/display_sichern.py alles` ([Anleitung](display_sichern.md)).
-2. Im Seitenbau `lib_013.bin` bis `lib_016.bin` aus der Sicherung laden.
-3. Platz wählen (96–99, 196–199, 296–299; beim Display 2.2 sind 198, 199, 298, 299 belegt), Hintergrund, Texte, Tasten und Zahlen setzen.
+2. Im Seitenbau `lib_013.bin` bis `lib_018.bin` aus der Sicherung laden (Variablen: je 64 Seiten eine Bibliothek).
+3. Platz wählen (96–99, 196–199, 296–299), Hintergrund, Texte, Tasten und Zahlen setzen.
 4. **DWIN_SET als ZIP** exportieren, den Ordner auf eine leere FAT32-SD-Karte kopieren,
    bei ausgeschalteter Maschine ins Display stecken, einschalten, warten, Karte ziehen, neu starten.
 
@@ -45,7 +45,7 @@ Zehnmal schnell auf den Schriftzug der Startseite tippen (rechts neben der
 Menütaste), am Display oder im Nachbau der Weboberfläche.
 
 Voraussetzungen:
-- **Doom-Seite:** Seitenbau → *Vorlage: Doom-Seite* → Platz 297 → ZIP → SD-Karte.
+- **Doom-Seite:** Seitenbau → *Vorlage: Doom-Seite* → Platz 299 → ZIP → SD-Karte.
   Sie trägt zwei Zeichenflächen: VP `0x2000` (Bitmap 160×100) und `0x6000` (vergrößern).
 - **WAD-Datei:** Weboberfläche → Diagnose → Doom → hochladen, z. B. die
   Shareware-`doom1.wad` (4 MB). Die Datei liegt nur auf dem ESP32, nicht im Repo.

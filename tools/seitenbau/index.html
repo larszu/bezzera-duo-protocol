@@ -60,7 +60,7 @@ code{font-size:12px}
       <label>Hintergrund <input type="color" id="bg_farbe" value="#101418"></label>
       <label>Bild <input type="file" id="bg_bild" accept="image/*"></label><button id="bg_weg">Bild entfernen</button></div>
     <div class="reihe"><button id="vorlage_doom">Vorlage: Doom-Seite</button><button id="vorlage_leiste">Vorlage: Espresso-Leiste</button></div>
-    <p class="hinweis">Frei sind 96–99 (Englisch), 196–199 (Deutsch) und 296–299 (Italienisch). Display 2.2 belegt 198, 199, 298 und 299 selbst. Die Doom-Seite gehört standardmäßig auf 297.</p>
+    <p class="hinweis">Frei sind 96–99 (Englisch), 196–199 (Deutsch) und 296–299 (Italienisch). Die Doom-Seite gehört standardmäßig auf 299.</p>
   </section>
   <section>
     <h2>Hinzufügen</h2>
@@ -72,7 +72,7 @@ code{font-size:12px}
   </section>
   <section>
     <h2>Display-Sicherung laden</h2>
-    <p class="hinweis">Aus <code>tools/display_sichern.py</code>: <code>lib_013.bin</code> (Touch) und <code>lib_014.bin</code>–<code>lib_016.bin</code> (Variablen). Ohne sie gibt es nur das Bild.</p>
+    <p class="hinweis">Aus <code>tools/display_sichern.py</code>: <code>lib_013.bin</code> (Touch) und <code>lib_014.bin</code>–<code>lib_018.bin</code> (Variablen, je 64 Seiten). Ohne sie gibt es nur das Bild.</p>
     <div class="reihe"><input type="file" id="libs" multiple accept=".bin"></div>
     <div id="lib_status" class="hinweis">noch nichts geladen</div>
   </section>
@@ -217,10 +217,10 @@ $("bg_bild").onchange=()=>{const f=$("bg_bild").files[0]; if(!f) return; const r
     const s=Math.max(W/i.width,H/i.height); g.drawImage(i,(W-i.width*s)/2,(H-i.height*s)/2,i.width*s,i.height*s); p.bild=c.toDataURL("image/png"); bildLaden(p.bild)}; i.src=r.result};
   r.readAsDataURL(f)};
 $("bg_weg").onclick=()=>{p.bild=null; bildLaden(null)};
-$("vorlage_doom").onclick=()=>{p={seite:297,bg:"#000000",bild:null,el:[
+$("vorlage_doom").onclick=()=>{p={seite:299,bg:"#000000",bild:null,el:[
   {typ:"flaeche",x:0,y:0,b:W,h:H,vp:"0x2000"},{typ:"flaeche",x:0,y:0,b:W,h:H,vp:"0x6000"},
   {typ:"text",x:6,y:4,b:60,h:12,text:"DOOM",groesse:12,farbe:"#8a1a1a",fett:true}]};
-  $("seite").value=297; $("bg_farbe").value="#000000"; bildLaden(null); gewaehlt=-1; zeichne(); eigenschaften()};
+  $("seite").value=299; $("bg_farbe").value="#000000"; bildLaden(null); gewaehlt=-1; zeichne(); eigenschaften()};
 $("vorlage_leiste").onclick=()=>{p.el.push(
   {typ:"text",x:16,y:12,b:100,h:22,text:"Espresso",groesse:22,farbe:"#ffffff",fett:true},
   {typ:"zahl",x:16,y:60,b:90,h:36,vp:"0x0053",stellen:3,nachkomma:0,farbe:"#ffffff",vorlage:0},
@@ -232,15 +232,16 @@ $("vorlage_leiste").onclick=()=>{p.el.push(
   {typ:"taste",x:214,y:170,b:90,h:52,art:"seite",ziel:101,grafik:true,beschriftung:"Zurück",farbe:"#3a4652",textfarbe:"#ffffff",groesse:18,radius:10}); zeichne()};
 
 // ── Sicherung laden ──
-const SEITE14=2048, EINTRAG=32;
+const SEITE14=2048, EINTRAG=32, LIB=0x20000;
 $("libs").onchange=async()=>{
   const fs=[...$("libs").files], nr=f=>{const m=f.name.match(/(\d+)\.bin$/i); return m?+m[1]:-1};
   const teile={}; for(const f of fs) teile[nr(f)]=new Uint8Array(await f.arrayBuffer());
   const msg=[];
-  if(teile[13]){lib13=teile[13]; msg.push(`Touch: ${touchEintraege(lib13).length} Tasten`)}
+  // Eine Bibliothek sind 128 KB (64 Seiten); aeltere Sicherungen mit 256 KB je Datei enthalten sie doppelt
+  if(teile[13]){lib13=teile[13].slice(0,LIB); msg.push(`Touch: ${touchEintraege(lib13).length} Tasten`)}
   if(teile[14]){const n=300*SEITE14, a=new Uint8Array(n).fill(0xFF); let o=0;
-    for(const k of [14,15,16]){if(!teile[k]) break; a.set(teile[k].subarray(0,Math.min(teile[k].length,n-o)),o); o+=teile[k].length; if(o>=n) break}
-    lib14=a; if(o<n) msg.push(`<span class="warn">Variablen nur bis Seite ${Math.floor(o/SEITE14)-1}: lib_015/016.bin fehlen</span>`);
+    for(const k of [14,15,16,17,18]){if(!teile[k]) break; const t=teile[k].subarray(0,Math.min(LIB,n-o)); a.set(t,o); o+=t.length; if(o>=n) break}
+    lib14=a; if(o<n) msg.push(`<span class="warn">Variablen nur bis Seite ${Math.floor(o/SEITE14)-1}: lib_015–018.bin fehlen</span>`);
     vorlagenSuchen(); msg.push(`Variablen: ${vorlagen.length} Zahlenanzeigen als Schriftvorlage`)}
   $("lib_status").innerHTML=msg.join(" · ")||"keine passende Datei (Namen wie lib_013.bin)"; eigenschaften()};
 function vorlagenSuchen(){vorlagen=[]; const gesehen=new Set();
@@ -314,7 +315,7 @@ function laden(blob,name){const a=document.createElement("a"); a.href=URL.create
 $("export").onclick=async()=>{const st=$("export_status");
   try{const d=[["DWIN_SET/"+p.seite+".bmp",await bmp()]], fehlt=[];
     if(p.el.some(e=>e.typ==="taste")){if(lib13) d.push(["DWIN_SET/13.bin",neues13()]); else fehlt.push("lib_013.bin (Tasten)")}
-    if(p.el.some(e=>e.typ==="zahl"||e.typ==="flaeche")){if(lib14) d.push(["DWIN_SET/14.bin",neues14()]); else fehlt.push("lib_014–016.bin (Anzeigen)")}
+    if(p.el.some(e=>e.typ==="zahl"||e.typ==="flaeche")){if(lib14) d.push(["DWIN_SET/14.bin",neues14()]); else fehlt.push("lib_014–018.bin (Anzeigen)")}
     d.push(["seitenbau.json",new TextEncoder().encode(JSON.stringify(p,null,1))]);
     laden(zip(d),`duo-seite-${p.seite}.zip`);
     st.innerHTML=fehlt.length?`<span class="warn">Ohne ${fehlt.join(" und ")}: Die ZIP enthält nur das Bild. Erst die Sicherung laden.</span>`:`ZIP mit ${d.length-1} Dateien für Seite ${p.seite}.`}

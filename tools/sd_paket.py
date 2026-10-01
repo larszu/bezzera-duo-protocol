@@ -7,9 +7,10 @@ fuer mehrere Seiten auf einmal und mit Konfiguration:
     python3 sd_paket.py flash/sicherung-20261001-2120 --ziel /Volumes/DWIN \\
         --seite seiten/doom.json --seite seiten/test.json --config R2=05
 
-Erzeugt DWIN_SET/<seite>.bmp je Seite, 13.bin (Touch, volle 256 KB) und
-14.bin (Variablen, volle 768 KB = Bibliothek 14-16) und CONFIG.TXT. Alles
-hinter der Touch-Tabelle und hinter Seite 299 bleibt aus der Sicherung erhalten. Die Projektdateien sind
+Erzeugt DWIN_SET/<seite>.bmp je Seite, 13.bin (Touch, 128 KB = Bibliothek 13),
+14.bin (Variablen der Seiten 0-299, 600 KB ab Bibliothek 14, je 64 Seiten
+eine Bibliothek) und CONFIG.TXT. Alles hinter der Touch-Tabelle bleibt aus
+der Sicherung erhalten. Die Projektdateien sind
 seitenbau.json-Dateien (Seitenbau: "Projekt speichern"). Die Ausgangsdateien
 kommen vollstaendig aus der Sicherung; nur die genannten Seiten werden ersetzt.
 Prueft am Ende, dass alle anderen Seiten byte-gleich geblieben sind.
@@ -26,7 +27,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H = 320, 240
 SEITE14, EINTRAG = 2048, 32
-SEITEN = 3 * 128  # 14.bin ueber Bibliothek 14-16; Display 2.2 nutzt auch Seiten ab 300
+LIB = 0x20000  # eine Bibliothek: 64 K Worte = 128 KB (gemessen; darueber faengt die Adresse von vorn an)
+SEITEN = 300
+LIBS14 = (14, 15, 16, 17, 18)  # Seite p liegt in Bibliothek 14 + p // 64
 FREI = {96, 97, 98, 99, 196, 197, 198, 199, 296, 297, 298, 299}
 SCHRIFT = "/System/Library/Fonts/Helvetica.ttc"
 # Konfiguration des Displays 2.2 (Register 0x10-0x1C), R0/R4 nie setzen, RB loescht alles
@@ -142,18 +145,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", action="append", default=[], help="z. B. R2=05 (Touch-Piepen aus)")
     a = ap.parse_args(argv)
 
-    lies = lambda n: open(os.path.join(a.sicherung, f"lib_{n:03d}.bin"), "rb").read()
+    lies = lambda n: open(os.path.join(a.sicherung, f"lib_{n:03d}.bin"), "rb").read()[:LIB]
     lib13 = lies(13)
-    lib14 = bytearray(b"\xff" * (SEITEN * SEITE14))
-    o = 0
-    for n in (14, 15, 16):
+    lib14 = bytearray()
+    for n in LIBS14:
         pfad = os.path.join(a.sicherung, f"lib_{n:03d}.bin")
-        d = open(pfad, "rb").read() if os.path.exists(pfad) else b"\xff" * 0x40000
         if not os.path.exists(pfad):
-            print(f"Hinweis: lib_{n:03d}.bin fehlt in der Sicherung, Seiten dort gelten als leer")
-        teil = d[:len(lib14) - o]
-        lib14[o:o + len(teil)] = teil
-        o += len(teil)
+            raise SystemExit(f"lib_{n:03d}.bin fehlt in der Sicherung")
+        lib14 += lies(n)
+    lib14 = lib14[:SEITEN * SEITE14]
     alt14 = bytes(lib14)
     vl = vorlagen(lib14)
     touch = touch_eintraege(lib13)

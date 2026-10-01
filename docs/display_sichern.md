@@ -11,7 +11,7 @@ zweimal gelesen, nur gleiche Lesungen gehen raus. Der Rechner sammelt nur ein.
 
 ```sh
 python3 tools/display_sichern.py suche   # welche Bibliotheken 0–127 Inhalt haben
-python3 tools/display_sichern.py alles   # alle mit Inhalt, je 256 KB, + Bildproben 128/201/296
+python3 tools/display_sichern.py alles   # alle mit Inhalt, je 128 KB, + Bildproben 128/201/296
 ```
 
 Ablage: `flash/sicherung-<Datum>/` mit `manifest.json` (SHA-256), nicht im Repo.
