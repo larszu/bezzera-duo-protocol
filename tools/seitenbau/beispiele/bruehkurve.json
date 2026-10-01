@@ -6,11 +6,11 @@
   {
    "typ": "text",
    "x": 8,
-   "y": 6,
+   "y": 8,
    "b": 40,
    "h": 17,
    "text": "Brühkurve",
-   "groesse": 17,
+   "groesse": 15,
    "farbe": "#ffffff",
    "fett": true
   },
@@ -272,52 +272,6 @@
    "fett": false
   },
   {
-   "typ": "zahl",
-   "x": 120,
-   "y": 4,
-   "b": 50,
-   "h": 24,
-   "vp": "0x0053",
-   "stellen": 3,
-   "nachkomma": 0,
-   "farbe": "#ff9a3c",
-   "vorlage": 2
-  },
-  {
-   "typ": "text",
-   "x": 158,
-   "y": 10,
-   "b": 40,
-   "h": 12,
-   "text": "°C",
-   "groesse": 12,
-   "farbe": "#ff9a3c",
-   "fett": false
-  },
-  {
-   "typ": "zahl",
-   "x": 180,
-   "y": 4,
-   "b": 60,
-   "h": 24,
-   "vp": "0x0311",
-   "stellen": 3,
-   "nachkomma": 1,
-   "farbe": "#ffffff",
-   "vorlage": 2
-  },
-  {
-   "typ": "text",
-   "x": 222,
-   "y": 10,
-   "b": 40,
-   "h": 12,
-   "text": "s",
-   "groesse": 12,
-   "farbe": "#ffffff",
-   "fett": false
-  },
-  {
    "typ": "flaeche",
    "x": 36,
    "y": 34,
@@ -332,29 +286,6 @@
    "b": 249,
    "h": 151,
    "vp": "0x0480"
-  },
-  {
-   "typ": "zahl",
-   "x": 236,
-   "y": 4,
-   "b": 60,
-   "h": 24,
-   "vp": "0x0310",
-   "stellen": 3,
-   "nachkomma": 1,
-   "farbe": "#7ddc8a",
-   "vorlage": 2
-  },
-  {
-   "typ": "text",
-   "x": 304,
-   "y": 10,
-   "b": 40,
-   "h": 12,
-   "text": "g",
-   "groesse": 12,
-   "farbe": "#7ddc8a",
-   "fett": false
   },
   {
    "typ": "taste",
@@ -396,7 +327,7 @@
   },
   {
    "typ": "text",
-   "x": 134,
+   "x": 136,
    "y": 221,
    "b": 40,
    "h": 10,
@@ -430,7 +361,7 @@
   },
   {
    "typ": "text",
-   "x": 212,
+   "x": 216,
    "y": 221,
    "b": 40,
    "h": 10,
@@ -453,6 +384,75 @@
    "textfarbe": "#ffffff",
    "groesse": 15,
    "radius": 8
+  },
+  {
+   "typ": "zahl",
+   "x": 92,
+   "y": 4,
+   "b": 39,
+   "h": 20,
+   "vp": "0x0053",
+   "stellen": 3,
+   "nachkomma": 0,
+   "farbe": "#ff9a3c",
+   "vorlage": 0
+  },
+  {
+   "typ": "text",
+   "x": 133,
+   "y": 10,
+   "b": 20,
+   "h": 12,
+   "text": "°C",
+   "groesse": 12,
+   "farbe": "#ff9a3c",
+   "fett": false
+  },
+  {
+   "typ": "zahl",
+   "x": 158,
+   "y": 4,
+   "b": 52,
+   "h": 20,
+   "vp": "0x0311",
+   "stellen": 2,
+   "nachkomma": 1,
+   "farbe": "#ffffff",
+   "vorlage": 0
+  },
+  {
+   "typ": "text",
+   "x": 212,
+   "y": 10,
+   "b": 20,
+   "h": 12,
+   "text": "s",
+   "groesse": 12,
+   "farbe": "#ffffff",
+   "fett": false
+  },
+  {
+   "typ": "zahl",
+   "x": 226,
+   "y": 4,
+   "b": 65,
+   "h": 20,
+   "vp": "0x0310",
+   "stellen": 3,
+   "nachkomma": 1,
+   "farbe": "#7ddc8a",
+   "vorlage": 0
+  },
+  {
+   "typ": "text",
+   "x": 293,
+   "y": 10,
+   "b": 20,
+   "h": 12,
+   "text": "g",
+   "groesse": 12,
+   "farbe": "#7ddc8a",
+   "fett": false
   }
  ]
 }
