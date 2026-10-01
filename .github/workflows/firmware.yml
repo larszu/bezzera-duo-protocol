@@ -41,6 +41,7 @@ jobs:
           mkdir -p site/seitenbau && cp tools/seitenbau/index.html site/seitenbau/
           (cd tools/display_kopf_c6 && zip -r ../../site/display_kopf_c6.zip DWIN_SET)
           cp build/duo_bridge.ino.merged.bin site/duo_bridge.bin
+          cp build/duo_bridge.ino.bin site/duo_bridge.ino.bin
           sed -i "s/__VERSION__/${VERSION}/" site/manifest.json site/index.html
       - uses: actions/upload-pages-artifact@v4
         with:

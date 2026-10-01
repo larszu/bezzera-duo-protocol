@@ -54,6 +54,19 @@ static void eigeneSeitenAntwort(const uint8_t *r, size_t n) {
 // und Beschriftung stehen im Hintergrundbild (tools/seitenbau/beispiele/
 // bruehkurve.json). Linienbefehl 0x0002: Anzahl Strecken, Farbe, Punkte.
 static const uint16_t BK_VP_DRUCK = 0x0400, BK_VP_TEMP = 0x0480;
+static const int32_t BK_SEITE = 196;
+
+// Steht das Display auf der Bruehkurve, bleibt es dort, wenn das Mainboard beim
+// Bezug auf seine Ausgabeseite (x06) und danach zur Startseite (x01) schalten
+// will; der Rahmen geht nicht ans Display. Alarme und Standby kommen durch. Das
+// Mainboard liest die Seite nie zurueck (alle Mitschnitte), merkt es also nicht.
+static bool kurveHalten(const uint8_t *r, size_t n) {
+  if (n != 7 || r[3] != 0x80 || r[4] != 0x03 || leitung.seite != BK_SEITE) return false;
+  uint16_t s = (r[5] << 8) | r[6];
+  if (s % 100 != 6 && s % 100 != 1) return false;
+  ereignis("- Bruehkurve bleibt (Mainboard wollte Seite %u)", s);
+  return true;
+}
 static const int BK_X0 = 36, BK_Y0 = 34, BK_B = 248, BK_H = 150;  // Plotbereich, muss zum Bild passen
 static const int BK_SEK = 45, BK_PUNKTE = 60;
 static const float BK_DRUCK_MAX = 12, BK_T_MIN = 80, BK_T_MAX = 100;
