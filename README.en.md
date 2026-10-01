@@ -42,9 +42,17 @@ speak it yourself. The goal is the same as in the Reddit project by
 ✅ ESP32 bridge: pass-through and capture on the machine  
 🧪 ESP32 bridge: inject button presses, emulate the display  
 ✅ Web UI with display replica and live values, run against the real display  
-🧪 Beyond the display: remote on/off, Home Assistant, brew by weight, 24 h history  
+✅ Remote on/off, set the clock from the phone, all settings and counters read from the mainboard  
+🧪 Espresso app in the browser: brew profiles per coffee, shot log with curves and rating, weekly schedule and calendar, brew by weight with a Bluetooth scale, Home Assistant  
 
 ✅ tested · 🧪 built, not yet tested on the machine · 💡 idea / assumption — details under [Status](#-status)
+
+## 🚀 Quick start
+
+1. **Flash in the browser:** https://larszu.github.io/bezzera-duo-protocol/ (Chrome/Edge, ESP32 via USB-C) – asks for your home Wi-Fi right after. Other ways: [`docs/flashen.en.md`](docs/flashen.en.md).
+2. **Set up without a computer:** connect the phone to Wi-Fi `duo-bridge` (password `espresso1`), the page opens by itself → Einstellungen → Heim-WLAN.
+3. **Install:** wiring under [ESP32 bridge](#-esp32-bridge).
+4. **Use:** http://duo.local – from outside via Tailscale or Home Assistant: [`docs/fernzugriff.en.md`](docs/fernzugriff.en.md).
 
 > ⚠️ The machine carries **230 V**. Pull the mains plug before you connect
 > anything. With the machine running, only touch measurement leads that are
@@ -111,14 +119,16 @@ with evidence for each statement, is in [`docs/stand.en.md`](docs/stand.en.md).
 | Topic | Status |
 |---|---|
 | Protocol, levels, wires, power-up sequence, temperatures, firmware version | ✅ measured (logic analyzer, 2026-09-27) |
-| Page catalogue (0–299), button table (1070 buttons) | ✅ photographed or read from the flash |
-| Bridge pass-through / capture | ✅ on the machine |
-| Web UI with display replica | ✅ run against the real display (live values, pages, values read from the display) · 💡 whether a click has an effect on the machine |
-| Display emulation, hybrid mode | 🧪 |
-| An external button press acts like a real one | 💡 core assumption behind all remote control, never tried |
-| On/off, Home Assistant, history, brew by weight | 🧪 checked in simulation, not on the machine, with no real scale |
-| Pressure word, page x06 as dispense counter, stop via the continuous-dispense button | 💡 |
-| Continuous operation (password, OTA, watchdog, power supply) | 💡 not built |
+| Page catalogue (0–299), button table (1070 buttons), variable configuration (`14.bin`) | ✅ photographed or read from the flash |
+| Bridge pass-through / capture, web UI with display replica | ✅ on the machine |
+| An external button press acts like a real one | ✅ 2026-09-30: start, standby, OK, settings OK, set clock |
+| On/off, set the clock, settings and counters (22,263 shots) | ✅ on the machine |
+| Espresso app: tabs, profiles, shot log, schedule/calendar, Wi-Fi setup, Improv | 🧪 compiled, UI checked in simulation |
+| Home Assistant, history, brew by weight | 🧪 checked in simulation, with no real scale |
+| Pressure words 5/6 | 🧪 read from `14.bin`; no shot captured yet |
+| Stop via the continuous-dispense button | 💡 |
+| Password protection, own Wi-Fi password | 🧪 built |
+| Continuous operation (OTA, power from the machine) | 💡 not built |
 
 All captures come from the cold machine with an empty tank; a shot has never
 been on the line.
@@ -432,16 +442,15 @@ Firmware [`bridge/duo_bridge/`](bridge/duo_bridge/) for the **Waveshare
 ESP32-S3-ETH**. The ESP32 sits *in* the line, passes frames through,
 captures them, injects its own frames or answers the mainboard itself.
 
+Flashing: in the browser via the [flash page](https://larszu.github.io/bezzera-duo-protocol/)
+or with Arduino CLI and esptool, all in [`docs/flashen.en.md`](docs/flashen.en.md):
+
 ```bash
-arduino-cli core install esp32:esp32
+arduino-cli core install esp32:esp32@3.3.12
 FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs,PSRAM=opi
 arduino-cli compile --fqbn $FQBN bridge/duo_bridge
 arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge
 ```
-
-With Bluetooth the firmware no longer fits into the default partition (1.2 MB),
-hence `min_spiffs` (1.9 MB). `PSRAM=opi` for the ESP32-S3R8 of the Waveshare board:
-with it the history covers 24 h instead of 30 min. Without PSRAM everything else works the same.
 
 ### Wiring
 
@@ -523,18 +532,23 @@ valid frames arrived even without a display. There is no „start byte“ from t
 - **On the computer, without Wi-Fi:** `python3 tools/web_lokal.py` → http://localhost:8080,
   talks to the ESP32 over USB. With `--demo` entirely without an ESP32: simulated
   machine and scale.
-- **Own Wi-Fi** `duo-bridge` → http://192.168.4.1, on the home network http://duo.local
-  or via Ethernet (W5500).
+- **Own Wi-Fi** `duo-bridge` (sign-in portal, any address leads there), on the
+  home network http://duo.local or via Ethernet (W5500).
 
-It shows the **display replica** (320 × 240, SVG, all page types) with
-live values; a click acts like a touch at that position — write a
-value, ± within the limits from the flash, change page. In addition on/off,
-history, brew by weight, settings, all VPs, event log and page catalogue. The
-„Mainboard“ lamp only lights up on valid frames; garbage bytes appear in the log.
+Six tabs, usable on a phone (labels are German):
 
-> 🔒 No login, and the password of the bridge's own Wi-Fi is public here —
-> only run it for testing on your own network. For continuous operation the ESP32
-> gets its own password (see [Next steps](#-next-steps)).
+| Tab | Content |
+|---|---|
+| **Espresso** | state, “bereit” (ready), boiler temperatures and pressures, on/standby, quick profile choice, running shot with weight, flow, time, pressure |
+| **Profile** | create brew profiles per coffee and write them to the machine |
+| **Verlauf** (history) | temperature and pressure with selectable range (5 min–24 h) and resolution (1 s–5 min), shot log with curve, stars and note |
+| **Maschine** | display replica (click = touch), all settings and counters read from the mainboard, set the clock, weekly schedule, calendar, idle timeout |
+| **Einstellungen** (settings) | search and join home Wi-Fi, passwords, scale via Bluetooth search, stop button, Home Assistant |
+| **Diagnose** | raw commands, all VPs, page catalogue, event log |
+
+> 🔒 The default password of the `duo-bridge` Wi-Fi (`espresso1`) is public
+> here. After setup change it under **Einstellungen → Zugang** and set a
+> password for the page (user `duo`) – required before remote access.
 
 ---
 
@@ -546,12 +560,23 @@ web UI and are stored in the ESP32's NVS, never in the source code.
 
 | Function | how | Status |
 |---|---|---|
-| **Remote on/off** | writes VP `0x0000` = 1 and page x01 („Für Start drücken“, Press to start) or VP `0x0000` = 0 and page x00 („Standby“ in the side menu), exactly like these buttons according to the touch configuration | 🧪 built · 💡 effect on the machine |
+| **Remote on/off** | VP `0x0000` = 1 and page x01 („Für Start drücken“, press to start) or 0 and page x00 („Standby“), like the buttons | ✅ |
+| **Set the clock from the phone** | via the date/time page with OK | ✅ |
+| **Read settings and counters** | open menu pages by key code, the mainboard writes its values (`tools/menue_lesen.py`); total shots from the technician menu | ✅ 22,263 shots |
+| **Brew profiles** | per coffee temperature, pre-infusion, steam, priority, target; written to the machine via the settings pages and checked | 🧪 |
+| **Shot log** | every shot via the dispensing counter (page x06): duration, max pressure, temperature, weight, profile; stars and note; curves of the last 10 | 🧪 |
+| **Ready indicator** | coffee boiler within 1 °C of the setpoint for 60 s | 🧪 |
+| **Backflush reminder** | after a configurable number of shots; backflushing on the machine is detected | 🧪 |
+| **Weekly schedule, calendar, idle** | on/off by schedule, by iCal events with a keyword, standby after n minutes without a shot; time via NTP, otherwise from the display | 🧪 |
+| **Weight on the built-in display** | with a scale the dispensing counter shows grams instead of seconds (the bridge changes the value in the frame to the display) | 🧪 |
 | **Home Assistant** | MQTT with discovery, see below | 🧪 |
-| **History** | VP `0x0050` once per second into a ring buffer, 24 h with PSRAM (otherwise 30 min); chart 10 min to 24 h | 🧪 simulation |
-| **Pressure curves** | as soon as it is known which word in VP `0x0050` carries the pressure: „Rohworte zeigen“ (Show raw words) in the history, run the pump, enter the rising word under settings | 🧪 built · 💡 pressure word |
-| **Brew by weight** | Bluetooth or Wi-Fi scale, shot is detected, chart of weight, flow and pressure, stop at target minus learned stop offset via the stop button of the keypad | 🧪 built · 💡 stop via the keypad |
-| **Count shots, report alarms** | counter in NVS, alarm pages (tank, maintenance, filter …) as state and alarm | 🧪 simulation |
+| **History** | VP `0x0050` every second, 24 h with PSRAM; range and resolution selectable | 🧪 |
+| **Pressure curves** | word 5 (pump, ×0.5 bar) and 6 (steam boiler, ×0.25 bar) from `14.bin` | 🧪 |
+| **Brew by weight** | Bluetooth or Wi-Fi scale, stop at target minus learned stop offset via the stop button | 🧪 · 💡 stop via the keypad |
+| **Setup without a computer** | search and join Wi-Fi in the sign-in portal; after flashing in the browser via Improv | 🧪 |
+
+Own pages on the built-in display are not possible: the display project is
+fixed, the bridge can only fill existing fields with its own values.
 
 <p align="center">
   <img src="docs/screenshots/zusatz_rohworte.png" alt="History with all nine raw words of VP 0x0050; in the simulation word 1 rises while the pump runs" width="800" /><br />
@@ -709,6 +734,8 @@ All Python scripts need only the standard library.
 | [`tools/duo_live.py`](tools/duo_live.py) | live view in the terminal directly from the analyzer or as a replay |
 | [`tools/bridge.py`](tools/bridge.py) | send commands to the bridge and read along |
 | [`tools/web_lokal.py`](tools/web_lokal.py) | web UI on the computer over USB; `--demo` without an ESP32 |
+| [`tools/vp_dump.py`](tools/vp_dump.py) | read the whole display variable memory, show differences |
+| [`tools/menue_lesen.py`](tools/menue_lesen.py) | open menu pages by key code and record what the mainboard writes |
 | [`tools/web_demo.py`](tools/web_demo.py) | simulated machine and scale for `--demo` |
 | [`tools/seiten_foto.py`](tools/seiten_foto.py) | cycle through all pages and photograph them with a webcam (`brew install imagesnap`) |
 | [`tools/libop_lesen.py`](tools/libop_lesen.py) | read flash areas of the display — knows only the read mode |
@@ -721,24 +748,16 @@ Tests: `python3 -m unittest discover -s tests`
 
 ## 🧭 Next steps
 
-1. **Test hybrid mode on the machine:** „OK“ on „Bitte Tank füllen“ via
-   the web UI — does the mainboard react as to a real press?
-2. **Emulation with a complete start-up:** switch on the ESP32 before the machine,
-   capture the start-up, then run without the display.
-3. **Continuous operation:** own password and login, own Wi-Fi that can be switched off,
-   firmware update over Wi-Fi (OTA), watchdog, power supply from the machine
-   (check the 5 V budget) and fixed wiring instead of a breadboard.
-4. **Check the functions beyond the display on the machine:** on/off, find the pressure word in VP
-   `0x0050` (raw words in the history), Home Assistant against the broker,
-   brew by weight with a real scale; capture a shot (page and
-   words for pump pressure and dispense time); for the automatic stop, trace the
-   continuous-dispense button in the keypad's ribbon cable.
-5. **Also read the variable configuration (`14.bin`)** from the flash: it tells
-   which VP is shown at which position — and with it the setpoints on the
-   coffee and tea pages.
+1. **Test the new firmware on the machine:** writing profiles, shot log,
+   schedule, weight on the display, setup via portal and Improv.
+2. **Capture a shot:** confirms pressure words 5/6 and shot detection via page x06.
+3. **Decode the mainboard's Auto On/Off:** block VP `0x0007`–`0x000E` per
+   weekday has been read (e.g. `0 0 9 0 0 2 8 1`), its meaning not yet.
+4. **Measure the keypad** for the automatic stop (PhotoMOS on the continuous-dispense button).
+5. **Continuous operation:** firmware update over Wi-Fi (OTA), power from the
+   machine (check the 5 V budget), fixed wiring instead of a breadboard.
 6. **Repair or replace the touch:** clean the contact on the 6-pin connector
-   ([instructions](docs/bauteile.md));
-   alternatively capture the SiS9252 over I²C and have the ESP32 emulate it.
+   ([instructions](docs/bauteile.md)).
 
 <details>
 <summary><b>Earlier assumptions that were not confirmed</b></summary>

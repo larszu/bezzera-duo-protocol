@@ -170,10 +170,19 @@ static void beobachte(char quelle, const uint8_t *r, size_t n) {
     if (s != leitung.seite) ereignis("%c Seite %ld", quelle, (long)s);
     leitung.seite = s;
   } else if (cmd == 0x80 && pn >= 9 && p[0] == 0x1F && p[1] == 0x5A && zumDisplay) {
+    // Im Standby stellt das Mainboard die Uhr jede Sekunde; ins Protokoll nur,
+    // wenn die Zeit springt (nicht im Sekundentakt weiterlaeuft)
+    auto sek = [](const uint8_t *r) {
+      auto b = [](uint8_t x) { return (x >> 4) * 10 + (x & 0x0F); };
+      return b(r[4]) * 3600 + b(r[5]) * 60 + b(r[6]);
+    };
+    int erwartet = leitung.rtcGueltig ? sek(leitung.rtc) + (millis() - leitung.rtcMs + 500) / 1000 : -100;
+    int neu = sek(p + 2);
+    bool sprung = !leitung.rtcGueltig || abs(neu - erwartet) > 2 || memcmp(leitung.rtc, p + 2, 3);
     memcpy(leitung.rtc, p + 2, 7);
     leitung.rtcGueltig = true;
     leitung.rtcMs = millis();
-    ereignis("%c Uhr gestellt", quelle);
+    if (sprung) ereignis("%c Uhr gestellt %02x:%02x:%02x", quelle, p[6], p[7], p[8]);
   } else if (cmd == 0x81 && pn >= 4 && !zumDisplay) {
     if (p[0] == 0x03 && pn >= 4) leitung.seite = (p[2] << 8) | p[3];
     if (p[0] == 0x20 && pn >= 9) {
@@ -367,7 +376,10 @@ static void rahmenVomDisplay(uint8_t *r, size_t n) {
   logZeile('A', r, n);
 }
 
+static void anzeigeAnpassen(uint8_t *r, size_t n);  // zusatz.h: Werte der Bridge aufs Display
+
 static void rahmenVomMainboard(uint8_t *r, size_t n) {
+  anzeigeAnpassen(r, n);
   uartB.write(r, n);
   logZeile('B', r, n);
   if (emulation == 1) emuliereAntwort(r, n);
@@ -550,11 +562,14 @@ static void befehl(char *z) {
   }
 }
 
+static bool improvByte(uint8_t c);  // improv.h
+
 static void leseBefehle() {
   static char zeile[400];
   static size_t n = 0;
   while (Serial.available()) {
     char c = Serial.read();
+    if (improvByte(c)) continue;
     if (c == '\r') continue;
     if (c == '\n') {
       zeile[n] = 0;

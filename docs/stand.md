@@ -108,7 +108,9 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 
 | | Aussage |
 |---|---|
-| 💡 | Dauerbetrieb: Passwort für die Weboberfläche, abschaltbares eigenes WLAN, OTA, Watchdog, Versorgung aus der Maschine |
+| 🧪 | Passwort für die Weboberfläche, eigenes WLAN-Passwort, WLAN-Einrichtung im Portal und per Improv, Wochenplan, Kalender, Leerlauf, Shot-Log, Bereit, Gewicht im Display | gebaut 2026-10-01, Oberfläche in der Simulation geprüft |
+| ✅ | Einstellungen und Zähler aus dem Mainboard: Menüseiten per Tastencode öffnen, das Mainboard schreibt `0x0020`–`0x002D`, Auto-Ein/Aus-Block `0x0007`–`0x000E`, im Technikmenü (Werkspasswort 1906) PID, Sonden, Ladezeit und **Bezüge gesamt 22.263** (`0x0082`) | Bridge 2026-09-30 |
+| 💡 | OTA, Versorgung aus der Maschine |
 | 💡 | Variablen-Konfiguration `14.bin` aus dem Flash lesen (zeigt, welche VP wo angezeigt wird) |
 | 💡 | Touch-Controller SiS9252 per I²C mitschneiden und nachbilden |
 

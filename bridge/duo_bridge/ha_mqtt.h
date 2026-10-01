@@ -297,6 +297,8 @@ static String zusatzJson() {
   jsonZahl(j, cfg.vorlauf, 1);
   j += ",\"lernen\":";
   j += cfg.lernen ? "true" : "false";
+  j += ",\"gewicht_display\":";
+  j += cfg.gewichtImDisplay ? "true" : "false";
   j += ",\"stopp_pin\":";
   j += cfg.stoppPin;
   j += ",\"stopp_high\":";

@@ -43,54 +43,52 @@ button:disabled{opacity:.4;cursor:default}
 #katalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;max-height:300px;overflow:auto;font-size:12px}
 #katalog button{text-align:left;padding:4px 6px;font-size:12px}
 .hinweis{font-size:12px;color:var(--leise);margin:4px 0 0}
+nav#reiter{display:flex;gap:4px;padding:8px 12px 0;overflow-x:auto;border-bottom:1px solid var(--linie)}
+nav#reiter button{background:none;border:none;border-bottom:3px solid transparent;border-radius:0;padding:8px 12px;color:var(--leise);white-space:nowrap}
+nav#reiter button.an{color:var(--text);border-bottom-color:var(--akzent)}
+[data-tab]{display:none}
+body[data-reiter=espresso] [data-tab~=espresso],body[data-reiter=profile] [data-tab~=profile],body[data-reiter=verlauf] [data-tab~=verlauf],
+body[data-reiter=maschine] [data-tab~=maschine],body[data-reiter=einstellungen] [data-tab~=einstellungen],body[data-reiter=diagnose] [data-tab~=diagnose]{display:block}
+.kopfzeile{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.badge{font-size:13px;padding:3px 10px;border-radius:12px;background:#22304d;color:var(--leise)}
+.badge.ja{background:var(--ok);color:#06140f}
+.hinweisband{background:#3a2a12;border:1px solid var(--kaffee);color:#ffe2c4;padding:8px 12px;border-radius:8px;margin:12px 16px 0}
+.wert.klein{font-size:30px}
+button.gross{font-size:17px;padding:9px 20px} button.start{background:#1f5d4c;border-color:#2f8a70}
+.chip{padding:4px 8px;border-radius:12px;font-size:12px} .chip.an{background:var(--akzent);color:#06131c;border-color:var(--akzent)}
+.stern{cursor:pointer;color:#55627d;font-size:18px} .stern.an{color:#f9c74f}
+.liste-zeile{display:flex;align-items:center;gap:10px;padding:6px 8px;border-bottom:1px solid var(--linie);cursor:pointer} .liste-zeile:hover{background:#18243d}
+h3{font-size:13px;color:var(--leise);margin:14px 0 6px;font-weight:600}
 </style>
 </head>
 <body>
 <header>
-  <h1>Bezzera Duo · Bridge</h1>
+  <h1>Bezzera Duo</h1>
   <span class="lampe" id="l_mb"><i></i>Mainboard</span>
   <span class="lampe" id="l_dp"><i></i>Display</span>
   <span class="lampe" id="uhr"></span>
 </header>
-<div id="banner">Mainboard ist verbunden: Eingriffe unten wirken auf die echte Maschine.</div>
+<nav id="reiter">
+  <button data-r="espresso">Espresso</button><button data-r="profile">Profile</button><button data-r="verlauf">Verlauf</button>
+  <button data-r="maschine">Maschine</button><button data-r="einstellungen">Einstellungen</button><button data-r="diagnose">Diagnose</button>
+</nav>
+<div id="erinnerung" class="hinweisband" style="display:none"></div>
 <main>
-  <section style="grid-column:1/-1">
-    <h2>Display</h2>
-    <div id="dsp_wrap" style="max-width:640px;margin:0 auto"><svg id="dsp" viewBox="0 0 320 240" style="width:100%;display:block;border-radius:6px;box-shadow:0 0 0 6px #000,0 6px 30px #0008"></svg></div>
-    <div class="form" style="margin-top:8px"><label><input type="checkbox" id="f_flaechen" style="width:auto"> Tastenflächen zeigen</label></div>
-    <p class="hinweis" id="dsp_erklaerung" style="color:var(--text)"></p>
-    <div class="form" id="dsp_pw" style="display:none">Werkspasswort eingeben: <button onclick="passwort(1901)">1901</button><button onclick="passwort(1906)">1906</button><span class="hinweis">laut Clive Coffee nach einem Reset; welches wofür gilt, ist nicht belegt</span></div>
-    <p class="hinweis" id="dsp_hinweis">Nachbau aus Fotos. Ein Klick wirkt wie eine Berührung an dieser Stelle: Die Taste aus der Touch-Konfiguration des Displays (1070 Tasten) schreibt ihren Wert und wechselt die Seite, genau wie das Display selbst. Ist das Mainboard verbunden, liest es den Wert beim nächsten Abfragen.</p>
-  </section>
-
-  <section>
-    <h2>Anzeige</h2>
-    <div id="seitenname">–</div>
-    <div class="einheit" id="seitennr"></div>
-    <div class="gross" style="margin-top:14px">
-      <div><div class="wert" style="color:var(--kaffee)" id="t_kaffee">–</div><div class="einheit">Kaffeekessel °C</div></div>
-      <div><div class="wert" style="color:var(--dampf)" id="t_dampf">–</div><div class="einheit">Servicekessel °C</div></div>
-    </div>
-  </section>
-
-  <section>
+  <section data-tab="espresso" style="grid-column:1/-1">
     <h2>Maschine</h2>
-    <div id="m_status" style="font-size:20px;font-weight:600">–</div>
-    <div class="form" style="margin-top:12px"><button id="b_an" onclick="aktion('an')">Einschalten</button><button id="b_aus" onclick="aktion('aus')">Standby</button>
-      <button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button></div>
-    <p class="hinweis">Wirkt wie „Für Start drücken“ bzw. „Standby“ im Seitenmenü: VP 0x0000 = 1 / 0. Home Assistant: <span id="m_mqtt">–</span></p>
+    <div class="kopfzeile"><div id="m_status" style="font-size:22px;font-weight:600">–</div><span id="bereit" class="badge">–</span></div>
+    <div class="gross" style="margin-top:14px">
+      <div><div class="wert" style="color:var(--kaffee)" id="t_kaffee">–</div><div class="einheit">Kaffeekessel °C <span id="t_soll"></span></div></div>
+      <div><div class="wert" style="color:var(--dampf)" id="t_dampf">–</div><div class="einheit">Dampfkessel °C</div></div>
+      <div><div class="wert klein" id="p_pumpe">–</div><div class="einheit">Pumpe bar</div></div>
+      <div><div class="wert klein" id="p_dampf">–</div><div class="einheit">Dampfkessel bar</div></div>
+    </div>
+    <div class="form" style="margin-top:14px"><button class="gross start" id="b_an" onclick="aktion('an')">Einschalten</button><button class="gross" id="b_aus" onclick="aktion('aus')">Standby</button></div>
+    <div class="form">Profil <select id="prof_schnell"></select><button onclick="profilAnwenden(+v('prof_schnell'))">auf die Maschine</button><span class="hinweis" id="prof_schnell_info"></span></div>
+    <p class="hinweis"><span id="seitenname">–</span> <span id="seitennr"></span> · Home Assistant: <span id="m_mqtt">–</span></p>
   </section>
-
-  <section style="grid-column:1/-1">
-    <h2>Verlauf</h2>
-    <div class="form"><select id="v_sek"><option value="600">10 min</option><option value="3600" selected>1 h</option><option value="21600">6 h</option><option value="86400">24 h</option></select>
-      <label><input type="checkbox" id="v_roh" style="width:auto"> Rohworte VP 0x0050 zeigen (Druckwort suchen)</label></div>
-    <canvas id="kurve" width="600" height="220" style="height:220px"></canvas>
-    <p class="hinweis" id="v_legende"></p>
-  </section>
-
-  <section style="grid-column:1/-1">
-    <h2>Brew by Weight</h2>
+  <section data-tab="espresso" style="grid-column:1/-1">
+    <h2>Bezug</h2>
     <div class="gross">
       <div><div class="wert" id="bw_g">–</div><div class="einheit">Gramm <span id="bw_ziel_txt"></span></div></div>
       <div><div class="wert" id="bw_fluss">–</div><div class="einheit">g/s</div></div>
@@ -104,31 +102,7 @@ button:disabled{opacity:.4;cursor:default}
     <p class="hinweis"><span style="color:#e6edf7">■</span> Gewicht <span style="color:var(--ok)">■</span> Durchfluss g/s <span style="color:var(--akzent)">■</span> Druck bar (rechte Achse, sobald das Druckwort zugeordnet ist) · Waage: <span id="bw_waage">–</span></p>
     <table style="margin-top:8px"><thead><tr><th>vor</th><th>Gewicht</th><th>Ziel</th><th>Dauer</th><th></th></tr></thead><tbody id="bw_liste"></tbody></table>
   </section>
-
-  <section>
-    <h2>Steuerung</h2>
-    <div class="form">Seite <input id="f_seite" type="number" min="0" max="299" value="101"><button onclick="cmd('p '+v('f_seite'))">zeigen</button></div>
-    <div class="form">Tastendruck: VP <select id="f_ovp"><option value="0x0000">0x0000</option><option value="0x0001">0x0001</option></select>
-      Wert <input id="f_owert" value="5"> ×<input id="f_oanz" value="1" style="width:50px">
-      <button onclick="cmd('o '+v('f_ovp')+' '+v('f_owert')+' '+v('f_oanz'))">senden</button></div>
-    <div class="form">VP <input id="f_vp" value="0x0050"> Worte <input id="f_w" class="breit" value="10 11 12 13 14 15 16 17 18"><button onclick="cmd('w '+v('f_vp')+' '+v('f_w'))">schreiben</button></div>
-    <div class="form">Roh <select id="f_ziel"><option value="d">→ Display</option><option value="m">→ Mainboard</option></select>
-      <input id="f_roh" class="breit" value="c6 a5 03 81 03 02"><button onclick="cmd(v('f_ziel')+' '+v('f_roh'))">senden</button></div>
-    <p class="hinweis">Tastendruck: Die nächsten n Antworten des Displays auf „VP lesen“ werden überschrieben, das Mainboard sieht den Wert wie einen Druck. Welche Taste welchen Wert schickt, steht in der Tastentabelle aus dem Display-Flash (docs/tasten.json); ein Klick auf das Display oben nutzt sie direkt.</p>
-  </section>
-
-  <section>
-    <h2>Variablen</h2>
-    <table><thead><tr><th>VP</th><th>Worte</th><th>Alter</th></tr></thead><tbody id="vps"></tbody></table>
-  </section>
-
-  <section>
-    <h2>Seiten</h2>
-    <div class="form">Sprache <select id="f_sprache"><option value="100">Deutsch</option><option value="0">Englisch</option><option value="200">Italienisch</option></select></div>
-    <div id="katalog"></div>
-  </section>
-
-  <section style="grid-column:1/-1">
+  <section data-tab="profile" style="grid-column:1/-1">
     <h2>Brühprofile</h2>
     <p class="hinweis">Je Kaffeesorte gespeichert in der Bridge. „Auf die Maschine“ stellt Brühtemperatur, Vorbrühen, Kesselpriorität und Dampfkessel am Mainboard ein (wie am Display mit OK) und setzt das Zielgewicht für Brew by Weight. Nur vom Startbildschirm aus.</p>
     <table><thead><tr><th>Name</th><th>Röster / Sorte</th><th>Mahlgrad</th><th>Dosis → Ziel</th><th>°C</th><th>Vorbrühen</th><th>Dampf</th><th></th></tr></thead><tbody id="pr_liste"></tbody></table>
@@ -144,31 +118,121 @@ button:disabled{opacity:.4;cursor:default}
       <div class="form"><button type="submit">Speichern</button><button type="button" onclick="profilVonMaschine()">Werte der Maschine übernehmen</button><button type="button" onclick="profilNeu()">Neu</button></div>
     </form>
   </section>
-
-  <section>
-    <h2>Einstellungen</h2>
-    <form id="einst" onsubmit="speichern(event)">
-    <h3 class="hinweis" style="margin:0 0 4px">Home Assistant (MQTT)</h3>
+  <section data-tab="verlauf" style="grid-column:1/-1">
+    <h2>Temperatur und Druck</h2>
+    <div class="form">Zeitraum <select id="v_sek"><option value="300">5 min</option><option value="900">15 min</option><option value="1800">30 min</option><option value="3600" selected>1 h</option><option value="10800">3 h</option><option value="21600">6 h</option><option value="43200">12 h</option><option value="86400">24 h</option></select>
+      Auflösung <select id="v_aufl"><option value="0" selected>automatisch</option><option value="1">1 s</option><option value="5">5 s</option><option value="15">15 s</option><option value="60">1 min</option><option value="300">5 min</option></select>
+      <label><input type="checkbox" id="v_roh" style="width:auto"> Rohwerte</label></div>
+    <canvas id="kurve" width="600" height="240" style="height:240px"></canvas>
+    <p class="hinweis" id="v_legende"></p>
+  </section>
+  <section data-tab="verlauf" style="grid-column:1/-1">
+    <h2>Shots</h2>
+    <p class="hinweis">Jeder Bezug, den die Maschine anzeigt (Ausgabezähler, CRONO an). Sterne und Notiz zum Einstellen der Mühle; Klick auf eine Zeile zeigt die Kurve.</p>
+    <div style="overflow-x:auto"><table style="min-width:560px"><thead><tr><th>Zeit</th><th>Profil</th><th>Dauer</th><th>Gewicht</th><th>max. Druck</th><th>°C</th><th>Bewertung</th><th>Notiz</th></tr></thead><tbody id="shot_liste"></tbody></table></div>
+    <canvas id="shot_kurve" width="600" height="200" style="height:200px;margin-top:10px;display:none"></canvas>
+    <p class="hinweis" id="shot_info"></p>
+  </section>
+  <section data-tab="maschine" style="grid-column:1/-1">
+    <h2>Display</h2>
+    <div id="dsp_wrap" style="max-width:640px;margin:0 auto"><svg id="dsp" viewBox="0 0 320 240" style="width:100%;display:block;border-radius:6px;box-shadow:0 0 0 6px #000,0 6px 30px #0008"></svg></div>
+    <div class="form" style="margin-top:8px"><label><input type="checkbox" id="f_flaechen" style="width:auto"> Tastenflächen zeigen</label></div>
+    <p class="hinweis" id="dsp_erklaerung" style="color:var(--text)"></p>
+    <div class="form" id="dsp_pw" style="display:none">Werkspasswort eingeben: <button onclick="passwort(1901)">1901</button><button onclick="passwort(1906)">1906</button><span class="hinweis">laut Clive Coffee nach einem Reset; welches wofür gilt, ist nicht belegt</span></div>
+    <p class="hinweis" id="dsp_hinweis">Nachbau aus Fotos. Ein Klick wirkt wie eine Berührung an dieser Stelle: Die Taste aus der Touch-Konfiguration des Displays (1070 Tasten) schreibt ihren Wert und wechselt die Seite, genau wie das Display selbst. Ist das Mainboard verbunden, liest es den Wert beim nächsten Abfragen.</p>
+  </section>
+  <section data-tab="maschine">
+    <h2>Maschinendaten</h2>
+    <div class="gross"><div><div class="wert klein" id="md_bezuege">–</div><div class="einheit">Bezüge gesamt</div></div>
+      <div><div class="wert klein" id="md_rueck">–</div><div class="einheit">seit dem letzten Rückspülen</div></div></div>
+    <div class="form" style="margin-top:10px"><button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button><button onclick="shotAktion('rueckspuelen_erledigt')">Rückspülen erledigt</button>
+      Erinnern alle <input id="md_rueck_alle" style="width:55px" onchange="shotAktion('rueckspuelen_alle '+this.value)"> Bezüge</div>
+    <table style="margin-top:8px"><thead><tr><th>Wert</th><th>Einstellung</th><th>gelesen vor</th></tr></thead><tbody id="md_tabelle"></tbody></table>
+    <p class="hinweis">Werte schreibt das Mainboard nur, wenn die zugehörige Seite geöffnet wird; „Bezüge gesamt“ beim Öffnen des Technikmenüs.</p>
+  </section>
+  <section data-tab="maschine">
+    <h2>Ein- und Ausschalten</h2>
+    <p class="hinweis">Führt die Bridge aus (Uhrzeit aus dem Internet, sonst vom Display): <span id="zp_uhr">–</span></p>
+    <h3>Wochenplan <label><input type="checkbox" id="zp_plan" style="width:auto"> aktiv</label></h3>
+    <div id="zp_zeilen"></div>
+    <div class="form"><button onclick="zpZeile()">+ Zeile</button></div>
+    <h3>Kalender <label><input type="checkbox" id="zp_kal" style="width:auto"> aktiv</label></h3>
+    <div class="form">iCal-Adresse <input id="zp_url" class="breit" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></div>
+    <div class="form">nur Termine mit <input id="zp_wort" style="width:120px" placeholder="z. B. Espresso"> im Titel · einschalten <input id="zp_vor" style="width:50px"> min vorher, am Ende aus</div>
+    <p class="hinweis" id="zp_kal_status"></p><ul id="zp_termine" class="hinweis" style="margin:4px 0 0 16px;padding:0"></ul>
+    <h3>Leerlauf</h3>
+    <div class="form">nach <input id="zp_leer" style="width:55px"> min ohne Bezug in Standby (0 = nie)</div>
+    <div class="form"><button onclick="zpSpeichern()">Speichern</button><span class="hinweis" id="zp_ok"></span></div>
+  </section>
+  <section data-tab="einstellungen">
+    <h2>Heim-WLAN</h2>
+    <p id="wl_status" class="einheit">–</p>
+    <div class="form"><button onclick="wlSuchen()">Netze suchen</button></div>
+    <div id="wl_liste"></div>
+    <div class="form" id="wl_form" style="display:none"><b id="wl_name"></b> Passwort <input id="wl_pass" type="password" class="breit"><button onclick="wlVerbinden()">Verbinden</button></div>
+    <h3>Zugang</h3>
+    <div class="form">WLAN „duo-bridge“ Passwort <input id="sc_ap" type="password" style="width:140px" placeholder="mind. 8 Zeichen"><button onclick="sicherheit('ap_pass',v('sc_ap'))">Ändern</button></div>
+    <div class="form">Passwort für diese Seite <input id="sc_web" type="password" style="width:140px"><button onclick="sicherheit('web_pass',v('sc_web'))">Setzen</button><button onclick="sicherheit('web_pass','-')">Entfernen</button></div>
+    <p class="hinweis" id="sc_info">Mit Passwort fragt der Browser beim Öffnen nach Benutzer „duo“ und Passwort. Für den Zugriff von unterwegs nötig.</p>
+  </section>
+<form id="einst" onsubmit="speichern(event)" style="display:contents">
+  <section data-tab="einstellungen">
+    <h2>Waage</h2>
+    <div class="form"><select name="waage_art" onchange="waageFelder()"><option value="0">keine Waage</option><option value="1">Bluetooth-Waage</option><option value="2">WLAN-Waage: Adresse abfragen</option><option value="3">WLAN-Waage meldet selbst</option></select></div>
+    <div data-waage="1">
+      <div class="form"><button type="button" onclick="bleSuchen()">Waage suchen</button><span class="hinweis" id="ble_info">Waage einschalten, dann suchen.</span></div>
+      <div id="ble_liste"></div>
+      <div class="form">Gewählt: <b id="ble_gewaehlt">erste gefundene Waage</b><input type="hidden" name="waage_ble"></div>
+    </div>
+    <div class="form" data-waage="2">Adresse <input name="waage_url" class="breit" placeholder="http://waage.local/sensor/gewicht"></div>
+    <div class="form" data-waage="3">MQTT-Thema <input name="waage_topic" class="breit" placeholder="waage/gewicht"></div>
+    <div class="form">Vorlauf <input name="vorlauf" style="width:60px"> g <label><input type="checkbox" name="lernen" style="width:auto"> aus jedem Bezug lernen</label></div>
+    <div class="form"><label><input type="checkbox" name="gewicht_display" style="width:auto"> Gewicht im Display der Maschine zeigen (statt Sekunden im Ausgabezähler)</label></div>
+    <div class="form"><button type="submit">Speichern</button><span class="hinweis einst_ok"></span></div>
+  </section>
+  <section data-tab="einstellungen">
+    <h2>Stopp-Taste (Hardware)</h2>
+    <p class="hinweis">Nur mit eingebautem PhotoMOS-Relais an der Dauerausgabe-Taste.</p>
+    <div class="form">GPIO <select name="stopp_pin"><option value="-1">keiner, nur melden</option><option>1</option><option>2</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>47</option><option>48</option></select>
+      <label><input type="checkbox" name="stopp_high" style="width:auto"> aktiv high</label> Tastendruck <input name="stopp_puls" style="width:60px"> ms</div>
+    <div class="form"><button type="submit">Speichern</button><span class="hinweis einst_ok"></span></div>
+  </section>
+  <section data-tab="einstellungen">
+    <h2>Home Assistant</h2>
     <div class="form">Broker <input name="mqtt_uri" class="breit" placeholder="mqtt://homeassistant.local:1883"></div>
     <div class="form">Benutzer <input name="mqtt_user" class="breit"> Passwort <input name="mqtt_pass" type="password" class="breit" placeholder="unverändert"></div>
     <div class="form">Discovery-Präfix <input name="ha_prefix" class="breit"></div>
-    <h3 class="hinweis" style="margin:10px 0 4px">Waage</h3>
-    <div class="form"><select name="waage_art"><option value="0">aus</option><option value="1">Bluetooth (Acaia, Bookoo, Felicita, Decent)</option><option value="2">WLAN: URL abfragen</option><option value="3">WLAN: Waage meldet selbst</option></select></div>
-    <div class="form">Bluetooth-Adresse <input name="waage_ble" class="breit" placeholder="leer = erste gefundene Waage"></div>
-    <div class="form">URL <input name="waage_url" class="breit" placeholder="http://waage.local/sensor/gewicht"></div>
-    <div class="form">MQTT-Thema <input name="waage_topic" class="breit" placeholder="waage/gewicht"></div>
-    <div class="form">Vorlauf <input name="vorlauf" style="width:60px"> g <label><input type="checkbox" name="lernen" style="width:auto"> aus jedem Bezug lernen</label></div>
-    <h3 class="hinweis" style="margin:10px 0 4px">Stopp-Taste am Tastenfeld (optional, Hardware)</h3>
-    <div class="form">GPIO <select name="stopp_pin"><option value="-1">keiner, nur melden</option><option>1</option><option>2</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>47</option><option>48</option></select>
-      <label><input type="checkbox" name="stopp_high" style="width:auto"> aktiv high</label> Tastendruck <input name="stopp_puls" style="width:60px"> ms</div>
-    <h3 class="hinweis" style="margin:10px 0 4px">Druck (Wort in VP 0x0050)</h3>
+    <div class="form"><button type="submit">Speichern</button><span class="hinweis einst_ok"></span></div>
+  </section>
+  <section data-tab="einstellungen">
+    <h2>Erweitert</h2>
+    <p class="hinweis">Welches Wort in VP 0x0050 den Druck trägt (aus 14.bin: Pumpe Wort 5 ÷ 2, Dampfkessel Wort 6 ÷ 4).</p>
     <div class="form">Pumpe <select name="druck_p_wort"></select> ÷ <input name="druck_p_teil" style="width:60px"></div>
     <div class="form">Servicekessel <select name="druck_k_wort"></select> ÷ <input name="druck_k_teil" style="width:60px"></div>
-    <div class="form"><button type="submit">Speichern</button><span class="hinweis" id="einst_ok"></span></div>
-    </form>
+    <div class="form"><button type="submit">Speichern</button><span class="hinweis einst_ok"></span></div>
   </section>
-
-  <section>
+</form>
+  <section data-tab="diagnose">
+    <h2>Steuerung</h2>
+    <div class="form">Seite <input id="f_seite" type="number" min="0" max="299" value="101"><button onclick="cmd('p '+v('f_seite'))">zeigen</button></div>
+    <div class="form">Tastendruck: VP <select id="f_ovp"><option value="0x0000">0x0000</option><option value="0x0001">0x0001</option></select>
+      Wert <input id="f_owert" value="5"> ×<input id="f_oanz" value="1" style="width:50px">
+      <button onclick="cmd('o '+v('f_ovp')+' '+v('f_owert')+' '+v('f_oanz'))">senden</button></div>
+    <div class="form">VP <input id="f_vp" value="0x0050"> Worte <input id="f_w" class="breit" value="10 11 12 13 14 15 16 17 18"><button onclick="cmd('w '+v('f_vp')+' '+v('f_w'))">schreiben</button></div>
+    <div class="form">Roh <select id="f_ziel"><option value="d">→ Display</option><option value="m">→ Mainboard</option></select>
+      <input id="f_roh" class="breit" value="c6 a5 03 81 03 02"><button onclick="cmd(v('f_ziel')+' '+v('f_roh'))">senden</button></div>
+    <p class="hinweis">Tastendruck: Die nächsten n Antworten des Displays auf „VP lesen“ werden überschrieben, das Mainboard sieht den Wert wie einen Druck. Welche Taste welchen Wert schickt, steht in der Tastentabelle aus dem Display-Flash (docs/tasten.json); ein Klick auf das Display oben nutzt sie direkt.</p>
+  </section>
+  <section data-tab="diagnose">
+    <h2>Variablen</h2>
+    <table><thead><tr><th>VP</th><th>Worte</th><th>Alter</th></tr></thead><tbody id="vps"></tbody></table>
+  </section>
+  <section data-tab="diagnose">
+    <h2>Seiten</h2>
+    <div class="form">Sprache <select id="f_sprache"><option value="100">Deutsch</option><option value="0">Englisch</option><option value="200">Italienisch</option></select></div>
+    <div id="katalog"></div>
+  </section>
+  <section data-tab="diagnose">
     <h2>Ereignisse</h2>
     <div id="log"></div>
   </section>
@@ -213,7 +277,7 @@ async function hole(){
   try{
     const r=await fetch("/api/status?seit="+seit), j=await r.json();
     const mb=j.mainboard.still_ms>=0&&j.mainboard.still_ms<2000, dp=j.display.still_ms>=0&&j.display.still_ms<2000;
-    $("l_mb").classList.toggle("an",mb); $("l_dp").classList.toggle("an",dp); $("banner").style.display=mb?"block":"none";
+    $("l_mb").classList.toggle("an",mb); $("l_dp").classList.toggle("an",dp); 
     $("uhr").textContent=j.rtc?("Display-Uhr "+j.rtc):"";
     $("seitenname").textContent=seitenname(j.seite);
     $("seitenname").className=ALARM.has(j.seite%100)?"alarm":"";
@@ -970,7 +1034,9 @@ function kurve(id,reihen,o={}){
 const ROHFARBEN=["#e6edf7","#b388ff","#43aa8b","#f4a261","#4cc9f0","#f9c74f","#f94144","#90be6d","#ff70a6"];
 let verlaufJ=null;
 async function holeVerlauf(){
-  try{const r=await fetch("/api/verlauf?sek="+v("v_sek")+"&max=600"); verlaufJ=await r.json(); zeichneVerlauf()}catch(e){}
+  // Auflösung: Sekunden je Punkt; automatisch = höchstens 600 Punkte
+  const sek=+v("v_sek"), aufl=+v("v_aufl"), max=aufl?Math.max(2,Math.round(sek/aufl)):600;
+  try{const r=await fetch(`/api/verlauf?sek=${sek}&max=${max}`); verlaufJ=await r.json(); zeichneVerlauf()}catch(e){}
 }
 function zeichneVerlauf(){
   if(!verlaufJ) return;
@@ -989,7 +1055,7 @@ function zeichneVerlauf(){
   }
   kurve("kurve",reihen,{x0:-v("v_sek"),x1:0,fmtX:s=>uhrzeit(jetzt+s*1000),spanne0:10,min1:0,leer:"noch keine Werte vom Mainboard"});
 }
-$("v_sek").onchange=holeVerlauf; $("v_roh").onchange=zeichneVerlauf;
+$("v_sek").onchange=holeVerlauf; $("v_aufl").onchange=holeVerlauf; $("v_roh").onchange=zeichneVerlauf;
 
 async function holeBezug(){
   try{const b=await (await fetch("/api/bezug")).json(); bezugNr=b.nr;
@@ -1002,7 +1068,8 @@ async function holeBezug(){
 function einstellungenFuellen(c,vp50){
   const f=$("einst");
   for(const k of ["mqtt_uri","mqtt_user","ha_prefix","waage_art","waage_url","waage_topic","waage_ble","vorlauf","stopp_pin","stopp_puls","druck_p_teil","druck_k_teil"]) if(f[k]) f[k].value=c[k];
-  f.lernen.checked=c.lernen; f.stopp_high.checked=c.stopp_high;
+  f.lernen.checked=c.lernen; f.stopp_high.checked=c.stopp_high; f.gewicht_display.checked=c.gewicht_display;
+  $("ble_gewaehlt").textContent=c.waage_ble||"erste gefundene Waage"; waageFelder();
   f.mqtt_pass.placeholder=c.mqtt_pass_gesetzt?"gesetzt (leer = unverändert, - = löschen)":"kein Passwort";
   for(const n of ["druck_p_wort","druck_k_wort"]){
     f[n].innerHTML='<option value="-1">unbekannt</option>'+[...Array(9).keys()].map(w=>`<option value="${w}">Wort ${w}${vp50?" (jetzt "+vp50.w[w]+")":""}</option>`).join("");
@@ -1011,16 +1078,20 @@ function einstellungenFuellen(c,vp50){
 }
 async function speichern(ev){
   ev.preventDefault(); const f=$("einst"), d=new URLSearchParams(new FormData(f));
-  d.set("lernen",f.lernen.checked?1:0); d.set("stopp_high",f.stopp_high.checked?1:0);
+  d.set("lernen",f.lernen.checked?1:0); d.set("stopp_high",f.stopp_high.checked?1:0); d.set("gewicht_display",f.gewicht_display.checked?1:0);
   if(!f.mqtt_pass.value) d.delete("mqtt_pass");
   const r=await fetch("/api/einstellungen",{method:"POST",body:d.toString()});
-  $("einst_ok").textContent=r.ok?" gespeichert":" Fehler"; f.mqtt_pass.value=""; einstGeladen=false; setTimeout(()=>$("einst_ok").textContent="",3000);
+  document.querySelectorAll(".einst_ok").forEach(e=>{e.textContent=r.ok?" gespeichert":" Fehler"; setTimeout(()=>e.textContent="",3000)}); f.mqtt_pass.value=""; einstGeladen=false;
 }
 
 async function holeZusatz(){
   try{
     zj=await (await fetch("/api/zusatz")).json(); const w=zj.werte, b=zj.bezug;
-    $("m_status").textContent=zj.maschine.status; $("m_status").className=w.alarm=="ON"?"alarm":"";
+    $("m_status").textContent=zj.maschine.status;
+    $("bereit").textContent=w.bereit=="ON"?"bereit":zj.maschine.an?"heizt auf":"aus"; $("bereit").className="badge"+(w.bereit=="ON"?" ja":"");
+    $("p_pumpe").textContent=f1(w.druck_pumpe); $("p_dampf").textContent=f1(w.druck_kessel,2);
+    const fall=w.rueckspuelen_alle&&w.seit_rueckspuelen>=w.rueckspuelen_alle;
+    $("erinnerung").style.display=fall?"":"none"; if(fall) $("erinnerung").textContent=`Rückspülen fällig: ${w.seit_rueckspuelen} Bezüge seit dem letzten Mal (Seitenmenü → Rückspülen). Wird automatisch erkannt.`; $("m_status").className=w.alarm=="ON"?"alarm":"";
     $("b_an").disabled=zj.maschine.an; $("b_aus").disabled=!zj.maschine.an;
     $("m_mqtt").textContent=zj.mqtt+(zj.mqtt=="verbunden"?" ("+zj.mqtt_basis+")":"");
     $("bw_g").textContent=f1(b.laeuft?b.g:w.gewicht); $("bw_fluss").textContent=f1(w.durchfluss); $("bw_t").textContent=b.laeuft?f1(b.t):"–"; $("bw_p").textContent=f1(w.druck_pumpe);
@@ -1066,6 +1137,110 @@ async function profilVonMaschine(){
   if(w(0x61)) f.dampf.value=w(0x61); if(w(0x5a)!=null) f.prio.value=w(0x5a); if(zj) f.ziel.value=zj.cfg.ziel}
 setInterval(holeProfile,2000); holeProfile();
 addEventListener("resize",()=>{zeichneVerlauf(); holeBezug()});
+</script>
+<script>
+// ─── Reiter ────────────────────────────────────────────────────────────────
+function zeigeReiter(r){document.body.dataset.reiter=r; document.querySelectorAll("#reiter button").forEach(b=>b.classList.toggle("an",b.dataset.r==r));
+  try{localStorage.setItem("reiter",r)}catch(e){}
+  setTimeout(()=>{ if(r=="maschine"){holeMaschine(); holeZeitplan()} if(r=="einstellungen") holeWlan(false); if(r=="verlauf"){holeShots(); holeVerlauf()} },0); if(location.hash!="#"+r) history.replaceState(null,"","#"+r); window.dispatchEvent(new Event("resize"))}
+document.querySelectorAll("#reiter button").forEach(b=>b.onclick=()=>zeigeReiter(b.dataset.r));
+zeigeReiter((location.hash||"").slice(1)||(()=>{try{return localStorage.getItem("reiter")}catch(e){}})()||"espresso");
+const aktiv=r=>document.body.dataset.reiter==r;
+
+// ─── Profil-Schnellwahl ───────────────────────────────────────────────────
+setInterval(()=>{ if(!profJ) return; const sel=$("prof_schnell"); if(document.activeElement==sel) return;
+  const opt=profJ.profile.map(({nr,p})=>`<option value="${nr}">${esc(p.name)} · ${p.temp} °C · ${p.ziel?f1(p.ziel)+" g":""}</option>`).join("");
+  if(sel.innerHTML!=opt){sel.innerHTML=opt||'<option value="-1">noch keine Profile</option>'; if(profJ.aktiv>=0) sel.value=profJ.aktiv}
+  $("prof_schnell_info").textContent=profJ.ergebnis||""},1000);
+
+// ─── Waage: Felder je Art, Bluetooth-Suche ───────────────────────────────
+function waageFelder(){const a=$("einst").waage_art.value; document.querySelectorAll("[data-waage]").forEach(e=>e.style.display=e.dataset.waage==a?"":"none")}
+async function bleSuchen(){
+  await fetch("/api/ble_suche",{method:"POST"}); $("ble_info").textContent="suche … (6 s)"; $("ble_liste").innerHTML="";
+  for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,800)); const g=await (await fetch("/api/ble_geraete")).json(); if(g.laeuft) continue;
+    $("ble_info").textContent=g.geraete.length?"Waage antippen:":"nichts gefunden – Waage an und in der Nähe?";
+    $("ble_liste").innerHTML=g.geraete.map(d=>`<div class="liste-zeile" onclick="bleWaehlen('${esc(d.adresse)}','${esc(d.name)}')"><b>${esc(d.name)}</b>
+      <span class="hinweis">${d.bekannt?"✓ unterstützt":"unbekanntes Protokoll"} · Signal ${d.rssi} dBm</span></div>`).join(""); return}
+}
+function bleWaehlen(adr,name){const f=$("einst"); f.waage_art.value=1; f.waage_ble.value=adr; $("ble_gewaehlt").textContent=name+" ("+adr+")"; waageFelder(); f.requestSubmit()}
+
+// ─── Shots ─────────────────────────────────────────────────────────────────
+let shotsJ=null, shotGezeigt=null;
+async function shotAktion(a){await fetch("/api/shot_aktion",{method:"POST",body:a}); holeShots()}
+async function holeShots(){
+  try{shotsJ=await (await fetch("/api/shots")).json();
+    $("md_bezuege").textContent=shotsJ.bezuege_maschine?shotsJ.bezuege_maschine.toLocaleString("de-DE"):"–";
+    $("md_rueck").textContent=shotsJ.seit_rueckspuelen; if(document.activeElement!==$("md_rueck_alle")) $("md_rueck_alle").value=shotsJ.rueckspuelen_alle;
+    if(!aktiv("verlauf")||document.activeElement&&document.activeElement.classList.contains("shot_notiz")) return;
+    $("shot_liste").innerHTML=shotsJ.log.map(e=>`<tr class="liste-zeile" style="display:table-row" onclick="zeigeShot(${e.nr},event)"><td style="white-space:nowrap">${esc(e.zeit.slice(8,10)+"."+e.zeit.slice(5,7)+". "+e.zeit.slice(11))}</td><td>${esc(e.profil||"–")}</td><td>${f1(e.dauer,0)} s</td>
+      <td>${e.gewicht==null?"–":f1(e.gewicht)+" g"}</td><td>${f1(e.druck_max)} bar</td><td>${f1(e.temp,0)}</td>
+      <td>${[1,2,3,4,5].map(n=>`<span class="stern${n<=e.sterne?" an":""}" onclick="event.stopPropagation();shotAktion('bewerten ${e.nr} ${n==e.sterne?0:n}')">★</span>`).join("")}</td>
+      <td><input class="shot_notiz" value="${esc(e.notiz)}" onclick="event.stopPropagation()" onchange="shotAktion('bewerten ${e.nr} ${e.sterne} '+this.value)" style="width:140px"></td></tr>`).join("")||'<tr><td colspan="8" class="hinweis">noch keine Shots erkannt</td></tr>';
+  }catch(e){}
+}
+async function zeigeShot(nr){
+  const p=await (await fetch("/api/shot?nr="+nr)).json(); $("shot_kurve").style.display=p.length?"":"none";
+  $("shot_info").textContent=p.length?`Shot ${nr}: Druck (bar, rechts), Temperatur (°C) und Gewicht (g, links)`:"Für diesen Shot ist keine Kurve mehr gespeichert (nur die letzten 10).";
+  if(p.length) kurve("shot_kurve",[{p:p.map(q=>[q[0],q[2]]),farbe:"#f4a261"},{p:p.map(q=>[q[0],q[3]]),farbe:"#e6edf7",breite:2.5},{p:p.map(q=>[q[0],q[1]]),farbe:"#4cc9f0",achse:1}],{x0:0,min1:0,spanne1:4,fmtX:s=>Math.round(s)+" s"});
+}
+setInterval(holeShots,3000); holeShots();
+
+// ─── Maschinendaten ───────────────────────────────────────────────────────
+const MD={0x20:"Wassereingang (0 Tank, 1 Festwasser)",0x21:"LED Helligkeit",0x25:"LED Körper an",0x26:"Sprache (0 EN, 1 DE, 2 IT)",0x27:"Bezüge seit Wartung",0x28:"Tage seit Filterwechsel",
+ 0x29:"Lichter Helligkeit",0x2A:"Lichter an",0x2B:"Einheit (0 °C, 1 °F)",0x2C:"Auto Ein/Aus an",0x2D:"Passwort Einstellungen an",0x5A:"Kesselpriorität (0 Kaffee, 1 Services, 2 keine)",
+ 0x5B:"CRONO (Ausgabezähler) an",0x5C:"Vorbrühen (Zehntelsekunden)",0x5E:"Kaffeekessel an",0x5F:"Dampfkessel an",0x60:"Sollwert Kaffee °C",0x61:"Sollwert Dampf °C",0x63:"Firmware Mainboard ×10",
+ 0x70:"Maschinentyp (0 E61, 1 BZ)",0x71:"Gruppe",0x76:"PID Kaffee P ×10",0x77:"PID Kaffee I ×100",0x78:"PID Kaffee D ×10",0x79:"PID Kaffee Band",0x7B:"PID Dampf P ×10",0x7C:"PID Dampf I ×100",0x7D:"PID Dampf D ×10",
+ 0x80:"Füllstandsonde (Stufe)",0x81:"Ladezeit-Limit (Stufe)",0x82:"Bezüge gesamt"};
+function mdWert(vp,w){
+  const janein=[0x25,0x2A,0x2C,0x2D,0x5B,0x5E,0x5F], liste={0x20:["Tank","Festwasser"],0x26:["Englisch","Deutsch","Italienisch"],0x2B:["°C","°F"],0x5A:["Kaffee","Services","keine"],0x70:["E61","BZ"],0x81:["","60 s","90 s","120 s"],0x80:["","50K","150K","400K","1M"]};
+  if(janein.includes(vp)) return w?"ja":"nein"; if(liste[vp]&&liste[vp][w]!=null&&liste[vp][w]!=="") return liste[vp][w];
+  if([0x76,0x78,0x7B,0x7D].includes(vp)) return (w/10).toFixed(1); if([0x77,0x7C].includes(vp)) return (w/100).toFixed(2);
+  if(vp==0x5C) return (w/10).toFixed(1)+" s"; if(vp==0x63) return (w/10).toFixed(1); if(vp==0x60||vp==0x61) return w+" °C"; if(vp==0x82) return w.toLocaleString("de-DE"); return w}
+async function holeMaschine(){ if(!aktiv("maschine")) return;
+  try{const m=await (await fetch("/api/maschine")).json();
+    $("md_tabelle").innerHTML=Object.entries(m.vps).filter(([vp])=>MD[+vp]).map(([vp,[w,alter]])=>`<tr><td>${MD[+vp].replace(/ \(.*\)| ×\d+/g,"")}</td><td>${mdWert(+vp,w)}</td><td>${alter<120?alter+" s":alter<7200?Math.round(alter/60)+" min":Math.round(alter/3600)+" h"}</td></tr>`).join("")||'<tr><td colspan="3" class="hinweis">noch nichts gelesen: Seiten an der Maschine öffnen</td></tr>'}catch(e){}
+}
+setInterval(holeMaschine,4000); holeMaschine();
+
+// ─── Zeitplan ─────────────────────────────────────────────────────────────
+const TAGE=["Mo","Di","Mi","Do","Fr","Sa","So"]; let zpJ=null, zpGeladen=false;
+function zpZeileHtml(z){return `<div class="form zp_z">${TAGE.map((t,i)=>`<button class="chip${z.tage&(1<<i)?" an":""}" onclick="this.classList.toggle('an')">${t}</button>`).join("")}
+  ein <input type="time" value="${z.ein}" class="zp_ein" style="width:auto"> aus <input type="time" value="${z.aus}" class="zp_aus" style="width:auto">
+  <label><input type="checkbox" class="zp_akt" ${z.aktiv?"checked":""} style="width:auto"> an</label><button onclick="this.parentNode.remove()">✕</button></div>`}
+function zpZeile(){$("zp_zeilen").insertAdjacentHTML("beforeend",zpZeileHtml({tage:31,ein:"07:00",aus:"09:00",aktiv:true}))}
+async function holeZeitplan(neu){ if(!aktiv("maschine")&&!neu) return;
+  try{zpJ=await (await fetch("/api/zeitplan")).json(); $("zp_uhr").textContent=(zpJ.uhrzeit||"unbekannt")+(zpJ.ntp?" (Internet)":" (Display)");
+    $("zp_kal_status").textContent="Kalender: "+zpJ.kalender_status;
+    $("zp_termine").innerHTML=zpJ.termine.map(t=>`<li>${esc(t.start)} ${esc(t.titel)}</li>`).join("");
+    if(!zpGeladen||neu){zpGeladen=true; $("zp_plan").checked=zpJ.plan_aktiv; $("zp_kal").checked=zpJ.kalender_aktiv; $("zp_url").value=zpJ.kalender_url;
+      $("zp_wort").value=zpJ.stichwort; $("zp_vor").value=zpJ.vorlauf; $("zp_leer").value=zpJ.leerlauf; $("zp_zeilen").innerHTML=zpJ.zeilen.map(zpZeileHtml).join("")}
+  }catch(e){}
+}
+async function zpSpeichern(){
+  const zeilen=[...document.querySelectorAll(".zp_z")].map(z=>{let t=0; z.querySelectorAll(".chip").forEach((c,i)=>{if(c.classList.contains("an")) t|=1<<i});
+    return `${t},${z.querySelector(".zp_ein").value},${z.querySelector(".zp_aus").value},${z.querySelector(".zp_akt").checked?1:0}`}).join(";");
+  const d=new URLSearchParams({plan_aktiv:$("zp_plan").checked?1:0,kalender_aktiv:$("zp_kal").checked?1:0,kalender_url:v("zp_url"),stichwort:v("zp_wort"),vorlauf:v("zp_vor"),leerlauf:v("zp_leer"),zeilen});
+  const r=await fetch("/api/zeitplan",{method:"POST",body:d.toString()}); $("zp_ok").textContent=r.ok?" gespeichert":" Fehler"; setTimeout(()=>$("zp_ok").textContent="",3000); holeZeitplan(true)}
+setInterval(holeZeitplan,5000); holeZeitplan();
+
+// ─── Heim-WLAN und Zugang ─────────────────────────────────────────────────
+let wlGewaehlt="";
+function balken(r){return r>-55?"▂▄▆█":r>-67?"▂▄▆":r>-78?"▂▄":"▂"}
+async function holeWlan(suche){ if(!aktiv("einstellungen")&&!suche) return;
+  try{const w=await (await fetch("/api/wlan"+(suche?"?suche=1":""))).json();
+    $("wl_status").innerHTML=w.verbunden?`Verbunden mit <b>${esc(w.ssid)}</b> · <a href="http://duo.local/" style="color:var(--akzent)">duo.local</a> · ${esc(w.ip)}`:(w.eth?`Ethernet ${esc(w.eth)}`:"Nicht im Heimnetz. Netz suchen und verbinden.");
+    $("sc_info").textContent=(w.web_passwort?"Diese Seite ist mit Passwort geschützt (Benutzer „duo“). ":"Diese Seite hat kein Passwort. ")+(w.ap_eigenes_passwort?"":"Das WLAN „duo-bridge“ nutzt noch das Standardpasswort espresso1 – bitte ändern.");
+    if(w.netze.length) $("wl_liste").innerHTML=w.netze.map(n=>`<div class="liste-zeile" onclick="wlWaehlen('${esc(n.ssid)}',${n.offen})"><span style="display:inline-block;min-width:48px;color:var(--akzent)">${balken(n.rssi)}</span><b>${esc(n.ssid)}</b>${n.offen?' <span class="hinweis">offen</span>':""}</div>`).join("");
+    if(w.sucht) setTimeout(()=>holeWlan(false),1500);
+  }catch(e){}
+}
+function wlSuchen(){$("wl_liste").innerHTML='<p class="hinweis">suche …</p>'; holeWlan(true)}
+function wlWaehlen(ssid,offen){wlGewaehlt=ssid; $("wl_name").textContent=ssid; $("wl_form").style.display=""; $("wl_pass").value=""; if(offen) wlVerbinden(); else $("wl_pass").focus()}
+async function wlVerbinden(){await fetch("/api/wlan_setzen",{method:"POST",body:new URLSearchParams({ssid:wlGewaehlt,pass:v("wl_pass")}).toString()});
+  $("wl_status").textContent="verbinde …"; $("wl_form").style.display="none"; setTimeout(()=>holeWlan(false),6000)}
+async function sicherheit(k,w){const r=await fetch("/api/sicherheit",{method:"POST",body:new URLSearchParams({[k]:w}).toString()}); const t=await r.text();
+  $("sc_info").textContent=t=="ok"?"gespeichert":t; $("sc_ap").value=$("sc_web").value=""; setTimeout(()=>holeWlan(false),500)}
+setInterval(()=>holeWlan(false),5000); holeWlan(false);
 </script>
 </body>
 </html>)HTML";

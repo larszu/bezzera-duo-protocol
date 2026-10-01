@@ -116,6 +116,47 @@ class Demo:
             schritt = max(1, math.ceil(len(p) / mx))
             return json.dumps({"jetzt": 0, "groesse": 86400,
                                "p": [[int(jetzt - t), self.seite] + w for t, w in p[::schritt]]}).encode()
+        if u.path == "/api/shots":
+            return json.dumps({"laeuft": self.laeuft, "t": None, "bezuege_maschine": 22263 + len(self.liste),
+                               "seit_rueckspuelen": 61, "rueckspuelen_alle": 60,
+                               "log": [{"nr": 40 - i, "zeit": f"2026-10-01 0{7 + i // 3}:{10 + i * 7 % 50:02d}", "dauer": 27 + i % 5,
+                                        "gewicht": 36.2 - i * 0.3, "druck_max": 9.0 + i % 2 / 2, "temp": 93,
+                                        "profil": "Hausespresso", "sterne": (4, 3, 5, 0, 2)[i % 5], "notiz": "", "kurve": i == 0}
+                                       for i in range(6)]}).encode()
+        if u.path == "/api/shot":
+            return json.dumps([[t / 10, min(9, t / 25), 93, max(0, (t - 60) / 10 * 1.6)] for t in range(0, 280, 2)]).encode()
+        if u.path in ("/api/shot_aktion", "/api/ble_suche", "/api/wlan_setzen", "/api/profil_aktion"):
+            return b"ok"
+        if u.path == "/api/ble_geraete":
+            return json.dumps({"laeuft": False, "geraete": [
+                {"name": "BOOKOO_SC", "adresse": "aa:bb:cc:dd:ee:01", "rssi": -58, "bekannt": True},
+                {"name": "LUNAR-2B4F", "adresse": "aa:bb:cc:dd:ee:02", "rssi": -71, "bekannt": True},
+                {"name": "Kopfhörer", "adresse": "aa:bb:cc:dd:ee:03", "rssi": -80, "bekannt": False}]}).encode()
+        if u.path == "/api/maschine":
+            vps = {0x20: 0, 0x25: 1, 0x26: 1, 0x27: 0, 0x28: 0, 0x2C: 1, 0x5A: 0, 0x5B: 1, 0x5C: 20, 0x5E: 1, 0x5F: 1, 0x60: 93,
+                   0x61: 130, 0x63: 21, 0x70: 1, 0x76: 90, 0x77: 100, 0x78: 50, 0x79: 5, 0x7B: 82, 0x7C: 15, 0x7D: 100,
+                   0x80: 3, 0x81: 3, 0x82: 22263}
+            return json.dumps({"vps": {str(k): [v, 3600] for k, v in vps.items()}, "bezuege_maschine": 22263}).encode()
+        if u.path == "/api/wlan":
+            return json.dumps({"verbunden": False, "ssid": "", "ip": "", "eth": "", "ap": "duo-bridge",
+                               "ap_eigenes_passwort": False, "web_passwort": False, "sucht": False,
+                               "netze": [{"ssid": "Vodafone-Zuhause", "rssi": -52, "offen": False},
+                                         {"ssid": "Gast", "rssi": -70, "offen": True}]}).encode()
+        if u.path == "/api/sicherheit":
+            return b"ok"
+        if u.path == "/api/zeitplan":
+            return json.dumps({"plan_aktiv": True, "kalender_aktiv": False, "vorlauf": 20, "leerlauf": 60,
+                               "kalender_url": "", "stichwort": "Espresso", "kalender_status": "aus",
+                               "uhrzeit": time.strftime("%Y-%m-%d %H:%M"), "ntp": True,
+                               "zeilen": [{"tage": 31, "ein": "06:45", "aus": "09:00", "aktiv": True},
+                                          {"tage": 96, "ein": "08:30", "aus": "12:00", "aktiv": True}],
+                               "termine": []}).encode()
+        if u.path == "/api/profile":
+            return json.dumps({"aktiv": 0, "ablauf": False, "ergebnis": "", "profile": [
+                {"nr": 0, "p": {"name": "Hausespresso", "roester": "Rösterei X · Brasil", "mahlgrad": "4.5", "notiz": "",
+                                "dosis": 18, "ziel": 36, "temp": 93, "vorb": 20, "dampf": 130, "prio": 0}},
+                {"nr": 1, "p": {"name": "Hell geröstet", "roester": "Äthiopien", "mahlgrad": "3.8", "notiz": "länger vorbrühen",
+                                "dosis": 18, "ziel": 40, "temp": 95, "vorb": 40, "dampf": 0, "prio": 255}}]}).encode()
         if u.path == "/api/bezug":
             return json.dumps({"nr": self.bezug_nr, "p": self.bezug}).encode()
         if u.path == "/api/aktion":
@@ -139,7 +180,8 @@ class Demo:
         w = self.verlauf[-1][1]
         druck = w[c["druck_p_wort"]] / c["druck_p_teil"] if c["druck_p_wort"] >= 0 else None
         letzter = self.liste[0] if self.liste else None
-        werte = {"kaffee": w[3], "service": w[4], "druck_pumpe": druck, "druck_kessel": None,
+        werte = {"bereit": "ON" if self.an and w[3] >= 92 else "OFF", "seit_rueckspuelen": 61, "rueckspuelen_alle": 60,
+                 "kaffee": w[3], "service": w[4], "druck_pumpe": druck, "druck_kessel": None,
                  "status": "an" if self.an else "Standby", "alarm": "OFF", "alarm_text": "",
                  "an": "ON" if self.an else "OFF", "gewicht": round(self.g, 1), "durchfluss": round(self.fluss, 1),
                  "bezug": "ON" if self.laeuft else "OFF", "letzter_g": letzter and letzter["g"],
