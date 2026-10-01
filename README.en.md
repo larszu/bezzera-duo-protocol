@@ -494,6 +494,17 @@ green to ESP32 **5V**, brown to GND, yellow to GPIO15, white to GPIO18.
 
 The mode is stored and survives a restart; the default is 0.
 
+**Most people only need mode 0** (bridge). Everything in the web UI works in
+it: on/off, profiles, scale, history, schedule, notifications. It is the
+factory default; nothing to change.
+
+Switching, if needed:
+
+- **Web UI:** tab *Diagnose* → *Steuerung* → *Betriebsart*.
+- **USB:** `python3 tools/bridge.py "e 0"` (or `e 1`, `e 2`); `?` shows the
+  current mode (`emulation=`).
+- `tools/display_sichern.py` switches to 1 for the backup and back afterwards.
+
 **Mode 0 really only passes through:** the display shows exactly what the
 mainboard sends, and the mainboard only gets the display's answers. When the
 bridge asks the display something itself (web UI, `d`,
