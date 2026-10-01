@@ -281,7 +281,7 @@
    "stellen": 3,
    "nachkomma": 0,
    "farbe": "#ff9a3c",
-   "vorlage": 0
+   "vorlage": 2
   },
   {
    "typ": "text",
@@ -304,7 +304,7 @@
    "stellen": 3,
    "nachkomma": 1,
    "farbe": "#ffffff",
-   "vorlage": 0
+   "vorlage": 2
   },
   {
    "typ": "text",
@@ -343,7 +343,7 @@
    "stellen": 3,
    "nachkomma": 1,
    "farbe": "#7ddc8a",
-   "vorlage": 0
+   "vorlage": 2
   },
   {
    "typ": "text",

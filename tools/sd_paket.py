@@ -7,8 +7,9 @@ fuer mehrere Seiten auf einmal und mit Konfiguration:
     python3 sd_paket.py flash/sicherung-20261001-2120 --ziel /Volumes/DWIN \\
         --seite seiten/doom.json --seite seiten/test.json --config R2=05
 
-Erzeugt DWIN_SET/<seite>.bmp je Seite, 13.bin (Touch), 14.bin (Variablen der
-Seiten 0-299, ueber Bibliothek 14-16) und CONFIG.TXT. Die Projektdateien sind
+Erzeugt DWIN_SET/<seite>.bmp je Seite, 13.bin (Touch, volle 256 KB) und
+14.bin (Variablen, volle 768 KB = Bibliothek 14-16) und CONFIG.TXT. Alles
+hinter der Touch-Tabelle und hinter Seite 299 bleibt aus der Sicherung erhalten. Die Projektdateien sind
 seitenbau.json-Dateien (Seitenbau: "Projekt speichern"). Die Ausgangsdateien
 kommen vollstaendig aus der Sicherung; nur die genannten Seiten werden ersetzt.
 Prueft am Ende, dass alle anderen Seiten byte-gleich geblieben sind.
@@ -25,6 +26,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H = 320, 240
 SEITE14, EINTRAG = 2048, 32
+SEITEN = 3 * 128  # 14.bin ueber Bibliothek 14-16; Display 2.2 nutzt auch Seiten ab 300
 FREI = {96, 97, 98, 99, 196, 197, 198, 199, 296, 297, 298, 299}
 SCHRIFT = "/System/Library/Fonts/Helvetica.ttc"
 # Konfiguration des Displays 2.2 (Register 0x10-0x1C), R0/R4 nie setzen, RB loescht alles
@@ -84,7 +86,7 @@ def touch_fuer(seite: int, e: dict) -> bytes:
 def vorlagen(lib14: bytes) -> list[bytes]:
     """Zahlenanzeigen (0x10) aus den Originalseiten als Schriftvorlage."""
     out, gesehen = [], set()
-    for s in range(300):
+    for s in range(SEITEN):
         for i in range(64):
             o = s * SEITE14 + i * EINTRAG
             if lib14[o] != 0x5A:
@@ -142,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
 
     lies = lambda n: open(os.path.join(a.sicherung, f"lib_{n:03d}.bin"), "rb").read()
     lib13 = lies(13)
-    lib14 = bytearray(b"\xff" * (300 * SEITE14))
+    lib14 = bytearray(b"\xff" * (SEITEN * SEITE14))
     o = 0
     for n in (14, 15, 16):
         pfad = os.path.join(a.sicherung, f"lib_{n:03d}.bin")
@@ -185,12 +187,16 @@ def main(argv: list[str] | None = None) -> int:
     rest = [t for t in touch if t[0] not in seiten]
     if [t[1] for t in rest] != [t[1] for t in alt_touch]:
         raise SystemExit("Touch-Tabelle: andere Seiten veraendert, Abbruch")
-    for s in range(300):
+    for s in range(SEITEN):
         if s not in seiten and lib14[s * SEITE14:(s + 1) * SEITE14] != alt14[s * SEITE14:(s + 1) * SEITE14]:
             raise SystemExit(f"Variablen Seite {s} veraendert, Abbruch")
 
     if seiten:
-        open(os.path.join(ziel, "13.bin"), "wb").write(b"".join(t[1] for t in touch) + b"\xff" * 16)
+        tab = b"".join(t[1] for t in touch) + b"\xff" * 16
+        ende_alt = sum(len(t[1]) for t in alt_touch) + 16
+        if any(b not in (0x00, 0xFF) for b in lib13[ende_alt:len(tab)]):
+            raise SystemExit("Hinter der Touch-Tabelle liegen Daten, die die neuen Tasten ueberschreiben wuerden")
+        open(os.path.join(ziel, "13.bin"), "wb").write(tab + lib13[len(tab):])
         open(os.path.join(ziel, "14.bin"), "wb").write(bytes(lib14))
     cfg = dict(CONFIG)
     for c in a.config:

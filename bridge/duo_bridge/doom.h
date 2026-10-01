@@ -5,7 +5,7 @@
 // (TP_Flag, TP_Status, X, Y) und zaehlt Tipper rechts neben der Menuetaste,
 // also auf dem Schriftzug. Am Display selbst aendert das nichts.
 //
-// Anzeigen: Eine eigene Seite (Standard 299, aus tools/seitenbau, per
+// Anzeigen: Eine eigene Seite (Standard 297, aus tools/seitenbau, per
 // SD-Karte installiert) traegt zwei Zeichenflaechen (Basic Graphics 0x21):
 //   VP 0x2000  Befehl 0x000F Bitmap, 160x100 Pixel RGB565 bei (80,70)
 //   VP 0x6000  Befehl 0x0010 Vergroessern auf den ganzen Bildschirm (optional)
@@ -40,7 +40,7 @@ static const int DOOM_B = 160, DOOM_H = 100, DOOM_X = 80, DOOM_Y = 70;
 static const char *DOOM_WAD = "/littlefs/doom.wad";
 
 struct DoomEinst {
-  uint16_t seite = 299;
+  uint16_t seite = 297;
   bool zoom = true, turbo = false;
 };
 static DoomEinst doomEinst;
@@ -64,7 +64,7 @@ static volatile bool tpNeu = false;
 static void doomLaden() {
   Preferences p;
   p.begin("doom", true);
-  doomEinst.seite = p.getUShort("seite", 299);
+  doomEinst.seite = p.getUShort("seite", 297);
   doomEinst.zoom = p.getBool("zoom", true);
   doomEinst.turbo = p.getBool("turbo", false);
   p.end();

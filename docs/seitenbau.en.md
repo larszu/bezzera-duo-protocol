@@ -12,7 +12,7 @@ or open `tools/seitenbau/index.html` offline. It runs on Windows, Mac and Linux,
 
 1. Back up the display: `python3 tools/display_sichern.py alles` ([guide](display_sichern.en.md)).
 2. Load `lib_013.bin` to `lib_016.bin` from the backup into the builder.
-3. Pick a slot (96–99, 196–199, 296–299) and add a background, texts, buttons and numbers.
+3. Pick a slot (96–99, 196–199, 296–299; display 2.2 uses 198, 199, 298, 299 itself) and add a background, texts, buttons and numbers.
 4. Export **DWIN_SET als ZIP**, copy the folder to an empty FAT32 SD card, insert it with the
    machine off, switch on, wait, remove the card, restart.
 
@@ -42,7 +42,7 @@ Tap the logo text on the home page (right of the menu button) ten times quickly,
 on the display or in the web UI replica.
 
 Requirements:
-- **Doom page:** page builder → *Vorlage: Doom-Seite* → slot 299 → ZIP → SD card.
+- **Doom page:** page builder → *Vorlage: Doom-Seite* → slot 297 → ZIP → SD card.
   It holds two drawing areas: VP `0x2000` (160×100 bitmap) and `0x6000` (zoom).
 - **WAD file:** web UI → Diagnose → Doom → upload, e.g. the shareware `doom1.wad`
   (4 MB). It lives on the ESP32 only, never in the repo. Without a WAD you get the Doom fire.
