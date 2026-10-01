@@ -6,7 +6,7 @@ name: Firmware
 on:
   push:
     branches: [main]
-    paths: ["bridge/**", "flasher/**", ".github/workflows/firmware.yml"]
+    paths: ["bridge/**", "flasher/**", "tools/seitenbau/**", ".github/workflows/firmware.yml"]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -38,6 +38,7 @@ jobs:
           [[ "$GITHUB_REF_TYPE" == "tag" ]] || VERSION="main-$(git rev-parse --short HEAD)"
           mkdir -p site
           cp -r flasher/* site/
+          mkdir -p site/seitenbau && cp tools/seitenbau/index.html site/seitenbau/
           cp build/duo_bridge.ino.merged.bin site/duo_bridge.bin
           sed -i "s/__VERSION__/${VERSION}/" site/manifest.json site/index.html
       - uses: actions/upload-pages-artifact@v4

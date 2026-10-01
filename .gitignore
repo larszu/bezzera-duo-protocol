@@ -10,3 +10,5 @@ captures/live.jpg
 flash/
 # Build-Ausgaben von arduino-cli
 build/
+*.wad
+*.WAD

@@ -589,9 +589,8 @@ Weboberfläche und liegen im NVS des ESP32, nie im Quelltext.
 | **Druckkurven** | Wort 5 (Pumpe, ×0,5 bar) und 6 (Dampfkessel, ×0,25 bar) aus `14.bin` | 🧪 |
 | **Brew by Weight** | Bluetooth- oder WLAN-Waage, Stopp bei Ziel minus gelerntem Vorlauf über die Stopp-Taste | 🧪 · 💡 Stopp über das Tastenfeld |
 | **Einrichtung ohne Rechner** | WLAN suchen und verbinden im Anmeldeportal; nach dem Flashen im Browser per Improv | 🧪 |
-
-Eigene Seiten im eingebauten Display gehen nicht: Das Display-Projekt ist fest,
-die Bridge kann nur vorhandene Felder mit eigenen Werten füllen.
+| **Eigene Display-Seiten** | [Seitenbau](https://larszu.github.io/bezzera-duo-protocol/seitenbau/) im Browser (Windows/Mac/Linux): Bild, Tasten, Zahlen auf den freien Plätzen 96–99/196–199/296–299, per SD-Karte aufs Display; Tasten lösen Bridge-Aktionen aus ([Anleitung](docs/seitenbau.md)) | 🧪 |
+| **Doom** 🕹️ | Easter Egg: 10× auf den Schriftzug der Startseite tippen; Doom läuft auf dem ESP32 und malt per Bitmap-Befehl ins Display | 🧪 |
 
 <p align="center">
   <img src="docs/screenshots/zusatz_rohworte.png" alt="Verlauf mit allen neun Rohworten von VP 0x0050; in der Simulation steigt Wort 1 bei laufender Pumpe" width="800" /><br />
@@ -750,6 +749,8 @@ Alle Python-Skripte brauchen nur die Standardbibliothek.
 | [`tools/menue_lesen.py`](tools/menue_lesen.py) | Menüseiten per Tastencode öffnen und mitschreiben, was das Mainboard dabei schreibt |
 | [`tools/web_demo.py`](tools/web_demo.py) | simulierte Maschine und Waage für `--demo` |
 | [`tools/seiten_foto.py`](tools/seiten_foto.py) | alle Seiten durchschalten und per Webcam fotografieren (`brew install imagesnap`) |
+| [`tools/seitenbau/index.html`](tools/seitenbau/index.html) | eigene Display-Seiten bauen, offline im Browser ([online](https://larszu.github.io/bezzera-duo-protocol/seitenbau/)) |
+| [`tools/dgus_sdk_mac.sh`](tools/dgus_sdk_mac.sh) | DWIN-SDK 5.10 unter Wine auf dem Mac (nur für Schriften/Symbole nötig) |
 | [`tools/display_sichern.py`](tools/display_sichern.py) | Display-Flash komplett sichern, nur lesend; die Bridge liest selbst ([Anleitung](docs/display_sichern.md)) |
 | [`tools/seite_kopieren.py`](tools/seite_kopieren.py) | Bild einer Seite auf einen leeren Platz kopieren, mit Trockenlauf und Rücklesen — schreibt! |
 | [`tools/libop_lesen.py`](tools/libop_lesen.py) | Flash-Bereiche des Displays lesen — kennt nur den Lesemodus |
@@ -826,6 +827,10 @@ Alle Links nach Themen, auch zu Waagen und Grind by Weight: [`docs/links.md`](do
 - [1st-line: Matrix/Duo Software-Kompatibilität](https://www.1st-line.com/technical-support/bezzera-technical-support/bezzera-matrix-duo-software-compatibility-changes/)
 
 ---
+
+## ⚖️ Lizenz
+
+GPL-2.0 ([LICENSE](LICENSE)). Doom kommt aus [doomgeneric](https://github.com/ozkl/doomgeneric) (GPL-2.0).
 
 ## 👤 Autor
 
