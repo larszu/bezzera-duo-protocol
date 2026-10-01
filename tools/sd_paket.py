@@ -81,7 +81,7 @@ def touch_fuer(seite: int, e: dict) -> bytes:
     w16(k, 14, 0xFD05)  # Tastencode, meldet nicht von selbst (wie die Originaltasten)
     b = bytearray(16)
     b[0] = 0xFE
-    w16(b, 1, 0x0000 if e["art"] == "code" else 0x6100)
+    w16(b, 1, 0x0000 if e["art"] == "code" else 0x0300)
     w16(b, 4, int(e.get("wert") or 0))
     return bytes(k) + bytes(b)
 
@@ -165,28 +165,45 @@ def main(argv: list[str] | None = None) -> int:
     for pfad in a.seite:
         p = json.load(open(pfad))
         s = p["seite"]
-        if s not in FREI:
-            raise SystemExit(f"Seite {s} ist keine freie Seite ({sorted(FREI)})")
-        if any(t[0] == s for t in alt_touch) or lib14[s * SEITE14] == 0x5A:
-            raise SystemExit(f"Seite {s} ist im Display schon belegt")
+        ergaenzen = p.get("ergaenzen", False)  # bestehende Seite: anhaengen, Bild bleibt
+        if not ergaenzen:
+            if s not in FREI:
+                raise SystemExit(f"Seite {s} ist keine freie Seite ({sorted(FREI)})")
+            if any(t[0] == s for t in alt_touch) or lib14[s * SEITE14] == 0x5A:
+                raise SystemExit(f"Seite {s} ist im Display schon belegt")
         seiten.append(s)
-        # Touch: Reihenfolge der Originaldatei beibehalten, vor der ersten hoeheren Seite einfuegen
+        # Touch: Reihenfolge der Originaldatei beibehalten; neue Tasten nach den
+        # vorhandenen dieser Seite bzw. vor der ersten hoeheren Seite
         neu = [(s, touch_fuer(s, e)) for e in p["el"] if e["typ"] == "taste"]
         pos = next((i for i, t in enumerate(touch) if t[0] > s), len(touch))
         touch = touch[:pos] + neu + touch[pos:]
         vars_ = [e for e in p["el"] if e["typ"] in ("zahl", "flaeche")]
-        if len(vars_) > 64:
+        start = 0
+        if ergaenzen:
+            while start < 64 and lib14[s * SEITE14 + start * EINTRAG] == 0x5A:
+                start += 1
+        else:
+            lib14[s * SEITE14:(s + 1) * SEITE14] = b"\xff" * SEITE14
+        if start + len(vars_) > 64:
             raise SystemExit("hoechstens 64 Anzeigen je Seite")
-        lib14[s * SEITE14:(s + 1) * SEITE14] = b"\xff" * SEITE14
-        for i, e in enumerate(vars_):
+        for i, e in enumerate(vars_, start):
             lib14[s * SEITE14 + i * EINTRAG:s * SEITE14 + (i + 1) * EINTRAG] = variable_fuer(e, vl)
-        bild(p).save(os.path.join(ziel, f"{s}.bmp"))
-        print(f"Seite {s}: {len(neu)} Tasten, {len(vars_)} Anzeigen, Bild {s}.bmp")
+        if ergaenzen:
+            if lib14[s * SEITE14:s * SEITE14 + start * EINTRAG] != alt14[s * SEITE14:s * SEITE14 + start * EINTRAG]:
+                raise SystemExit(f"Seite {s}: vorhandene Anzeigen veraendert, Abbruch")
+            print(f"Seite {s} ergaenzt: {len(neu)} Tasten, {len(vars_)} Anzeigen (nach {start} vorhandenen), Bild bleibt")
+        else:
+            bild(p).save(os.path.join(ziel, f"{s}.bmp"))
+            print(f"Seite {s}: {len(neu)} Tasten, {len(vars_)} Anzeigen, Bild {s}.bmp")
 
     # Pruefen: alles ausser den neuen Seiten unveraendert
     rest = [t for t in touch if t[0] not in seiten]
-    if [t[1] for t in rest] != [t[1] for t in alt_touch]:
+    if [t[1] for t in rest] != [t[1] for t in alt_touch if t[0] not in seiten]:
         raise SystemExit("Touch-Tabelle: andere Seiten veraendert, Abbruch")
+    for s in seiten:  # vorhandene Tasten der Seite: unveraendert und in alter Reihenfolge vorn
+        alt = [t[1] for t in alt_touch if t[0] == s]
+        if [t[1] for t in touch if t[0] == s][:len(alt)] != alt:
+            raise SystemExit(f"Seite {s}: vorhandene Tasten veraendert, Abbruch")
     for s in range(SEITEN):
         if s not in seiten and lib14[s * SEITE14:(s + 1) * SEITE14] != alt14[s * SEITE14:(s + 1) * SEITE14]:
             raise SystemExit(f"Variablen Seite {s} veraendert, Abbruch")

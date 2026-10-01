@@ -23,14 +23,14 @@ The ZIP holds the background (`<page>.bmp`, 24-bit) and complete `13.bin`
 |---|---|---|
 | text, shape, button graphic | background image | static, any font on the computer |
 | button: change page | 13.bin `Pic_Next` | the display switches itself |
-| button: bridge action | 13.bin key code `FD05` on VP `0x6100` | the bridge picks it up: 1 on, 2 standby, 3 stop brew, 4 tare, 5 Doom, 10–29 profile 1–20 |
+| button: bridge action | 13.bin key code `FD05` on VP `0x0300` | the bridge picks it up: 1 on, 2 standby, 3 stop brew, 4 tare, 5 Doom, 10–29 profile 1–20 |
 | button: key code | 13.bin `FD05` on VP `0x0000` | like an original button, to the mainboard |
-| number | 14.bin data variable `0x10`, font copied from an existing display | mainboard values (`0x0053` …) or bridge values (`0x6110` …) |
+| number | 14.bin data variable `0x10`, font copied from an existing display | mainboard values (`0x0053` …) or bridge values (`0x0310` …) |
 | drawing area | 14.bin basic graphics `0x21` | the bridge draws into it (Doom) |
 
 Bridge values (only while a custom page is shown, every 500 ms):
-`0x6110` weight g×10, `0x6111` brew time s×10, `0x6112` shots since backflush,
-`0x6113` total shots, `0x6114` time hhmm, `0x6115` active profile.
+`0x0310` weight g×10, `0x0311` brew time s×10, `0x0312` shots since backflush,
+`0x0313` total shots, `0x0314` time hhmm, `0x0315` active profile.
 
 **Risk:** the SD card overwrites the touch and display configuration of every
 page. If 13/14.bin come from a bad backup, the original pages suffer too.
@@ -43,7 +43,7 @@ on the display or in the web UI replica.
 
 Requirements:
 - **Doom page:** page builder → *Vorlage: Doom-Seite* → slot 299 → ZIP → SD card.
-  It holds two drawing areas: VP `0x2000` (160×100 bitmap) and `0x6000` (zoom).
+  It holds two drawing areas: VP `0x0800` (96×62 bitmap) and `0x1FC0` (zoom).
 - **WAD file:** web UI → Diagnose → Doom → upload, e.g. the shareware `doom1.wad`
   (4 MB). It lives on the ESP32 only, never in the repo. Without a WAD you get the Doom fire.
 

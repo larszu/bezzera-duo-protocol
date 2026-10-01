@@ -26,14 +26,14 @@ Einträge der gewählten Seite ersetzt.
 |---|---|---|
 | Text, Fläche, Knopfgrafik | Hintergrundbild | statisch, beliebige Schrift des Rechners |
 | Taste: Seite wechseln | 13.bin, `Pic_Next` | das Display wechselt selbst |
-| Taste: Bridge-Aktion | 13.bin, Tastencode `FD05` auf VP `0x6100` | die Bridge holt den Wert ab: 1 Ein, 2 Standby, 3 Bezug stoppen, 4 Tara, 5 Doom, 10–29 Profil 1–20 |
+| Taste: Bridge-Aktion | 13.bin, Tastencode `FD05` auf VP `0x0300` | die Bridge holt den Wert ab: 1 Ein, 2 Standby, 3 Bezug stoppen, 4 Tara, 5 Doom, 10–29 Profil 1–20 |
 | Taste: Tastencode | 13.bin, `FD05` auf VP `0x0000` | wie eine Originaltaste ans Mainboard |
-| Zahl | 14.bin, Datenvariable `0x10`, Schrift aus einer vorhandenen Anzeige | Werte des Mainboards (`0x0053` …) oder der Bridge (`0x6110` …) |
+| Zahl | 14.bin, Datenvariable `0x10`, Schrift aus einer vorhandenen Anzeige | Werte des Mainboards (`0x0053` …) oder der Bridge (`0x0310` …) |
 | Zeichenfläche | 14.bin, Basic Graphics `0x21` | die Bridge zeichnet hinein (Doom) |
 
 Werte der Bridge (nur solange eine eigene Seite zu sehen ist, alle 500 ms):
-`0x6110` Gewicht g×10, `0x6111` Bezugszeit s×10, `0x6112` Bezüge seit Rückspülen,
-`0x6113` Bezüge gesamt, `0x6114` Uhrzeit hhmm, `0x6115` aktives Profil.
+`0x0310` Gewicht g×10, `0x0311` Bezugszeit s×10, `0x0312` Bezüge seit Rückspülen,
+`0x0313` Bezüge gesamt, `0x0314` Uhrzeit hhmm, `0x0315` aktives Profil.
 
 **Risiko:** Die SD-Karte überschreibt Touch- und Anzeigekonfiguration aller
 Seiten. Stammen 13/14.bin aus einer fehlerhaften Sicherung, sind auch die
@@ -46,7 +46,7 @@ Menütaste), am Display oder im Nachbau der Weboberfläche.
 
 Voraussetzungen:
 - **Doom-Seite:** Seitenbau → *Vorlage: Doom-Seite* → Platz 299 → ZIP → SD-Karte.
-  Sie trägt zwei Zeichenflächen: VP `0x2000` (Bitmap 160×100) und `0x6000` (vergrößern).
+  Sie trägt zwei Zeichenflächen: VP `0x0800` (Bitmap 96×62) und `0x1FC0` (vergrößern).
 - **WAD-Datei:** Weboberfläche → Diagnose → Doom → hochladen, z. B. die
   Shareware-`doom1.wad` (4 MB). Die Datei liegt nur auf dem ESP32, nicht im Repo.
   Ohne WAD brennt das Doom-Feuer.

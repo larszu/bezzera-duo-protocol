@@ -1,5 +1,5 @@
 #pragma once
-// Easter Egg: zehnmal schnell auf das Logo der Startseite tippen -> Doom auf dem Display.
+// Easter Egg: zehnmal schnell auf den Titel einer eigenen Seite (z. B. "Bruehkurve") tippen -> Doom auf dem Display.
 //
 // Erkennen: Die Bridge liest auf der Startseite das Touch-Register 0x05
 // (TP_Flag, TP_Status, X, Y) und zaehlt Tipper rechts neben der Menuetaste,
@@ -7,8 +7,10 @@
 //
 // Anzeigen: Eine eigene Seite (Standard 299, aus tools/seitenbau, per
 // SD-Karte installiert) traegt zwei Zeichenflaechen (Basic Graphics 0x21):
-//   VP 0x2000  Befehl 0x000F Bitmap, 160x100 Pixel RGB565 bei (80,70)
-//   VP 0x6000  Befehl 0x0010 Vergroessern auf den ganzen Bildschirm (optional)
+//   VP 0x0800  Befehl 0x000F Bitmap, 96x62 Pixel RGB565 bei (112,89)
+//   VP 0x1FC0  Befehl 0x0010 doppelt gross auf (64,58) (optional)
+// Nutzbar sind nur VPs bis 0x1FFF: ab 0x2000 liegt der Empfangspuffer des
+// Displays, ueber 0x3FFF wird gespiegelt. 96x62 Pixel ab 0x0806 enden bei 0x1F46.
 // Doom (doomgeneric, GPL-2.0, src/doom) rechnet in 320x200 mit Palette; jedes
 // zweite Pixel geht als RGB565 ins Bitmap, und zwar nur die Worte, die sich
 // seit dem letzten Bild geaendert haben. Bei 115200 Baud sind das wenige
@@ -35,8 +37,8 @@ struct DoomFarbe {
 extern DoomFarbe colors[256];  // i_video.c (CMAP256)
 }
 
-static const uint16_t DOOM_VP_BILD = 0x2000, DOOM_VP_ZOOM = 0x6000;
-static const int DOOM_B = 160, DOOM_H = 100, DOOM_X = 80, DOOM_Y = 70;
+static const uint16_t DOOM_VP_BILD = 0x0800, DOOM_VP_ZOOM = 0x1FC0;
+static const int DOOM_B = 96, DOOM_H = 62, DOOM_X = 112, DOOM_Y = 89;
 static const char *DOOM_WAD = "/littlefs/doom.wad";
 
 struct DoomEinst {
@@ -231,7 +233,7 @@ void DG_DrawFrame() {
   const uint8_t *q = (const uint8_t *)DG_ScreenBuffer;
   for (int y = 0; y < DOOM_H; y++)
     for (int x = 0; x < DOOM_B; x++) {
-      const DoomFarbe &c = colors[q[(2 * y) * DOOMGENERIC_RESX + 2 * x]];
+      const DoomFarbe &c = colors[q[(y * DOOMGENERIC_RESY / DOOM_H) * DOOMGENERIC_RESX + x * DOOMGENERIC_RESX / DOOM_B]];
       doomBild[y * DOOM_B + x] = rgb565(c.r, c.g, c.b);
     }
   doomBildSenden();
@@ -304,8 +306,8 @@ static void doomDisplayVorbereiten() {
   doomSeiteZeigen(doomEinst.seite);
   uint16_t kopf[] = {0x000F, 1, DOOM_X, DOOM_Y, DOOM_B, DOOM_H};
   doomVp(DOOM_VP_BILD, kopf, 6);
-  if (doomEinst.zoom) {  // Bitmap (80,70)-(239,169) auf den ganzen Bildschirm vergroessern
-    uint16_t z[] = {0x0010, 1, 0, 20, DOOM_X, DOOM_Y, DOOM_X + DOOM_B - 1, DOOM_Y + DOOM_H - 1};
+  if (doomEinst.zoom) {  // Bitmap (112,89)-(207,150) doppelt gross nach (64,58)
+    uint16_t z[] = {0x0010, 1, 64, 58, DOOM_X, DOOM_Y, DOOM_X + DOOM_B - 1, DOOM_Y + DOOM_H - 1};
     doomVp(DOOM_VP_ZOOM, z, 8);
   } else {
     uint16_t z[] = {0x0010, 0};
@@ -375,19 +377,21 @@ static void doomLoop() {
   static uint32_t zuletzt = 0, letzterTipp = 0;
   static uint8_t tipps = 0;
   static bool warUnten = false;
+  // Nur auf eigenen Seiten (96-99 je Sprache): auf der Startseite liegt das
+  // Logo beim Display 2.2 im Touch-Bereich der Menuetaste.
   int s = leitung.seite % 100;
-  if (emulation == 1 || doomBeendet || (s != 1 && s != 5 && s != 6)) return;
+  if (emulation == 1 || doomBeendet || s < 96 || leitung.seite == doomEinst.seite) return;
   if (tpNeu) {
     tpNeu = false;
     bool unten = tpStatus == 0x01 || tpStatus == 0x03;
     if (unten && !warUnten) {
-      bool logo = tpX >= 90 && tpX <= 150 && tpY <= 50;  // Schriftzug rechts neben der Menuetaste
+      bool logo = tpX <= 140 && tpY <= 30;  // Titel oben links
       if (!logo || millis() - letzterTipp > 1500) tipps = 0;
       if (logo) {
         letzterTipp = millis();
         if (++tipps >= 10) {
           tipps = 0;
-          doomStarten("10x Logo");
+          doomStarten("10x Titel");
         }
       }
     }
