@@ -60,6 +60,7 @@ jobs:
 
   pages:
     needs: bauen
+    if: github.ref_type != 'tag'  # Pages nimmt nur main an; die Seite baut der Lauf auf main
     runs-on: ubuntu-latest
     environment:
       name: github-pages
