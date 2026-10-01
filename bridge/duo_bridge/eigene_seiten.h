@@ -12,6 +12,8 @@
 //   0x6110 Gewicht der Waage, g x 10      0x6111 Bezugszeit, s x 10
 //   0x6112 Bezuege seit Rueckspuelen      0x6113 Bezuege gesamt (bis 65535)
 //   0x6114 Uhrzeit hhmm                   0x6115 aktives Profil (1-20, 0 = keins)
+//   0x6116 Hoechstdruck, bar x 10         0x6117 mittlere Bruehtemperatur, °C x 10
+//   (beide vom laufenden bzw. letzten Bezug)
 // Werte des Mainboards (z. B. 0x0053 Kaffeekessel) zeigt das Display ohnehin.
 
 static const uint16_t ES_VP_AKTION = 0x6100, ES_VP_WERTE = 0x6110;
@@ -121,16 +123,18 @@ static void eigeneSeitenLoop() {
     struct tm t;
     bool zeit = jetztLokal(t);
     float g = bezugG;
-    uint16_t w[6] = {
+    uint16_t w[8] = {
         (uint16_t)(isnan(g) || g < 0 ? 0 : lroundf(g * 10)),
         (uint16_t)(bezugZustand == BZ_LAEUFT ? (millis() - bezugStartMs) / 100 : 0),
         (uint16_t)zaehler.seitRueckspuelen,
         (uint16_t)min<uint32_t>(bezuegeMaschine(), 65535),
         (uint16_t)(zeit ? t.tm_hour * 100 + t.tm_min : 0),
         (uint16_t)(profilAktiv >= 0 ? profilAktiv + 1 : 0),
+        (uint16_t)lroundf(shotDruckMax * 10),
+        (uint16_t)(shotTempN ? lroundf(shotTempSumme / shotTempN * 10) : 0),
     };
-    uint8_t f[6 + 12] = {KOPF0, KOPF1, 3 + 12, 0x82, ES_VP_WERTE >> 8, ES_VP_WERTE & 0xFF};
-    for (int i = 0; i < 6; i++) {
+    uint8_t f[6 + 16] = {KOPF0, KOPF1, 3 + 16, 0x82, ES_VP_WERTE >> 8, ES_VP_WERTE & 0xFF};
+    for (int i = 0; i < 8; i++) {
       f[6 + 2 * i] = w[i] >> 8;
       f[7 + 2 * i] = w[i];
     }
