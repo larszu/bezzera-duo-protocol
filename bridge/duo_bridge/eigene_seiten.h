@@ -103,8 +103,11 @@ static void bruehkurveZeichnen(bool erzwingen) {
   bkLinie(BK_VP_TEMP, BK_FARBE_TEMP, temp, nt);
 }
 
-// Kurvensymbol auf der Startseite (x01) neben der Touch-Flaeche zur Bruehkurve
-// (tools/seitenbau/beispiele/start_*.json): zwei kleine Linien, VP 0x0500/0x0580.
+// Taste zur Bruehkurve auf der Startseite (x01), im Stil der Menuetaste: cyaner
+// Rahmen (Basic Graphics 0x0003, zwei Rechtecke = 2 px) mit weisser Kurve
+// (0x0002). Touch-Flaeche und Zeichenflaechen VP 0x0500/0x0580 kommen aus
+// tools/seitenbau/beispiele/start_*.json.
+static const uint16_t FARBE_CYAN = 0x3E7F, FARBE_WEISS = 0xFFFF;
 static void startSymbol() {
   static int32_t seite = -1;
   static uint32_t zuletzt = 0;
@@ -115,10 +118,15 @@ static void startSymbol() {
   if (seite == leitung.seite && millis() - zuletzt < 5000) return;
   seite = leitung.seite;
   zuletzt = millis();
-  static const uint16_t druck[] = {248, 42, 254, 42, 258, 22, 266, 16, 280, 16};
-  static const uint16_t temp[] = {248, 30, 258, 27, 268, 30, 280, 28};
-  bkLinie(0x0500, BK_FARBE_DRUCK, druck, 5);
-  bkLinie(0x0580, BK_FARBE_TEMP, temp, 4);
+  const uint16_t rahmen[] = {0x0003, 2, 254, 8, 306, 48, FARBE_CYAN, 255, 9, 305, 47, FARBE_CYAN};
+  uint8_t f[6 + sizeof rahmen] = {KOPF0, KOPF1, (uint8_t)(3 + sizeof rahmen), 0x82, 0x05, 0x00};
+  for (size_t i = 0; i < sizeof rahmen / 2; i++) {
+    f[6 + 2 * i] = rahmen[i] >> 8;
+    f[7 + 2 * i] = rahmen[i];
+  }
+  uartB.write(f, sizeof f);
+  static const uint16_t kurve[] = {260, 40, 266, 40, 270, 22, 277, 16, 286, 16, 292, 20, 300, 20};
+  bkLinie(0x0580, FARBE_WEISS, kurve, 7);
 }
 
 static void eigeneSeitenLoop() {

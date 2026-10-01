@@ -121,7 +121,7 @@ static void doomTouchAbfragen() {
 
 // ── Antworten vom Display (aus rahmenVomDisplay, loop()) ──
 static void doomAntwort(const uint8_t *r, size_t n) {
-  if (n < 13 || r[3] != 0x81 || r[4] != 0x05) return;
+  if (n < 12 || r[3] != 0x81 || r[4] != 0x05) return;  // C6 A5 09 81 05 06 + 6 Byte
   if (r[6] != 0x5A) return;  // keine neuen Koordinaten
   tpStatus = r[7];
   tpX = (r[8] << 8) | r[9];
