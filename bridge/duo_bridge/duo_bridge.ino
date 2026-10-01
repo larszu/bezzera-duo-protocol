@@ -767,11 +767,17 @@ static void modellSchreiben(const uint8_t *r, size_t n, char quelle) {
 }
 
 // Leseanfragen des Mainboards beantworten wie das Display: 81 reg n / 83 vp n.
+static bool sichernStandby();  // sichern.h
+
 static void emuliereAntwort(const uint8_t *r, size_t n) {
   if (n < 6) return;
   const uint8_t cmd = r[3];
   uint8_t a[260];
   size_t k = 0;
+  // Waehrend der Display-Sicherung sieht das Mainboard immer Standby: Seite
+  // x00 und Tastencode 0, egal was Display und Touch gerade melden.
+  const bool standby = sichernStandby();
+  const uint16_t standbySeite = leitung.seite >= 0 && leitung.seite < 300 ? (leitung.seite / 100) * 100 : 100;
   if (cmd == 0x81 && n >= 6) {
     uint8_t reg = r[4], anz = r[5];
     if (anz > 60) return;
@@ -782,6 +788,8 @@ static void emuliereAntwort(const uint8_t *r, size_t n) {
       uint16_t rg = reg + i;
       if (rg >= 0x20 && rg <= 0x26) a[k++] = rtc[rg - 0x20];
       else if (rg == 0x00) a[k++] = 0x22;  // Firmware-Version des echten Displays
+      else if (standby && rg == 0x03) a[k++] = standbySeite >> 8;
+      else if (standby && rg == 0x04) a[k++] = standbySeite & 0xFF;
       else a[k++] = rg < 256 ? regRam[rg] : 0;
     }
   } else if (cmd == 0x83 && n >= 7) {
@@ -791,6 +799,7 @@ static void emuliereAntwort(const uint8_t *r, size_t n) {
     a[k++] = 0x83; a[k++] = r[4]; a[k++] = r[5]; a[k++] = anz;
     for (uint8_t i = 0; i < anz; i++) {
       uint16_t w = (vp + i) < VP_ANZAHL ? vpRam[vp + i] : 0;
+      if (standby && vp + i == 0) w = 0;
       a[k++] = w >> 8;
       a[k++] = w & 0xFF;
     }
@@ -798,7 +807,7 @@ static void emuliereAntwort(const uint8_t *r, size_t n) {
     return;
   }
   // Tastendruck-Ueberschreibung (Befehl o) gilt auch im Emulationsmodus
-  if (a[0] == 0x83 && a[3] == 1) {
+  if (a[0] == 0x83 && a[3] == 1 && !standby) {
     uint16_t vp = (a[1] << 8) | a[2];
     for (auto &o : overrides) {
       if (o.aktiv && o.vp == vp) {
