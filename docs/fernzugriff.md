@@ -18,6 +18,14 @@ WireGuard plus Tailscale-Steuerung). Stattdessen reicht ein Rechner im
 Heimnetz als **Subnet-Router**, z. B. der Heimserver, ein Raspberry Pi oder ein
 NAS:
 
+Am einfachsten mit dem Skript aus diesem Repo, es erkennt das Heimnetz selbst:
+
+```bash
+sudo tools/tailscale_heimnetz.sh
+```
+
+Oder von Hand:
+
 ```bash
 # auf dem Gerät im Heimnetz (Linux)
 curl -fsSL https://tailscale.com/install.sh | sh

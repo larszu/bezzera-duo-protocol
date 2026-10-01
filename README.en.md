@@ -447,7 +447,7 @@ or with Arduino CLI and esptool, all in [`docs/flashen.en.md`](docs/flashen.en.m
 
 ```bash
 arduino-cli core install esp32:esp32@3.3.12
-FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs,PSRAM=opi
+FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom,PSRAM=opi
 arduino-cli compile --fqbn $FQBN bridge/duo_bridge
 arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge
 ```
@@ -739,6 +739,8 @@ All Python scripts need only the standard library.
 | [`tools/menue_lesen.py`](tools/menue_lesen.py) | open menu pages by key code and record what the mainboard writes |
 | [`tools/web_demo.py`](tools/web_demo.py) | simulated machine and scale for `--demo` |
 | [`tools/seiten_foto.py`](tools/seiten_foto.py) | cycle through all pages and photograph them with a webcam (`brew install imagesnap`) |
+| [`tools/display_sichern.py`](tools/display_sichern.py) | full read-only backup of the display flash; the bridge reads by itself ([guide](docs/display_sichern.en.md)) |
+| [`tools/seite_kopieren.py`](tools/seite_kopieren.py) | copy a page image to an empty slot, dry run and read-back — writes! |
 | [`tools/libop_lesen.py`](tools/libop_lesen.py) | read flash areas of the display — knows only the read mode |
 | [`tools/touch13.py`](tools/touch13.py) | decode the touch configuration → JSON and header for the bridge |
 | [`tools/tasten_scan.py`](tools/tasten_scan.py) | try key codes via register `0x4F` (no effect on this display) |

@@ -203,6 +203,28 @@ details.gruppe>summary .hinweis{font-weight:400}
     <div class="form">Passwort für diese Seite <input id="sc_web" type="password" style="width:140px"><button onclick="sicherheit('web_pass',v('sc_web'))">Setzen</button><button onclick="sicherheit('web_pass','-')">Entfernen</button></div>
     <p class="hinweis" id="sc_info">Mit Passwort fragt der Browser beim Öffnen nach Benutzer „duo“ und Passwort. Für den Zugriff von unterwegs nötig.</p>
   </section>
+  <section data-tab="einstellungen">
+    <h2>Benachrichtigungen</h2>
+    <h3>ntfy (Push aufs Handy)</h3>
+    <p class="hinweis">App „ntfy“ installieren, dort dieselbe Adresse abonnieren. Das Thema ist das Passwort: lang und zufällig wählen.</p>
+    <div class="form"><input id="bn_ntfy" class="breit" placeholder="https://ntfy.sh/duo-…"><button onclick="bnThema()">Zufälliges Thema</button></div>
+    <h3>Telegram-Bot (schalten von unterwegs)</h3>
+    <p class="hinweis">Bei @BotFather einen Bot anlegen, Token hier eintragen, dem Bot schreiben: Er nennt die Chat-Nummer, die hier unter „erlaubte Chats“ eingetragen wird. Befehle: /an, /aus, /status.</p>
+    <div class="form">Token <input id="bn_token" type="password" class="breit"></div>
+    <div class="form">erlaubte Chats <input id="bn_chats" class="breit" placeholder="123456789, 987654321"></div>
+    <h3>Melden bei</h3>
+    <div class="form"><label><input type="checkbox" id="bn_bereit" style="width:auto"> bereit</label><label><input type="checkbox" id="bn_shot" style="width:auto"> Shot fertig</label>
+      <label><input type="checkbox" id="bn_wartung" style="width:auto"> Rückspülen fällig</label><label><input type="checkbox" id="bn_alarm" style="width:auto"> Alarm</label></div>
+    <div class="form"><button onclick="bnSpeichern(false)">Speichern</button><button onclick="bnSpeichern(true)">Speichern und Probemeldung</button><span class="hinweis" id="bn_status"></span></div>
+  </section>
+  <section data-tab="einstellungen">
+    <h2>Apple Home, Google Home, Alexa (Matter)</h2>
+    <p class="hinweis">Die Bridge erscheint als Steckdose „Espresso“ und als Temperatursensor. Von unterwegs über den Home-Hub (HomePod, Apple TV, Nest, Echo), auch per Sprache. Voraussetzung: Bridge im Heim-WLAN.</p>
+    <div class="form"><label><input type="checkbox" id="mt_an" style="width:auto" onchange="mtAktion(this.checked?'an':'aus')"> Matter einschalten</label><span class="hinweis" id="mt_hinweis"></span></div>
+    <div id="mt_code" style="display:none"><p>In der Home-App „Gerät hinzufügen“ → „Weitere Optionen“ / „Code eingeben“: <b id="mt_nummer" style="font-size:20px;letter-spacing:1px"></b></p>
+      <p class="hinweis">Oder den QR-Code öffnen: <a id="mt_qr" target="_blank" style="color:var(--akzent)">QR-Code anzeigen</a> (braucht Internet am Handy)</p></div>
+    <div class="form"><button onclick="if(confirm('Aus allen Home-Apps entfernen?')) mtAktion('zuruecksetzen')">Kopplung zurücksetzen</button></div>
+  </section>
 <form id="einst" onsubmit="speichern(event)" style="display:contents">
   <section data-tab="einstellungen">
     <h2>Waage</h2>
@@ -1277,6 +1299,24 @@ async function zpSpeichern(){
   const d=new URLSearchParams({plan_aktiv:$("zp_plan").checked?1:0,kalender_aktiv:$("zp_kal").checked?1:0,kalender_url:v("zp_url"),stichwort:v("zp_wort"),vorlauf:v("zp_vor"),leerlauf:v("zp_leer"),zeilen});
   const r=await fetch("/api/zeitplan",{method:"POST",body:d.toString()}); $("zp_ok").textContent=r.ok?" gespeichert":" Fehler"; setTimeout(()=>$("zp_ok").textContent="",3000); holeZeitplan(true)}
 setInterval(holeZeitplan,5000); holeZeitplan();
+
+// ─── Benachrichtigungen und Matter ───────────────────────────────────────
+let bnGeladen=false;
+async function holeMelden(neu){ if(!aktiv("einstellungen")&&!neu) return;
+  try{const b=await (await fetch("/api/melden")).json(); $("bn_status").textContent=b.status;
+    if(!bnGeladen||neu){bnGeladen=true; $("bn_ntfy").value=b.ntfy; $("bn_chats").value=b.tg_chats; $("bn_token").value=""; $("bn_token").placeholder=b.tg_token_gesetzt?"gesetzt (leer = unverändert, - = löschen)":"kein Token";
+      for(const k of ["bereit","shot","wartung","alarm"]) $("bn_"+k).checked=b[k]}
+    const m=await (await fetch("/api/matter")).json(); $("mt_an").checked=m.an;
+    $("mt_hinweis").textContent=!m.an?"":m.eingerichtet?"eingerichtet":m.gestartet?"wartet auf Kopplung":"startet, sobald das Heim-WLAN verbunden ist (nach Neustart)";
+    $("mt_code").style.display=m.gestartet&&!m.eingerichtet?"":"none"; $("mt_nummer").textContent=m.code; if(m.qr) $("mt_qr").href=m.qr;
+  }catch(e){}
+}
+function bnThema(){const z="abcdefghijkmnpqrstuvwxyz23456789"; let t="duo-"; const r=new Uint32Array(14); crypto.getRandomValues(r); r.forEach(x=>t+=z[x%z.length]); $("bn_ntfy").value="https://ntfy.sh/"+t}
+async function bnSpeichern(test){const d=new URLSearchParams({ntfy:v("bn_ntfy"),tg_chats:v("bn_chats"),bereit:$("bn_bereit").checked?1:0,shot:$("bn_shot").checked?1:0,wartung:$("bn_wartung").checked?1:0,alarm:$("bn_alarm").checked?1:0});
+  if(v("bn_token")) d.set("tg_token",v("bn_token")); if(test) d.set("test","1");
+  await fetch("/api/melden",{method:"POST",body:d.toString()}); holeMelden(true)}
+async function mtAktion(a){await fetch("/api/matter",{method:"POST",body:a}); if(a!="zuruecksetzen") $("mt_hinweis").textContent=a=="an"?"wird nach dem Neustart der Bridge aktiv":"aus nach dem Neustart"; setTimeout(()=>holeMelden(false),1000)}
+setInterval(()=>holeMelden(false),5000); holeMelden(false);
 
 // ─── Heim-WLAN und Zugang ─────────────────────────────────────────────────
 let wlGewaehlt="";

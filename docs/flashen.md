@@ -25,14 +25,15 @@ zusätzlich als Release.
 ```bash
 brew install arduino-cli                       # macOS; Linux/Windows: arduino.github.io/arduino-cli
 arduino-cli core install esp32:esp32@3.3.12
-FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,PartitionScheme=min_spiffs,PSRAM=opi
+FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom,PSRAM=opi
 arduino-cli compile --fqbn $FQBN bridge/duo_bridge
 arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge   # Windows: -p COM5
 ```
 
-- `PartitionScheme=min_spiffs`: Mit Bluetooth passt die Firmware nicht in die
-  Standardaufteilung. Beim ersten Wechsel der Aufteilung gehen gespeicherte
-  Einstellungen verloren.
+- `FlashSize=16M,PartitionScheme=custom`: die eigene Aufteilung
+  `bridge/duo_bridge/partitions.csv` (zwei App-Bereiche à 6 MB, genug für Bluetooth
+  und Matter). Der Einstellungsspeicher liegt an derselben Stelle wie vorher,
+  gespeicherte Einstellungen bleiben beim Wechsel erhalten.
 - `PSRAM=opi`: der ESP32-S3R8 dieses Boards. Ohne PSRAM läuft alles, nur der
   Verlauf reicht dann 30 Minuten statt 24 Stunden.
 - `CDCOnBoot=cdc`: Ausgabe und Befehle über den USB-C-Anschluss.

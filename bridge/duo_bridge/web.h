@@ -53,6 +53,9 @@ static void ereignis(const char *fmt, ...);
 #include "netz.h"
 #include "zeitplan.h"
 #include "improv.h"
+#include "matter_home.h"
+#include "benachrichtigung.h"
+#include "sichern.h"
 
 static void netzEreignis(arduino_event_id_t e) {
   if (e == ARDUINO_EVENT_ETH_GOT_IP) {
@@ -368,6 +371,27 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
     pr.end();
     antwort = ap.length() && ap.length() < 8 ? "WLAN-Passwort braucht mindestens 8 Zeichen" : "ok";
     if (ap.length() >= 8) WiFi.softAP("duo-bridge", apPass.c_str());  // gilt sofort
+  } else if (pfad == "/api/melden") {  // Felder speichern; "test=1" schickt eine Probemeldung
+    if (rumpf.length()) {
+      int a = 0;
+      while (a < (int)rumpf.length()) {
+        int e = rumpf.indexOf('&', a);
+        if (e < 0) e = rumpf.length();
+        String paar = rumpf.substring(a, e);
+        a = e + 1;
+        int g = paar.indexOf('=');
+        if (g > 0) benFeld(urlDecode(paar.substring(0, g)), urlDecode(paar.substring(g + 1)));
+      }
+      benSpeichern();
+      if (queryWert(rumpf, "test") == "1") melden("Bezzera Duo", "Probemeldung: %s", kurzStatus().c_str());
+    }
+    antwort = benJson();
+  } else if (pfad == "/api/matter") {
+    if (rumpf.length() && !matterAktion(rumpf)) {
+      antwort = "unbekannt";
+      return 400;
+    }
+    antwort = matterJson();
   } else if (pfad == "/api/zeitplan") {
     if (rumpf.length()) {
       int a = 0;
@@ -470,13 +494,15 @@ void webSetup() {
   for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage",
                         "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion",
                         "/api/ble_suche", "/api/ble_geraete", "/api/maschine", "/api/maschine_setzen", "/api/wlan", "/api/wlan_setzen",
-                        "/api/sicherheit", "/api/zeitplan"})
+                        "/api/sicherheit", "/api/zeitplan", "/api/matter", "/api/melden"})
     server.on(p, zusatzWeb);
   server.begin();
   zusatzSetup();
   profileLaden();
   shotsSetup();
   zeitplanSetup();
+  matterLaden();
+  benSetup();
   mqttSetup();
   waageSetup();
 }
@@ -506,6 +532,9 @@ void webLoop() {
   zeitLoop();
   zeitplanLoop();
   improvLoop();
+  matterLoop();
+  benLoop();
+  sichernLoop();
   verlaufLoop();
   bezugLoop();
   mqttLoop();
