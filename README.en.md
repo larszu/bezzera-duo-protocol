@@ -467,7 +467,7 @@ arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge
 
 ### Wiring
 
-Wiring plan with hole positions: [`docs/breadboard_hybrid.png`](docs/breadboard_hybrid.png).
+Wiring plan with hole positions: [`docs/breadboard_hybrid.png`](docs/breadboard_hybrid.png). Which pin that is on the ESP32-S3-ETH or a classic ESP32 DevKit, and how to move from one to the other: [`docs/pinbelegung.en.md`](docs/pinbelegung.en.md).
 
 | Connection | how |
 |---|---|

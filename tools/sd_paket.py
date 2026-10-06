@@ -122,7 +122,16 @@ def bild(p: dict) -> Image.Image:
     im = Image.new("RGB", (W, H), p.get("bg", "#000000"))
     g = ImageDraw.Draw(im)
     for e in p["el"]:
-        if e["typ"] == "form":
+        if e["typ"] == "form" and e.get("gestrichelt"):  # Rasterlinie: 2 px Strich, 3 px Luecke
+            for i in range(0, max(e["b"], e["h"]), 5):
+                if e["b"] >= e["h"]:
+                    g.rectangle([e["x"] + i, e["y"], min(e["x"] + i + 1, e["x"] + e["b"] - 1), e["y"] + e["h"] - 1], fill=e["farbe"])
+                else:
+                    g.rectangle([e["x"], e["y"] + i, e["x"] + e["b"] - 1, min(e["y"] + i + 1, e["y"] + e["h"] - 1)], fill=e["farbe"])
+        elif e["typ"] == "form" and e.get("rahmen"):  # nur Umriss (Infobox)
+            g.rounded_rectangle([e["x"], e["y"], e["x"] + e["b"] - 1, e["y"] + e["h"] - 1], e.get("radius", 0),
+                                outline=e["farbe"], width=e.get("staerke", 2))
+        elif e["typ"] == "form":
             g.rounded_rectangle([e["x"], e["y"], e["x"] + e["b"] - 1, e["y"] + e["h"] - 1], e.get("radius", 0), fill=e["farbe"])
         if e["typ"] == "taste" and e.get("grafik"):
             g.rounded_rectangle([e["x"], e["y"], e["x"] + e["b"] - 1, e["y"] + e["h"] - 1], e.get("radius", 8),

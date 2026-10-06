@@ -13,6 +13,7 @@
 //   0x0312 Bezuege seit Rueckspuelen      0x0313 Bezuege gesamt (bis 65535)
 //   0x0314 Uhrzeit hhmm                   0x0315 aktives Profil (1-20, 0 = keins)
 //   0x0316 Hoechstdruck, bar x 10         0x0317 mittlere Bruehtemperatur, °C x 10
+//   0x0318 Pumpendruck jetzt, bar x 10
 //   (beide vom laufenden bzw. letzten Bezug)
 // Werte des Mainboards (z. B. 0x0053 Kaffeekessel) zeigt das Display ohnehin.
 
@@ -68,9 +69,11 @@ static bool kurveHalten(const uint8_t *r, size_t n) {
   ereignis("- Bruehkurve bleibt (Mainboard wollte Seite %u)", s);
   return true;
 }
-static const int BK_X0 = 36, BK_Y0 = 34, BK_B = 248, BK_H = 150;  // Plotbereich, muss zum Bild passen
+// Plotbereich, muss zu tools/seitenbau/beispiele/bruehkurve.json passen. Ein
+// Raster fuer beide Groessen wie bei Gaggiuino: links 0-12 bar, rechts 0-120 °C.
+static const int BK_X0 = 24, BK_Y0 = 6, BK_B = 192, BK_H = 200;
 static const int BK_SEK = 45, BK_PUNKTE = 60;
-static const float BK_DRUCK_MAX = 12, BK_T_MIN = 80, BK_T_MAX = 100;
+static const float BK_DRUCK_MAX = 12, BK_T_MIN = 0, BK_T_MAX = 120;
 static const uint16_t BK_FARBE_DRUCK = 0x3D7F, BK_FARBE_TEMP = 0xFC60;  // Blau, Orange (RGB565)
 
 static void bkLinie(uint16_t vp, uint16_t farbe, const uint16_t *pkt, int n) {
@@ -165,7 +168,7 @@ static void eigeneSeitenLoop() {
     struct tm t;
     bool zeit = jetztLokal(t);
     float g = bezugG;
-    uint16_t w[8] = {
+    uint16_t w[9] = {
         (uint16_t)(isnan(g) || g < 0 ? 0 : lroundf(g * 10)),
         (uint16_t)(bezugZustand == BZ_LAEUFT ? (millis() - bezugStartMs) / 100 : 0),
         (uint16_t)zaehler.seitRueckspuelen,
@@ -174,9 +177,10 @@ static void eigeneSeitenLoop() {
         (uint16_t)(profilAktiv >= 0 ? profilAktiv + 1 : 0),
         (uint16_t)lroundf(shotDruckMax * 10),
         (uint16_t)(shotTempN ? lroundf(shotTempSumme / shotTempN * 10) : 0),
+        (uint16_t)(vpRam[0x55] * 5),  // Mainboard meldet x 0,5 bar
     };
-    uint8_t f[6 + 16] = {KOPF0, KOPF1, 3 + 16, 0x82, ES_VP_WERTE >> 8, ES_VP_WERTE & 0xFF};
-    for (int i = 0; i < 8; i++) {
+    uint8_t f[6 + 18] = {KOPF0, KOPF1, 3 + 18, 0x82, ES_VP_WERTE >> 8, ES_VP_WERTE & 0xFF};
+    for (int i = 0; i < 9; i++) {
       f[6 + 2 * i] = w[i] >> 8;
       f[7 + 2 * i] = w[i];
     }

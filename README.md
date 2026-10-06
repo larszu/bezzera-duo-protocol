@@ -199,7 +199,9 @@ Maschinenlogik** — es zeigt Variablen an und meldet Touch-Eingaben über UART.
 
 **Hersteller ist PRO.EL.IND (Italien), nicht Gicar.** Deckelaufkleber
 `SDEDB` / `BZ1PTE` / `7661047PR`, Produktionsaufkleber `1809` (September 2018).
-Versorgung 12 V DC, Sicherung 3,15 A.
+Versorgung 12 V DC, Sicherung 3,15 A. Verwandte Maschinen (Rocket R58: gleiche MCU,
+gleiche DWIN-Befehle, Kopf `5A A5` mit CRC16) und der Plan zur Firmware-Sicherung
+über BDM: [docs/mainboard.md](docs/mainboard.md).
 
 | Bauteil | Was es ist | Bedeutung |
 |---|---|---|
@@ -469,7 +471,7 @@ arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge
 
 ### Verkabelung
 
-Steckplan mit Lochpositionen: [`docs/breadboard_hybrid.png`](docs/breadboard_hybrid.png).
+Steckplan mit Lochpositionen: [`docs/breadboard_hybrid.png`](docs/breadboard_hybrid.png). Welcher Stift das auf dem ESP32-S3-ETH bzw. einem klassischen ESP32-DevKit ist und wie man von einem aufs andere umbaut: [`docs/pinbelegung.md`](docs/pinbelegung.md).
 
 | Verbindung | wie |
 |---|---|
