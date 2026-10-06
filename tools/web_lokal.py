@@ -24,7 +24,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bridge import oeffne  # noqa: E402
+from bridge import oeffne, finde_port# noqa: E402
 
 BRIDGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bridge", "duo_bridge")
 
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
         usb = Demo()
         port = "Demo"
     else:
-        port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+        port = a.port or finde_port()
         if not port:
             raise SystemExit("Kein /dev/cu.usbmodem* gefunden. Steckt der ESP32?")
         usb = Usb(port)

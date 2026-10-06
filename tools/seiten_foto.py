@@ -30,7 +30,7 @@ import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bridge import lies, oeffne  # noqa: E402
+from bridge import lies, oeffne, finde_port# noqa: E402
 
 # Testzahlen: Wort i von VP 0x0050 bekommt 10 + i, sichtbar als 10..18.
 # VP 0x0063 (Firmware Mainboard) = 21 -> "FW: 2.1".
@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         subprocess.run(["imagesnap", "-l"])
         return 0
 
-    port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+    port = a.port or finde_port()
     if not port:
         raise SystemExit("Kein /dev/cu.usbmodem* gefunden. Steckt der ESP32?")
     os.makedirs(a.ziel, exist_ok=True)

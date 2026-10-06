@@ -10,6 +10,14 @@
 // eingeben bzw. den QR-Code scannen. Matter startet erst, wenn das Heim-WLAN
 // verbunden ist; ein Ausschalten wirkt nach dem Neustart.
 
+#if !CONFIG_IDF_TARGET_ESP32S3
+// Klassischer ESP32: zu wenig internes RAM fuer Matter neben Web, BLE und
+// Bridge. Die Weboberflaeche zeigt dann "nicht verfuegbar".
+static void matterLaden() {}
+static void matterLoop() {}
+static String matterJson() { return "{\"an\":false,\"gestartet\":false,\"eingerichtet\":false,\"code\":\"\",\"qr\":\"\",\"verfuegbar\":false}"; }
+static bool matterAktion(const String &) { return false; }
+#else
 #include <Matter.h>
 
 // Bluetooth beim Start nicht an Matter geben: die Waage braucht es
@@ -97,3 +105,4 @@ static bool matterAktion(const String &a) {
   }
   return false;
 }
+#endif

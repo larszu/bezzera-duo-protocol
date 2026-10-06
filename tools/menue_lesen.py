@@ -23,6 +23,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tasten_scan import Bridge  # noqa: E402
+from bridge import finde_port  # noqa: E402
 
 # (Tastencode, erwartete Seite ohne Sprachblock, Beschreibung)
 WEG = [
@@ -71,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--port")
     ap.add_argument("--sprache", type=int, default=100, help="Seitenblock: 0 EN, 100 DE, 200 IT")
     a = ap.parse_args(argv)
-    port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+    port = a.port or finde_port()
     br = Bridge(port)
     ergebnis = []
     geschrieben: set[str] = set()

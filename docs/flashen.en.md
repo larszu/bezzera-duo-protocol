@@ -2,8 +2,15 @@
 
 # Getting the firmware onto the ESP32 and setting it up
 
-The bridge runs on a **Waveshare ESP32-S3-ETH** (ESP32-S3 with 8 MB PSRAM,
-16 MB flash, Ethernet). Three ways, from simplest to most flexible.
+The bridge runs on two boards:
+
+| Board | What works |
+|---|---|
+| **Waveshare ESP32-S3-ETH** (ESP32-S3, 8 MB PSRAM, 16 MB flash, Ethernet), recommended | everything: Matter, Ethernet, update via the web UI, 24 h history |
+| **classic ESP32** (ESP32-D0WD/WROOM-32, 4 MB flash, USB via CP2102/CH340) | everything except Matter, Ethernet and update via the web UI; 30 min history |
+
+The flash page detects the board by itself. Build both locally with
+`bash tools/firmware_bauen.sh`. Three ways, from simplest to most flexible.
 
 ## 1. In the browser (recommended)
 

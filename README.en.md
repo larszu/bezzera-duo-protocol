@@ -449,7 +449,10 @@ Machine GND ──────────────── ESP32 GND
 ## 🌉 ESP32 bridge
 
 Firmware [`bridge/duo_bridge/`](bridge/duo_bridge/) for the **Waveshare
-ESP32-S3-ETH**. The ESP32 sits *in* the line, passes frames through,
+ESP32-S3-ETH** (recommended) or a **classic ESP32** with 4 MB (without Matter,
+Ethernet and web update). Install without prior knowledge:
+**[flash page](https://larszu.github.io/bezzera-duo-protocol/)**, it detects the board itself.
+Pins: RX display 15, TX mainboard 16, RX mainboard 17, TX display 18 (both boards). The ESP32 sits *in* the line, passes frames through,
 captures them, injects its own frames or answers the mainboard itself.
 
 Flashing: in the browser via the [flash page](https://larszu.github.io/bezzera-duo-protocol/)

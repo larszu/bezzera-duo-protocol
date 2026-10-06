@@ -30,6 +30,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from display_sichern import BILD_WORTE, Bridge, leer  # noqa: E402
+from bridge import finde_port  # noqa: E402
 
 BILD_NUTZ = 320 * 240  # Worte RGB565 je Bild
 
@@ -58,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"Keine Sicherung mit {probe}. Erst: display_sichern.py alles")
     if not leer(open(probe, "rb").read()):
         raise SystemExit(f"Bild {a.ziel} ist laut Sicherung nicht leer. Abbruch.")
-    port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+    port = a.port or finde_port()
     if not port:
         raise SystemExit("Kein /dev/cu.usbmodem* gefunden. Steckt die Bridge?")
     br = Bridge(port)

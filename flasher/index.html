@@ -12,7 +12,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-ap
 main{max-width:720px;margin:0 auto;padding:24px 16px}
 h1{font-size:24px;margin:0 0 4px} h2{font-size:15px;color:var(--leise);text-transform:uppercase;letter-spacing:.05em;margin:28px 0 8px}
 .karte{background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:16px;margin:12px 0}
-ol{padding-left:20px} li{margin:6px 0} code{background:#0e1628;padding:1px 5px;border-radius:4px}
+ol,ul{padding-left:20px} li{margin:6px 0} code{background:#0e1628;padding:1px 5px;border-radius:4px}
 a{color:var(--akzent)} .leise{color:var(--leise);font-size:14px}
 esp-web-install-button button{font:inherit;font-size:17px;padding:12px 22px;border-radius:8px;border:1px solid #2f8a70;background:#1f5d4c;color:#fff;cursor:pointer}
 </style>
@@ -20,14 +20,31 @@ esp-web-install-button button{font:inherit;font-size:17px;padding:12px 22px;bord
 <body>
 <main>
   <h1>Bezzera Duo Bridge</h1>
-  <p class="leise">Firmware __VERSION__ für den Waveshare ESP32-S3-ETH · <a href="https://github.com/larszu/bezzera-duo-protocol">Projekt auf GitHub</a> · <a href="seitenbau/">Seitenbau: eigene Display-Seiten</a></p>
+  <p class="leise">Firmware __VERSION__ · <a href="https://github.com/larszu/bezzera-duo-protocol">Projekt auf GitHub</a> · <a href="seitenbau/">Seitenbau: eigene Display-Seiten</a></p>
 
+  <h2>Das brauchst du</h2>
+  <div class="karte">
+    <ul>
+      <li><b>Einen ESP32</b>, eins von beiden:
+        <ul>
+          <li><b>Waveshare ESP32-S3-ETH</b> (empfohlen): alles inklusive Apple Home/Matter, Netzwerkkabel und Update über die Weboberfläche.</li>
+          <li><b>Klassischer ESP32</b> (z. B. „ESP32 DevKit“, „ESP32-WROOM-32“, 4 MB): alles außer Matter, Netzwerkkabel und Update über die Weboberfläche.</li>
+        </ul>
+        Welcher es ist, erkennt diese Seite beim Installieren selbst.</li>
+      <li><b>Ein USB-Kabel, das Daten kann.</b> Viele Kabel laden nur – wenn nichts erkannt wird, liegt es meist am Kabel.</li>
+      <li><b>Einen Rechner mit Chrome oder Edge</b> (Windows, Mac oder Linux). Safari, Firefox und Handys können nicht flashen.</li>
+    </ul>
+  </div>
+
+  <h2>Installieren</h2>
   <div class="karte">
     <ol>
-      <li>ESP32 per USB-C an diesen Rechner stecken.</li>
-      <li>Auf „Installieren“ klicken und den Anschluss wählen (meist „USB JTAG/serial debug unit“).</li>
-      <li>Nach dem Flashen fragt die Seite nach dem Heim-WLAN: Netz wählen, Passwort eingeben.</li>
-      <li>Fertig: Die Bridge ist unter <a href="http://duo.local">http://duo.local</a> erreichbar.</li>
+      <li>ESP32 per USB an den Rechner stecken.</li>
+      <li>Auf <b>Installieren</b> klicken. Es erscheint eine Liste: den Eintrag wählen, der beim Einstecken dazugekommen ist
+        (ESP32-S3: „USB JTAG/serial debug unit“; klassischer ESP32: „CP2102“, „CH340“ oder „USB Serial“).</li>
+      <li>„Gerät löschen“ beim ersten Mal anhaken, dann <b>Installieren</b>. Dauert etwa 1–2 Minuten, den ESP32 nicht abziehen.</li>
+      <li>Danach fragt die Seite nach dem WLAN: dein Heimnetz wählen, Passwort eingeben.</li>
+      <li>Fertig: Die Bridge ist unter <a href="http://duo.local">http://duo.local</a> erreichbar (Android: die angezeigte IP-Adresse).</li>
     </ol>
     <esp-web-install-button manifest="manifest.json">
       <button slot="activate">Installieren</button>
@@ -40,14 +57,18 @@ esp-web-install-button button{font:inherit;font-size:17px;padding:12px 22px;bord
   <div class="karte">
     Ist die Firmware schon drauf: Handy mit dem WLAN <code>duo-bridge</code> verbinden (Passwort <code>espresso1</code>),
     die Seite öffnet sich von selbst. Unter <b>Einstellungen → Heim-WLAN</b> das eigene Netz wählen, danach das
-    WLAN-Passwort der Bridge ändern.
+    WLAN-Passwort der Bridge und ein Passwort für die Seite setzen.
   </div>
 
   <h2>Klappt nicht?</h2>
   <div class="karte leise">
-    Kein Anschluss in der Liste: anderes USB-Kabel (viele sind nur Ladekabel) oder den Taster <b>BOOT</b> gedrückt
-    halten, kurz <b>RESET</b> drücken, BOOT loslassen, dann noch einmal „Installieren“.
-    Ausführlich: <a href="https://github.com/larszu/bezzera-duo-protocol/blob/main/docs/flashen.md">docs/flashen.md</a>.
+    <p><b>Kein Eintrag in der Liste:</b> anderes USB-Kabel probieren. Beim klassischen ESP32 unter Windows/macOS
+    eventuell den Treiber des USB-Chips installieren (auf dem Board steht meist <i>CP2102</i> oder <i>CH340</i>):
+    <a href="https://www.silabs.com/developer-tools/usb-to-uart-bridge-vcp-drivers">CP210x</a> ·
+    <a href="https://www.wch-ic.com/downloads/CH341SER_EXE.html">CH340</a>.</p>
+    <p><b>„Failed to connect“:</b> Taste <b>BOOT</b> (manchmal „IO0“) gedrückt halten, kurz <b>RESET</b>/<b>EN</b> drücken,
+    BOOT loslassen, dann noch einmal „Installieren“.</p>
+    <p>Ausführlich: <a href="https://github.com/larszu/bezzera-duo-protocol/blob/main/docs/flashen.md">docs/flashen.md</a>.</p>
   </div>
 </main>
 </body>

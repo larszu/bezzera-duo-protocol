@@ -27,7 +27,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bridge import oeffne  # noqa: E402
+from bridge import oeffne, finde_port# noqa: E402
 
 KOPF = "c6 a5"
 
@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", help="Treffer zusaetzlich als JSON speichern (wird ergaenzt)")
     ap.add_argument("--port")
     a = ap.parse_args(argv)
-    port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+    port = a.port or finde_port()
     if not port:
         raise SystemExit("Kein /dev/cu.usbmodem* gefunden.")
     br = Bridge(port)

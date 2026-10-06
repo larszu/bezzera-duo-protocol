@@ -1342,6 +1342,7 @@ async function holeMelden(neu){ if(!aktiv("einstellungen")&&!neu) return;
     if(!bnGeladen||neu){bnGeladen=true; $("bn_ntfy").value=b.ntfy; $("bn_chats").value=b.tg_chats; $("bn_token").value=""; $("bn_token").placeholder=b.tg_token_gesetzt?"gesetzt (leer = unverändert, - = löschen)":"kein Token";
       for(const k of ["bereit","shot","wartung","alarm"]) $("bn_"+k).checked=b[k]}
     const m=await (await fetch("/api/matter")).json(); $("mt_an").checked=m.an;
+    if(m.verfuegbar===false){$("mt_an").disabled=true; $("mt_hinweis").textContent="auf diesem ESP32 nicht verfügbar (zu wenig Speicher, nur ESP32-S3)"} else
     $("mt_hinweis").textContent=!m.an?"":m.eingerichtet?"eingerichtet":m.gestartet?"wartet auf Kopplung":"startet, sobald das Heim-WLAN verbunden ist (nach Neustart)";
     $("mt_code").style.display=m.gestartet&&!m.eingerichtet?"":"none"; $("mt_nummer").textContent=m.code; if(m.qr) $("mt_qr").href=m.qr;
   }catch(e){}
