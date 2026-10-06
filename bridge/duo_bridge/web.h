@@ -574,12 +574,16 @@ void webSetup() {
 //   Register 0x20 (Uhr, 7 Byte) alle 6 s: das Mainboard stellt sie im Betrieb
 //     nur einmal, danach laeuft sie im Display weiter
 static void displayNachlesen() {
-  static uint32_t zuletzt = 0;
-  static uint8_t takt = 0;
-  if (millis() - zuletzt < 2000 || emulation == 1) return;
+  // Seite alle 400 ms: Seitenwechsel per Touch (z. B. Startseite -> Bruehkurve)
+  // macht das Display allein; die Bridge muss ihn kennen, bevor ein Bezug
+  // beginnt (kurveHalten). Uhr alle 6 s.
+  static uint32_t zuletzt = 0, uhr = 0;
+  if (millis() - zuletzt < 400 || emulation == 1) return;
   zuletzt = millis();
   char b[32];
-  strcpy(b, ++takt % 3 ? "d c6 a5 03 81 03 02" : "d c6 a5 03 81 20 07");
+  bool uhrDran = millis() - uhr >= 6000;
+  if (uhrDran) uhr = millis();
+  strcpy(b, uhrDran ? "d c6 a5 03 81 20 07" : "d c6 a5 03 81 03 02");
   befehl(b);
 }
 
