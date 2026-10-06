@@ -24,6 +24,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tasten_scan import KOPF, Bridge  # noqa: E402
+from bridge import finde_port  # noqa: E402
 
 PUFFER_VP = 0x1000  # 0x2000.. ist ein interner Puffer des Displays (UART), dort nicht
 BLOCK = 32  # Worte je Vorgang: das Display verarbeitet hoechstens 32 Worte je Rahmen
@@ -60,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-o", "--out")
     ap.add_argument("--port")
     a = ap.parse_args(argv)
-    port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+    port = a.port or finde_port()
     if not port:
         raise SystemExit("Kein /dev/cu.usbmodem* gefunden.")
     br = Bridge(port)

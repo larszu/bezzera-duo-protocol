@@ -27,7 +27,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bridge import oeffne  # noqa: E402
+from bridge import oeffne, finde_port# noqa: E402
 
 LIB_WORTE = 0x10000  # jede Bibliothek 64 KW = 128 KB (gemessen: hoehere Adressen fangen von vorn an)
 BILD_WORTE = 0x20000  # Platz je Bild im Datenbank-Bereich (Annahme, Probe klaert es)
@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--port")
     ap.add_argument("--ziel")
     a = ap.parse_args(argv)
-    port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+    port = a.port or finde_port()
     if not port:
         raise SystemExit("Kein /dev/cu.usbmodem* gefunden. Steckt die Bridge?")
     br = Bridge(port)

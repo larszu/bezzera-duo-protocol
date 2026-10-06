@@ -23,6 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tasten_scan import KOPF, Bridge  # noqa: E402
+from bridge import finde_port  # noqa: E402
 
 BLOCK = 32
 
@@ -64,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
             if alt.get(k) != neu.get(k):
                 print(f"{k}: {alt.get(k)} -> {neu.get(k)}")
         return 0
-    port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+    port = a.port or finde_port()
     if not port:
         raise SystemExit("Kein /dev/cu.usbmodem* gefunden.")
     werte = lies(Bridge(port), a.von, a.bis)

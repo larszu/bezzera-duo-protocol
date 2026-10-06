@@ -6,7 +6,7 @@ name: Firmware
 on:
   push:
     branches: [main]
-    paths: ["bridge/**", "flasher/**", "tools/seitenbau/**", "tools/display_kopf_c6/**", ".github/workflows/firmware.yml"]
+    paths: ["bridge/**", "flasher/**", "tools/firmware_bauen.sh", "tools/seitenbau/**", "tools/display_kopf_c6/**", ".github/workflows/firmware.yml"]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -31,17 +31,16 @@ jobs:
           arduino-cli core install esp32:esp32@3.3.12
       - name: Kompilieren
         run: |
-          arduino-cli compile \
-            --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom,PSRAM=opi \
-            --output-dir build bridge/duo_bridge
+          bash tools/firmware_bauen.sh   # build/s3 und build/esp32
           VERSION="${GITHUB_REF_NAME}"
           [[ "$GITHUB_REF_TYPE" == "tag" ]] || VERSION="main-$(git rev-parse --short HEAD)"
           mkdir -p site
           cp -r flasher/* site/
           mkdir -p site/seitenbau && cp tools/seitenbau/index.html site/seitenbau/
           (cd tools/display_kopf_c6 && zip -r ../../site/display_kopf_c6.zip DWIN_SET)
-          cp build/duo_bridge.ino.merged.bin site/duo_bridge.bin
-          cp build/duo_bridge.ino.bin site/duo_bridge.ino.bin
+          cp build/s3/duo_bridge.ino.merged.bin site/duo_bridge.bin
+          cp build/s3/duo_bridge.ino.bin site/duo_bridge.ino.bin
+          cp build/esp32/duo_bridge.ino.merged.bin site/duo_bridge_esp32.bin
           sed -i "s/__VERSION__/${VERSION}/" site/manifest.json site/index.html
       - uses: actions/upload-pages-artifact@v4
         with:
@@ -51,10 +50,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp build/duo_bridge.ino.merged.bin "duo_bridge-${GITHUB_REF_NAME}.bin"
-          cp build/duo_bridge.ino.bin "duo_bridge-update-${GITHUB_REF_NAME}.bin"
+          cp build/s3/duo_bridge.ino.merged.bin "duo_bridge-esp32s3-${GITHUB_REF_NAME}.bin"
+          cp build/s3/duo_bridge.ino.bin "duo_bridge-esp32s3-update-${GITHUB_REF_NAME}.bin"
+          cp build/esp32/duo_bridge.ino.merged.bin "duo_bridge-esp32-${GITHUB_REF_NAME}.bin"
           cp site/display_kopf_c6.zip "display_kopf_c6.zip"
-          DATEIEN=("duo_bridge-${GITHUB_REF_NAME}.bin" "duo_bridge-update-${GITHUB_REF_NAME}.bin" "display_kopf_c6.zip")
+          DATEIEN=("duo_bridge-esp32s3-${GITHUB_REF_NAME}.bin" "duo_bridge-esp32s3-update-${GITHUB_REF_NAME}.bin" "duo_bridge-esp32-${GITHUB_REF_NAME}.bin" "display_kopf_c6.zip")
           gh release create "$GITHUB_REF_NAME" "${DATEIEN[@]}" --title "Bridge $GITHUB_REF_NAME" --notes-file docs/release-notes.md \
             || gh release upload "$GITHUB_REF_NAME" "${DATEIEN[@]}" --clobber
 

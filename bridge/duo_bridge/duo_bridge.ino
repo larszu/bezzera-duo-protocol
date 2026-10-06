@@ -653,11 +653,17 @@ static void leseBefehle() {
 }
 
 void setup() {
-  Serial.begin(921600);
+#if ARDUINO_USB_CDC_ON_BOOT
+  Serial.begin(921600);  // USB-CDC (ESP32-S3), Baudrate ohne Bedeutung
+#else
+  Serial.begin(115200);  // UART-Wandler (klassischer ESP32): 115200, wie der Web-Installer (Improv) es erwartet
+#endif
   // Liest am Rechner niemand mit, darf die Ausgabe ueber USB nie warten: Jede
   // blockierte Zeile liess die UARTs ueberlaufen, Antworten gingen verloren und
   // das Mainboard begann seinen Start (Uhr stellen) immer wieder von vorn.
-  Serial.setTxTimeoutMs(0);
+#if ARDUINO_USB_CDC_ON_BOOT
+  Serial.setTxTimeoutMs(0);  // nur USB-CDC (ESP32-S3); ein UART-Wandler (klassischer ESP32) leert sich immer
+#endif
   uartA.setRxBufferSize(2048);
   uartB.setRxBufferSize(2048);
   uartA.begin(BAUD, SERIAL_8N1, PIN_RX_DISPLAY, PIN_TX_MAINBOARD);

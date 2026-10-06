@@ -2,8 +2,14 @@
 
 # Firmware auf den ESP32 bringen und einrichten
 
-Die Bridge läuft auf einem **Waveshare ESP32-S3-ETH** (ESP32-S3 mit 8 MB PSRAM,
-16 MB Flash, Ethernet). Drei Wege, vom einfachsten zum flexibelsten.
+Die Bridge läuft auf zwei Boards:
+
+| Board | Was geht |
+|---|---|
+| **Waveshare ESP32-S3-ETH** (ESP32-S3, 8 MB PSRAM, 16 MB Flash, Ethernet), empfohlen | alles: Matter, Netzwerkkabel, Update über die Weboberfläche, 24 h Verlauf |
+| **klassischer ESP32** (ESP32-D0WD/WROOM-32, 4 MB Flash, USB über CP2102/CH340) | alles außer Matter, Netzwerkkabel und Update über die Weboberfläche; Verlauf 30 min |
+
+Die Flash-Seite erkennt das Board selbst. Drei Wege, vom einfachsten zum flexibelsten.
 
 ## 1. Im Browser (empfohlen)
 
@@ -25,10 +31,13 @@ zusätzlich als Release.
 ```bash
 brew install arduino-cli                       # macOS; Linux/Windows: arduino.github.io/arduino-cli
 arduino-cli core install esp32:esp32@3.3.12
-FQBN=esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=custom,PSRAM=opi
-arduino-cli compile --fqbn $FQBN bridge/duo_bridge
-arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge   # Windows: -p COM5
+bash tools/firmware_bauen.sh                   # baut build/s3 und build/esp32
+esptool --chip esp32s3 --port /dev/cu.usbmodem…  write-flash 0x0 build/s3/duo_bridge.ino.merged.bin
+esptool --chip esp32   --port /dev/cu.usbserial… write-flash 0x0 build/esp32/duo_bridge.ino.merged.bin
 ```
+
+Der klassische ESP32 wird aus einer Kopie ohne `partitions.csv` gebaut
+(`PartitionScheme=huge_app`, 3 MB Programm, kein zweiter Programmplatz).
 
 - `FlashSize=16M,PartitionScheme=custom`: die eigene Aufteilung
   `bridge/duo_bridge/partitions.csv` (zwei App-Bereiche à 6 MB, genug für Bluetooth
@@ -42,8 +51,12 @@ arduino-cli upload  --fqbn $FQBN -p /dev/cu.usbmodem… bridge/duo_bridge   # Wi
 
 ```bash
 pip install esptool
-esptool --chip esp32s3 --port /dev/cu.usbmodem… write-flash 0x0 duo_bridge-vX.Y.bin
+esptool --chip esp32s3 --port /dev/cu.usbmodem…  write-flash 0x0 duo_bridge-esp32s3-vX.Y.bin
+esptool --chip esp32   --port /dev/cu.usbserial… write-flash 0x0 duo_bridge-esp32-vX.Y.bin
 ```
+
+Update eines laufenden ESP32-S3 ohne Kabel: Weboberfläche → Diagnose → Firmware,
+Datei `duo_bridge-esp32s3-update-vX.Y.bin`.
 
 ## Wenn der ESP32 nicht erkannt wird
 

@@ -27,9 +27,24 @@ def oeffne(port: str) -> int:
     a[0] = 0
     a[1] = 0
     a[3] &= ~(termios.ICANON | termios.ECHO | termios.ISIG)
-    a[4] = a[5] = termios.B115200  # USB-CDC ignoriert die Baudrate
+    a[4] = a[5] = termios.B115200  # USB-CDC (ESP32-S3) ignoriert die Baudrate
     termios.tcsetattr(fd, termios.TCSANOW, a)
+    if "usbmodem" not in port and "ttyACM" not in port:  # klassischer ESP32 hinter einem UART-Wandler, 115200 Baud
+        # DTR/RTS loslassen: die Auto-Reset-Schaltung haelt den ESP32 sonst im Reset
+        import fcntl
+        import struct
+        fcntl.ioctl(fd, termios.TIOCMBIC, struct.pack("I", termios.TIOCM_DTR | termios.TIOCM_RTS))
     return fd
+
+
+def finde_port() -> str | None:
+    """ESP32-S3 (USB-CDC) oder klassischer ESP32 hinter einem UART-Wandler."""
+    for muster in ("/dev/cu.usbmodem*", "/dev/cu.usbserial*", "/dev/cu.SLAB_USBtoUART*", "/dev/cu.wchusbserial*",
+                   "/dev/ttyACM*", "/dev/ttyUSB*"):
+        treffer = sorted(glob.glob(muster))
+        if treffer:
+            return treffer[0]
+    return None
 
 
 def lies(fd: int, sekunden: float, out=sys.stdout) -> None:
@@ -50,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lesen", type=float, default=1.0, help="Sekunden mitlesen nach jedem Befehl")
     ap.add_argument("--pause", type=float, help="Sekunden zwischen Befehlen (Standard: --lesen)")
     a = ap.parse_args(argv)
-    port = a.port or next(iter(sorted(glob.glob("/dev/cu.usbmodem*"))), None)
+    port = a.port or finde_port()
     if not port:
         print("Kein /dev/cu.usbmodem* gefunden. Steckt der ESP32?", file=sys.stderr)
         return 1

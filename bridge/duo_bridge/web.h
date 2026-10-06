@@ -28,6 +28,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <Update.h>
+#include <esp_ota_ops.h>
 #include <esp_wifi.h>
 
 #include "tasten.h"
@@ -480,7 +481,10 @@ void zusatzBefehl(char *s) {
 
 void webSetup() {
   Network.onEvent(netzEreignis);
+#if CONFIG_IDF_TARGET_ESP32S3
+  // W5500 des Waveshare ESP32-S3-ETH; auf dem klassischen ESP32 sind GPIO 9-11 Flash-Pins
   ETH.begin(ETH_PHY_W5500, 1, ETH_CS, ETH_IRQ, ETH_RST, SPI2_HOST, ETH_SCK, ETH_MISO, ETH_MOSI);
+#endif
   WiFi.mode(WIFI_AP_STA);
   esp_wifi_set_country_code("DE", false);  // Kanaele 1-13 fest, nicht von Nachbar-Routern (802.11d) einschraenken lassen
   netzLaden();
@@ -528,6 +532,10 @@ void webSetup() {
       [] {
         if (!zugang()) return;
         bool ok = !Update.hasError();
+        if (!esp_ota_get_next_update_partition(nullptr)) {
+          server.send(500, "text/plain", "Dieser ESP32 hat keinen zweiten Programmplatz (4 MB Flash): bitte ueber die Flash-Seite aktualisieren");
+          return;
+        }
         server.send(ok ? 200 : 500, "text/plain", ok ? "ok, Neustart" : Update.errorString());
         if (ok) {
           delay(300);
