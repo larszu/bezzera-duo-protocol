@@ -1,12 +1,18 @@
-Firmware für die Bezzera-Duo-Bridge (Waveshare ESP32-S3-ETH).
+Firmware für die Bezzera-Duo-Bridge, für zwei Boards.
+
+**Installieren ohne Vorkenntnisse:** https://larszu.github.io/bezzera-duo-protocol/ in Chrome oder Edge öffnen,
+ESP32 per USB anstecken, „Installieren“. Die Seite erkennt das Board selbst.
 
 | Datei | Wofür |
 |---|---|
-| `duo_bridge-<version>.bin` | Erstes Flashen per USB ([Anleitung](https://github.com/larszu/bezzera-duo-protocol/blob/main/docs/flashen.md), Flash-Seite im Browser) |
-| `duo_bridge-update-<version>.bin` | Update über die Weboberfläche: Diagnose → Firmware |
+| `duo_bridge-esp32s3-<version>.bin` | Waveshare ESP32-S3-ETH, erstes Flashen per USB (ab 0x0) |
+| `duo_bridge-esp32s3-update-<version>.bin` | ESP32-S3: Update über die Weboberfläche (Diagnose → Firmware) |
+| `duo_bridge-esp32-<version>.bin` | klassischer ESP32 (4 MB), Flashen per USB (ab 0x0) |
 | `display_kopf_c6.zip` | Ersatz-Display 2.2 zeigt keine Werte: Ordner auf SD-Karte, siehe README |
 
-Neu in dieser Version: Ersatz-Display 2.2 (Kopf-Übersetzung, SD-Umstellung),
-Brühkurve auf dem Display und in der App, Startseiten-Taste, Touch-Piepen aus,
-Display-Sicherung, SD-Paketbauer (`tools/sd_paket.py`), Firmware-Update per
-Web, Fernzugriff als eigenes Tailscale-Gerät, ntfy, einstellbarer Web-Benutzer.
+Pinbelegung beider Boards: [docs/pinbelegung.md](https://github.com/larszu/bezzera-duo-protocol/blob/main/docs/pinbelegung.md).
+Der klassische ESP32 kann alles außer Matter, Ethernet und Update per Weboberfläche.
+
+Neu: klassischer ESP32 als zweites Board, Installer für beide, Brühkurve im neuen Layout
+(Raster für Druck und Temperatur, Infokästen), Brühkurve bleibt beim Bezug offen,
+Recherche zum Mainboard und zu verwandten Maschinen (docs/mainboard.md).
