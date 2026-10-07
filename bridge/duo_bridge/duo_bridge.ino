@@ -52,6 +52,13 @@
 //   ?                    Zustand
 
 #include <esp_bt.h>
+#include <esp_ota_ops.h>
+#include <ESPmDNS.h>
+
+// Versionsnummer: tools/firmware_bauen.sh setzt FW_VERSION (Tag oder main-<sha>)
+#ifndef FW_VERSION
+#define FW_VERSION "dev"
+#endif
 #include <Arduino.h>
 #include <Preferences.h>
 #include <driver/gpio.h>

@@ -18,6 +18,7 @@ header h1{font-size:17px;margin:0;font-weight:600}
 .lampe{display:inline-flex;align-items:center;gap:6px;color:var(--leise);font-size:13px}
 .lampe i{width:9px;height:9px;border-radius:50%;background:#555;display:inline-block}
 .lampe.an i{background:var(--ok)}
+main>section{min-width:0}
 main{display:grid;gap:14px;padding:14px 16px;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));max-width:1200px}
 section{background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:14px}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--leise);margin:0 0 10px;font-weight:600}
@@ -83,6 +84,8 @@ details.gruppe>summary .hinweis{font-weight:400}
 .shot-karten{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr))}
 .shot-karte{border:1px solid var(--linie);border-radius:8px;padding:8px 10px;cursor:pointer}
 .shot-karte.an{border-color:var(--akzent)}
+.sk-tag{display:flex;justify-content:space-between;color:var(--leise);font-size:13px;margin:10px 2px 4px} .sk-mini{width:84px;height:30px;flex:none}
+.sk-zahlen{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:6px 0} .sk-zahlen div{background:var(--linie);border-radius:6px;padding:3px 4px;text-align:center;font-size:12px;color:var(--leise)} .sk-zahlen b{display:block;font-size:15px;color:var(--text)}
 .sk-kopf{display:flex;justify-content:space-between;gap:8px;font-size:14px} .sk-kopf span{color:var(--leise);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sk-werte{display:flex;gap:14px;margin:6px 0;font-variant-numeric:tabular-nums;color:var(--leise);font-size:14px} .sk-werte b{color:var(--text);font-size:17px}
 .sk-fuss{display:flex;align-items:center;gap:8px} .sk-fuss input{flex:1;min-width:0;width:auto}
@@ -103,6 +106,7 @@ details.gruppe>summary .hinweis{font-weight:400}
 <main>
   <section data-tab="espresso" style="grid-column:1/-1">
     <h2>Maschine</h2>
+    <svg id="bogen" viewBox="0 0 240 192" style="width:min(320px,100%);display:block;margin:0 auto 6px" aria-label="Kaffeekessel und Pumpendruck"></svg>
     <div class="kopfzeile"><div id="m_status" style="font-size:22px;font-weight:600">–</div><span id="bereit" class="badge">–</span></div>
     <div class="gross" style="margin-top:14px">
       <div><div class="wert" style="color:var(--kaffee)" id="t_kaffee">–</div><div class="einheit">Kaffeekessel °C <span id="t_soll"></span></div></div>
@@ -156,21 +160,33 @@ details.gruppe>summary .hinweis{font-weight:400}
   <section data-tab="verlauf" style="grid-column:1/-1">
     <h2>Shots</h2>
     <p class="hinweis">Jeder Bezug, den die Maschine anzeigt (Ausgabezähler, CRONO an). Sterne und Notiz zum Einstellen der Mühle; Antippen zeigt die Kurve.</p>
-    <div id="shot_liste" class="shot-karten"></div>
+    <div class="form"><input id="shot_suche" placeholder="Suchen: Profil, Notiz …" style="width:220px" oninput="holeShots()"></div>
+    <div id="shot_liste"></div>
     <canvas id="shot_kurve" width="600" height="200" style="height:200px;margin-top:10px;display:none"></canvas>
     <p class="hinweis" id="shot_info"></p>
   </section>
   <section data-tab="espresso">
     <h2>Bezugstasten an der Maschine</h2>
-    <table class="karten"><tbody>
-      <tr><td><b>1</b></td><td>ein Espresso, normal</td></tr>
-      <tr><td><b>2</b></td><td>ein Kaffee, lang</td></tr>
-      <tr><td><b>3</b></td><td>doppelte Menge, normal</td></tr>
-      <tr><td><b>4</b></td><td>doppelte Menge, lang</td></tr>
-      <tr><td><b>5</b></td><td>Dauerbezug: läuft, bis die Taste noch einmal gedrückt wird; auch zum Programmieren der Mengen</td></tr>
-    </tbody></table>
+    <ol style="margin:4px 0 8px 18px;padding:0;line-height:1.7">
+      <li>ein Espresso, normal</li>
+      <li>ein Kaffee, lang</li>
+      <li>doppelte Menge, normal</li>
+      <li>doppelte Menge, lang</li>
+      <li>Dauerbezug: läuft, bis die Taste noch einmal gedrückt wird; auch zum Programmieren der Mengen</li>
+    </ol>
     <p class="hinweis">Tasten 1–4 stoppen von selbst, sobald die programmierte Wassermenge durch ist; jede Taste stoppt einen laufenden Bezug. Die Mengen programmiert man an der Maschine, siehe <a href="https://www.bedienungsanleitu.ng/bezzera/duo/anleitung" target="_blank" rel="noopener">Bedienungsanleitung</a>.
       Die Bridge sieht nur, <i>dass</i> ein Bezug läuft (Seite „Ausgabe“, Zeit, Druck, Temperatur), nicht welche Taste gedrückt wurde: Die Tasten hängen direkt am Mainboard (gemessen 02.10.2026).</p>
+  </section>
+  <section data-tab="maschine">
+    <h2>Rückspülen</h2>
+    <p class="einheit"><span id="rs_zaehler">–</span> Bezüge seit dem letzten Rückspülen</p>
+    <ol class="hinweis" style="margin:6px 0 8px 18px;padding:0;line-height:1.6">
+      <li>Blindsieb mit Reinigungspulver in den Siebträger, fest einspannen.</li>
+      <li>Am Display: Seitenmenü (drei Quadrate) → <b>Rückspülen</b>. Die Maschine pulst die Pumpe selbst.</li>
+      <li>Wenn sie fertig ist: Siebträger ausspülen, mit klarem Blindsieb noch einmal <b>Rückspülen</b>.</li>
+      <li>Siebträger mit normalem Sieb einspannen, einen Bezug ohne Kaffee durchlaufen lassen.</li>
+    </ol>
+    <p class="hinweis">Die Bridge erkennt das Waschprogramm am Display und setzt den Zähler selbst zurück. Von Hand: <button onclick="shotAktion('rueckspuelen_erledigt')">Rückspülen erledigt</button></p>
   </section>
   <section data-tab="maschine" style="grid-column:1/-1">
     <h2>Brühkurve</h2>
@@ -190,7 +206,7 @@ details.gruppe>summary .hinweis{font-weight:400}
     <h2>Maschinendaten</h2>
     <div class="gross"><div><div class="wert klein" id="md_bezuege">–</div><div class="einheit">Bezüge gesamt</div></div>
       <div><div class="wert klein" id="md_rueck">–</div><div class="einheit">seit dem letzten Rückspülen</div></div></div>
-    <div class="form" style="margin-top:10px"><button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button><span class="hinweis" id="uhr_info"></span><button onclick="shotAktion('rueckspuelen_erledigt')">Rückspülen erledigt</button>
+    <div class="form" style="margin-top:10px"><button onclick="uhrStellen()">Uhr von diesem Gerät stellen</button><span class="hinweis" id="uhr_info"></span>
       Erinnern alle <input id="md_rueck_alle" style="width:55px" onchange="shotAktion('rueckspuelen_alle '+this.value)"> Bezüge</div>
     <p class="einheit" id="md_ergebnis"></p>
     <div id="md_gruppen" style="margin-top:8px"></div>
@@ -297,8 +313,15 @@ details.gruppe>summary .hinweis{font-weight:400}
   </section>
   <section data-tab="diagnose">
     <h2>Firmware</h2>
-    <div class="form"><input type="file" id="fw_datei" accept=".bin"><button onclick="fwHochladen()">Aktualisieren</button><span class="hinweis" id="fw_status"></span></div>
+    <p class="einheit" id="fw_info">–</p>
+    <div class="form" id="fw_neu" style="display:none"></div>
+    <div class="form"><input type="file" id="fw_datei" accept=".bin"><button onclick="fwHochladen()">Datei hochladen</button><span class="hinweis" id="fw_status"></span></div>
     <p class="hinweis">Datei <code>duo_bridge.ino.bin</code> von der Flash-Seite (nicht die Datei für USB). Die Bridge startet danach neu; bei einem Fehler bleibt die alte Firmware.</p>
+  </section>
+  <section data-tab="diagnose">
+    <h2>Bridges im Netz</h2>
+    <div class="form"><button onclick="bridgesSuchen()">Suchen</button><span class="hinweis" id="br_status"></span></div>
+    <div id="br_liste"></div>
   </section>
   <section data-tab="diagnose">
     <h2>Variablen</h2>
@@ -365,6 +388,7 @@ async function hole(){
     const v50=j.vps.find(x=>x.vp==0x50);
     const k=v50?v50.w[3]:null, d=v50?v50.w[4]:null;
     $("t_kaffee").textContent=k??"–"; $("t_dampf").textContent=d??"–";
+    const s60=j.vps.find(x=>x.vp==0x60); bogenZeichnen(k, s60?s60.w[0]:null, v50?v50.w[5]/2:null);
     $("vps").innerHTML=j.vps.sort((a,b)=>a.vp-b.vp).map(x=>`<tr><td>${hex(x.vp)}</td><td>${x.w.join(" ")}</td><td>${(x.alter_ms/1000).toFixed(1)} s</td></tr>`).join("");
     if(j.ereignisse.length){const l=$("log"); l.textContent+=j.ereignisse.join("\n")+"\n"; l.scrollTop=l.scrollHeight}
     seit=j.ereignis_nr;
@@ -1255,15 +1279,35 @@ async function shotAktion(a){await fetch("/api/shot_aktion",{method:"POST",body:
 async function holeShots(){
   try{shotsJ=await (await fetch("/api/shots")).json();
     $("md_bezuege").textContent=shotsJ.bezuege_maschine?shotsJ.bezuege_maschine.toLocaleString("de-DE"):"–";
-    $("md_rueck").textContent=shotsJ.seit_rueckspuelen; if(document.activeElement!==$("md_rueck_alle")) $("md_rueck_alle").value=shotsJ.rueckspuelen_alle;
+    $("md_rueck").textContent=shotsJ.seit_rueckspuelen; $("rs_zaehler").textContent=shotsJ.seit_rueckspuelen; if(document.activeElement!==$("md_rueck_alle")) $("md_rueck_alle").value=shotsJ.rueckspuelen_alle;
     if(!aktiv("verlauf")||document.activeElement&&document.activeElement.classList.contains("shot_notiz")) return;
-    $("shot_liste").innerHTML=shotsJ.log.map(e=>`<div class="shot-karte${e.nr==shotGezeigt?" an":""}" onclick="zeigeShot(${e.nr})">
-      <div class="sk-kopf"><b>${esc(e.zeit.slice(8,10)+"."+e.zeit.slice(5,7)+". "+e.zeit.slice(11))}</b><span>${esc(e.profil||"ohne Profil")}</span></div>
-      <div class="sk-werte"><span><b>${f1(e.dauer,0)}</b> s</span><span><b>${e.gewicht==null?"–":f1(e.gewicht)}</b> g</span><span><b>${f1(e.druck_max)}</b> bar</span><span><b>${f1(e.temp,0)}</b> °C</span></div>
+    // Karten nach Tag gruppiert, mit Mini-Kurve, Dosis (aus dem Profil), Ausbeute, Zeit, Ratio (#43)
+    const such=(v("shot_suche")||"").toLowerCase(), heute=new Date(), tagText=z=>{const d=new Date(z.slice(0,10)), t=Math.round((new Date(heute.toDateString())-d)/864e5);
+      return t==0?"Heute":t==1?"Gestern":z.slice(8,10)+"."+z.slice(5,7)+"."+z.slice(0,4)};
+    const dosisVon=n=>{const q=(profJ&&profJ.profile||[]).find(x=>x&&x.p&&x.p.name===n); return q&&q.p.dosis?q.p.dosis:null};
+    const liste=shotsJ.log.filter(e=>!such||(e.profil||"").toLowerCase().includes(such)||(e.notiz||"").toLowerCase().includes(such));
+    let html="", tag="";
+    for(const e of liste){ const t=tagText(e.zeit);
+      if(t!==tag){tag=t; html+=`<div class="sk-tag"><b>${t}</b><span>${liste.filter(x=>tagText(x.zeit)===t).length} Shots</span></div>`}
+      const dosis=dosisVon(e.profil), ratio=dosis&&e.gewicht?"1:"+(e.gewicht/dosis).toFixed(1):"–";
+      html+=`<div class="shot-karte${e.nr==shotGezeigt?" an":""}" style="margin-bottom:8px" onclick="zeigeShot(${e.nr})">
+      <div class="sk-kopf"><span><b style="color:var(--text)">${esc(e.zeit.slice(11))}</b> · ${esc(e.profil||"Espresso")}</span><canvas class="sk-mini" id="mini_${e.nr}" width="168" height="60"></canvas></div>
+      <div class="sk-zahlen"><div>In<b>${dosis?f1(dosis)+"g":"–"}</b></div><div>Out<b>${e.gewicht==null?"–":f1(e.gewicht)+"g"}</b></div><div>Zeit<b>${f1(e.dauer,0)}s</b></div><div>Ratio<b>${ratio}</b></div></div>
+      <div class="hinweis">max. ${f1(e.druck_max)} bar · ${f1(e.temp,0)} °C</div>
       <div class="sk-fuss"><span>${[1,2,3,4,5].map(n=>`<span class="stern${n<=e.sterne?" an":""}" onclick="event.stopPropagation();shotAktion('bewerten ${e.nr} ${n==e.sterne?0:n}')">★</span>`).join("")}</span>
-        <input class="shot_notiz" placeholder="Notiz (Mahlgrad, Geschmack …)" value="${esc(e.notiz)}" onclick="event.stopPropagation()" onchange="shotAktion('bewerten ${e.nr} ${e.sterne} '+this.value)"></div></div>`).join("")||'<p class="hinweis">noch keine Shots erkannt</p>';
+        <input class="shot_notiz" placeholder="Notiz (Mahlgrad, Geschmack …)" value="${esc(e.notiz)}" onclick="event.stopPropagation()" onchange="shotAktion('bewerten ${e.nr} ${e.sterne} '+this.value)"></div></div>`}
+    $("shot_liste").innerHTML=html||'<p class="hinweis">noch keine Shots</p>';
+    liste.forEach(e=>miniKurve(e.nr));
   }catch(e){}
 }
+// Mini-Kurve (Druck) je Karte; Kurven gibt es fuer die letzten 10 Shots, im Speicher gemerkt
+const miniCache={};
+async function miniKurve(nr){ const c=$("mini_"+nr); if(!c) return;
+  let p=miniCache[nr]; if(!p){ try{p=await (await fetch("/api/shot?nr="+nr)).json()}catch(e){return} miniCache[nr]=p }
+  if(!p.length){c.style.display="none"; return}
+  const g=c.getContext("2d"), W=c.width, H=c.height, t1=Math.max(...p.map(q=>q[0]))||1;
+  g.clearRect(0,0,W,H); g.beginPath(); p.forEach((q,i)=>{const x=q[0]/t1*W, y=H-Math.min(12,q[1]||0)/12*H; i?g.lineTo(x,y):g.moveTo(x,y)});
+  g.strokeStyle="#f4a261"; g.lineWidth=2.5; g.stroke(); g.lineTo(W,H); g.lineTo(0,H); g.closePath(); g.fillStyle="rgba(244,162,97,.15)"; g.fill()}
 async function zeigeShot(nr){ shotGezeigt=nr; holeShots();
   const p=await (await fetch("/api/shot?nr="+nr)).json(); $("shot_kurve").style.display=p.length?"":"none";
   $("shot_info").textContent=p.length?`Shot ${nr}: Druck (bar, rechts), Temperatur (°C) und Gewicht (g, links)`:"Für diesen Shot ist keine Kurve mehr gespeichert (nur die letzten 10).";
@@ -1367,6 +1411,44 @@ async function holeBruehkurve(){ if(!aktiv("maschine")) return setTimeout(holeBr
     kurve("bk_kurve",r,{x0:0,x1:Math.max(45,t),fest0:[80,100],fest1:[0,12],fmtX:s=>Math.round(s)+" s",leer:"noch kein Bezug"})}
   setTimeout(holeBruehkurve,b.laeuft?700:3000)}
 holeBruehkurve();
+
+// ─── Bogenanzeige Kaffeekessel/Druck (#44) ────────────────────────────────
+// Aussen: Kaffeekessel bis Sollwert (gruen, sobald +-1 °C), innen: Pumpendruck 0-12 bar.
+function bogenZeichnen(t,soll,bar){
+  const R1=95, R2=78, cx=120, cy=110, start=135, umfang=270;
+  const punkt=(r,w)=>[cx+r*Math.cos(w*Math.PI/180), cy+r*Math.sin(w*Math.PI/180)];
+  const arc=(r,anteil,farbe,breite)=>{anteil=Math.max(0,Math.min(1,anteil)); if(anteil<=0) return "";
+    const [x1,y1]=punkt(r,start), [x2,y2]=punkt(r,start+umfang*anteil);
+    return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 ${umfang*anteil>180?1:0} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}" fill="none" stroke="${farbe}" stroke-width="${breite}" stroke-linecap="round"/>`};
+  const ziel=soll||95, ok=t!=null&&soll&&Math.abs(t-soll)<=1, anteilT=t!=null?(t-20)/(ziel-20):0;
+  $("bogen").innerHTML=arc(R1,1,"#22304d",12)+arc(R1,anteilT,ok?"#43aa8b":"#f4a261",12)+arc(R2,1,"#1a2540",8)+arc(R2,(bar||0)/12,"#4cc9f0",8)
+    +`<text x="${cx-34}" y="${cy-6}" text-anchor="middle" font-size="26" fill="${ok?"#43aa8b":"#f4a261"}">${t??"–"}°</text>`
+    +`<text x="${cx+34}" y="${cy-6}" text-anchor="middle" font-size="26" fill="#4cc9f0">${bar==null?"–":bar.toFixed(1)}</text>`
+    +`<text x="${cx-34}" y="${cy+12}" text-anchor="middle" font-size="11" fill="#8b9bb8">Kessel${soll?" · Soll "+soll:""}</text>`
+    +`<text x="${cx+34}" y="${cy+12}" text-anchor="middle" font-size="11" fill="#8b9bb8">bar</text>`
+    +`<text x="${cx}" y="${cy+40}" text-anchor="middle" font-size="12" fill="${ok?"#43aa8b":"#8b9bb8"}">${ok?"bereit":t==null?"keine Werte":"heizt"}</text>`}
+
+// ─── Update-Hinweis (#51) und Bridges im Netz (#52) ───────────────────────
+const FLASHSEITE="https://larszu.github.io/bezzera-duo-protocol/";
+let fwGeprueft=false;
+async function fwPruefen(){ if(fwGeprueft||!letzterStatus) return; fwGeprueft=true;
+  const s=letzterStatus; $("fw_info").textContent=`${s.chip||"ESP32"} · Version ${s.fw||"?"}`;
+  try{const m=await (await fetch(FLASHSEITE+"manifest.json",{cache:"no-store"})).json();
+    if(!m.version||m.version===s.fw) {$("fw_info").textContent+=" · aktuell"; return}
+    const z=$("fw_neu"); z.style.display="";
+    z.innerHTML=s.ota?`<b>Update verfügbar: ${esc(m.version)}</b><button onclick="fwOnline()">Jetzt aktualisieren</button>`
+      :`<b>Update verfügbar: ${esc(m.version)}</b> <span class="hinweis">Dieser ESP32 wird über die <a href="${FLASHSEITE}" target="_blank" rel="noopener">Flash-Seite</a> per USB aktualisiert.</span>`;
+  }catch(e){$("fw_info").textContent+=" · Update-Prüfung nicht möglich (kein Internet am Gerät?)"}}
+async function fwOnline(){$("fw_status").textContent="lädt Firmware …";
+  try{const b=await (await fetch(FLASHSEITE+"duo_bridge.ino.bin",{cache:"no-store"})).blob();
+    const fd=new FormData(); fd.append("fw",b,"duo_bridge.ino.bin"); $("fw_status").textContent="überträgt …";
+    const r=await fetch("/api/firmware",{method:"POST",body:fd}); $("fw_status").textContent=await r.text()}
+  catch(e){$("fw_status").textContent="Verbindung weg (Neustart?)"}}
+setInterval(fwPruefen,3000);
+async function bridgesSuchen(){$("br_status").textContent="sucht …"; $("br_liste").innerHTML="";
+  try{const j=await (await fetch("/api/bridges")).json(); $("br_status").textContent=j.bridges.length?"":"keine gefunden";
+    $("br_liste").innerHTML=j.bridges.map(b=>`<div class="liste-zeile" onclick="location.href='http://${esc(b.ip)}/'"><b>${esc(b.ip)}</b> ${esc(b.chip||"")} · ${esc(b.fw||"")}${b.ip===j.selbst?' <span class="hinweis">(diese)</span>':""}</div>`).join("")}
+  catch(e){$("br_status").textContent="Suche fehlgeschlagen"}}
 
 // ─── Firmware ────────────────────────────────────────────────────────────────
 async function fwHochladen(){const f=$("fw_datei").files[0]; if(!f) return; $("fw_status").textContent="lädt …";

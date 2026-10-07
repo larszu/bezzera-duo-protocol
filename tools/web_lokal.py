@@ -24,7 +24,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bridge import oeffne, finde_port# noqa: E402
+from bridge import oeffne, finde_port  # noqa: E402
 
 BRIDGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bridge", "duo_bridge")
 

@@ -88,6 +88,10 @@ String statusText(uint32_t seit) {
   j.reserve(6000);
   j += "{\"ms\":";
   j += jetzt;
+  j += ",\"fw\":\"" FW_VERSION "\",\"chip\":\"";
+  j += ESP.getChipModel();
+  j += "\",\"ota\":";
+  j += esp_ota_get_next_update_partition(nullptr) ? "true" : "false";
   j += ",\"seite\":";
   j += leitung.seite;
   j += ",\"rtc\":";
@@ -291,6 +295,24 @@ static int zusatzApi(const String &pfad, const String &query, const String &rump
     }
   } else if (pfad == "/api/shots") {
     antwort = shotsJson();
+  } else if (pfad == "/api/bridges") {  // andere Bridges im Netz (mDNS, dauert ~2 s)
+    int n = MDNS.queryService("duobridge", "tcp");
+    antwort = "{\"selbst\":";
+    jsonText(antwort, WiFi.localIP().toString());
+    antwort += ",\"bridges\":[";
+    for (int i = 0; i < n; i++) {
+      if (i) antwort += ',';
+      antwort += "{\"name\":";
+      jsonText(antwort, MDNS.hostname(i));
+      antwort += ",\"ip\":";
+      jsonText(antwort, MDNS.address(i).toString());
+      antwort += ",\"chip\":";
+      jsonText(antwort, MDNS.txt(i, "chip"));
+      antwort += ",\"fw\":";
+      jsonText(antwort, MDNS.txt(i, "fw"));
+      antwort += '}';
+    }
+    antwort += "]}";
   } else if (pfad == "/api/bruehkurve") {  // laufender bzw. letzter Bezug, wie auf dem Display
     antwort = "{\"laeuft\":";
     antwort += shotLaeuft ? "true" : "false";
@@ -503,6 +525,10 @@ void webSetup() {
   }
   Serial.printf("# WLAN duo-bridge: http://%s\n", WiFi.softAPIP().toString().c_str());
   MDNS.begin("duo");
+  // Dienst fuer die Bridge-Suche (#52): jede Bridge meldet Board und Version
+  MDNS.addService("duobridge", "tcp", 80);
+  MDNS.addServiceTxt("duobridge", "tcp", "chip", ESP.getChipModel());
+  MDNS.addServiceTxt("duobridge", "tcp", "fw", FW_VERSION);
   HEAP_PUNKT("mdns");
   MDNS.addService("http", "tcp", 80);
   server.on("/", HTTP_GET, [] {
@@ -525,7 +551,7 @@ void webSetup() {
   });
   dns.start(53, "*", WiFi.softAPIP());
   for (const char *p : {"/api/zusatz", "/api/verlauf", "/api/bezug", "/api/aktion", "/api/einstellungen", "/api/waage",
-                        "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion", "/api/bruehkurve",
+                        "/api/profile", "/api/profil", "/api/profil_aktion", "/api/shots", "/api/shot", "/api/shot_aktion", "/api/bruehkurve", "/api/bridges",
                         "/api/ble_suche", "/api/ble_geraete", "/api/maschine", "/api/maschine_setzen", "/api/wlan", "/api/wlan_setzen",
                         "/api/sicherheit", "/api/zeitplan", "/api/matter", "/api/melden"})
     server.on(p, zusatzWeb);

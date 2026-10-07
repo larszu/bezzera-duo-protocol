@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Duo Werkstatt</title>
+<style>
+:root{--bg:#0b1220;--karte:#131d31;--linie:#22304d;--text:#e6edf7;--leise:#8b9bb8;--akzent:#4cc9f0;--ok:#43aa8b;--warn:#f4a261}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:760px;margin:0 auto;padding:24px 16px}
+h1{font-size:24px;margin:0 0 4px} h2{font-size:15px;color:var(--leise);text-transform:uppercase;letter-spacing:.05em;margin:28px 0 8px}
+.karte{background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:16px;margin:12px 0}
+button{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid #2f8a70;background:#1f5d4c;color:#fff;cursor:pointer;margin:4px 6px 4px 0}
+button:disabled{opacity:.45;cursor:default} button.zweit{background:#1a2540;border-color:var(--linie)}
+label{display:block;margin:6px 0} input[type=checkbox]{margin-right:6px}
+a{color:var(--akzent)} .leise{color:var(--leise);font-size:14px} .ok{color:var(--ok)} .warn{color:var(--warn)}
+progress{width:100%;height:10px} pre{background:#0e1628;padding:10px;border-radius:8px;max-height:200px;overflow:auto;font-size:12px;white-space:pre-wrap}
+ol{padding-left:20px} li{margin:4px 0}
+</style>
+</head>
+<body>
+<main>
+  <h1>Duo Werkstatt</h1>
+  <p class="leise">Display sichern und eigene Seiten per SD-Karte aufspielen – ohne Programm, im Browser (Chrome oder Edge am Rechner).
+    <a href="../">Flash-Seite</a> · <a href="https://github.com/larszu/bezzera-duo-protocol/blob/main/docs/seitenbau.md">Anleitung</a></p>
+
+  <h2>1 · Bridge verbinden</h2>
+  <div class="karte">
+    <p class="leise">Bridge per USB an diesen Rechner, Maschine eingeschaltet (das Display wird über die Bridge gelesen).</p>
+    <button id="b_verbinden">Verbinden</button><span id="verbindung" class="leise">nicht verbunden</span>
+  </div>
+
+  <h2>2 · Display sichern</h2>
+  <div class="karte">
+    <p class="leise">Liest alle belegten Bereiche des Display-Speichers (Seiten, Tasten, Schriften, Symbole), etwa 15–30 Minuten.
+      Währenddessen beantwortet die Bridge das Mainboard selbst und meldet ihm „Standby“. Vor jeder SD-Karte einmal sichern
+      und die ZIP-Datei aufheben: Sie ist der Rückweg.</p>
+    <button id="b_sichern" disabled>Sicherung starten</button><button id="b_abbruch" class="zweit" disabled>Abbrechen</button>
+    <progress id="fortschritt" value="0" max="1"></progress>
+    <p id="sicherung_status" class="leise"></p>
+  </div>
+
+  <h2>3 · SD-Paket bauen</h2>
+  <div class="karte">
+    <p class="leise">Aus der Sicherung (eben gemacht oder als ZIP laden) entsteht ein Ordner <code>DWIN_SET</code> für die SD-Karte.
+      Alle Originalseiten bleiben byte-gleich; das prüft die Seite vor dem Herunterladen.</p>
+    <label>Sicherung (ZIP mit <code>lib_013.bin</code> … <code>lib_018.bin</code>): <input type="file" id="sicherung_zip" accept=".zip"></label>
+    <label><input type="checkbox" id="o_kurve" checked>Brühkurve (Seite 196) und Taste oben rechts auf der Startseite</label>
+    <label><input type="checkbox" id="o_piepen" checked>Piepen beim Antippen aus</label>
+    <label><input type="checkbox" id="o_kopf" checked>Rahmenkopf C6 A5 (Ersatz-Display 2.2 läuft auch ohne Bridge)</label>
+    <button id="b_paket" disabled>SD-Paket herunterladen</button>
+    <p id="paket_status" class="leise"></p>
+    <ol class="leise">
+      <li>ZIP entpacken, den Ordner <code>DWIN_SET</code> auf eine leere microSD kopieren (FAT32, höchstens 8 GB oder eine 4-GB-Partition).</li>
+      <li>Maschine eingeschaltet: Karte ins Display stecken. Es wird blau und lädt.</li>
+      <li>Wenn sich nichts mehr ändert: Karte ziehen, Maschine aus und wieder ein.</li>
+    </ol>
+  </div>
+
+  <h2>Protokoll</h2>
+  <pre id="log"></pre>
+</main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const log=t=>{$("log").textContent+=t+"\n"; $("log").scrollTop=1e9};
+
+// ─── Web Serial: Zeilen lesen, Befehle schreiben ──────────────────────────
+let port=null, schreiber=null, zeilenHoerer=[], puffer="";
+async function verbinden(){
+  if(!("serial" in navigator)){alert("Dieser Browser kann kein Web Serial. Bitte Chrome oder Edge am Rechner."); return}
+  port=await navigator.serial.requestPort();
+  await port.open({baudRate:115200});
+  try{await port.setSignals({dataTerminalReady:false,requestToSend:false})}catch(e){}  // klassischer ESP32: nicht im Reset halten
+  schreiber=port.writable.getWriter();
+  lesen();
+  const z=await zustand(); $("verbindung").textContent=z?` verbunden · Modus ${z.emulation}`:" verbunden, aber keine Antwort";
+  $("b_sichern").disabled=!z;
+}
+async function lesen(){
+  const r=port.readable.pipeThrough(new TextDecoderStream("iso-8859-1")).getReader();
+  for(;;){const {value,done}=await r.read(); if(done) break; puffer+=value;
+    let i; while((i=puffer.indexOf("\n"))>=0){const z=puffer.slice(0,i).trim(); puffer=puffer.slice(i+1); zeilenHoerer.forEach(f=>f(z))}}
+}
+const senden=t=>schreiber.write(new TextEncoder().encode(t+"\n"));
+function warteAuf(pruef,ms){return new Promise(ok=>{const f=z=>{const r=pruef(z); if(r!==undefined){fertig(r)}};
+  const fertig=r=>{zeilenHoerer=zeilenHoerer.filter(x=>x!==f); clearTimeout(t); ok(r)}; const t=setTimeout(()=>fertig(null),ms); zeilenHoerer.push(f)})}
+async function zustand(){const p=warteAuf(z=>z.startsWith("# baud=")?Object.fromEntries(z.slice(2).split(" ").map(x=>x.split("="))):undefined,2000);
+  await senden("?"); return p}
+
+// ─── Sicherung (wie tools/display_sichern.py) ─────────────────────────────
+const LIB_WORTE=0x10000, BLOCK=32;
+let abbrechen=false;
+// "S lib n adr worte" -> Map Wortadresse -> 64 Byte; Fehler/Abbruch -> null
+function libLesen(lib,adr,worte,ms){
+  const daten=new Map();
+  return new Promise(async ok=>{
+    const f=z=>{
+      if(z.startsWith("#S fertig")) ende(daten);
+      else if(z.startsWith("#S fehler")) ende(null);
+      else if(z.startsWith("#S lib ")){const t=z.split(" "); if(t.length===5&&+t[2]===lib) daten.set(+t[3],t[4])}};
+    const ende=r=>{zeilenHoerer=zeilenHoerer.filter(x=>x!==f); clearInterval(w); ok(r)};
+    const w=setInterval(()=>{if(abbrechen) ende(null)},300);
+    zeilenHoerer.push(f); await senden(`S lib ${lib} ${adr} ${worte}`);
+    setTimeout(()=>ende(daten.size?daten:null),ms)});
+}
+const hexBytes=h=>Uint8Array.from(h.match(/../g).map(x=>parseInt(x,16)));
+const leer=d=>d.every(b=>b===0xFF)||d.every(b=>b===0);
+async function sichern(){
+  abbrechen=false; $("b_sichern").disabled=true; $("b_abbruch").disabled=false;
+  const z=await zustand(); const vorher=z?z.emulation:"0", ausgabe=z&&z.ausgabe==="1";
+  const status=t=>{$("sicherung_status").textContent=t; log(t)};
+  try{
+    if(ausgabe) await senden("x");
+    await senden("e 1");
+    status("Suche belegte Bereiche …");
+    const libs=[];
+    for(let lib=0;lib<128&&!abbrechen;lib++){
+      $("fortschritt").value=lib/128*0.15;
+      for(let a=0;a<LIB_WORTE;a+=LIB_WORTE/16){const d=await libLesen(lib,a,BLOCK,8000); if(!d) continue; const b=hexBytes([...d.values()][0]||"ff"); if(!leer(b)){libs.push(lib); break}}
+    }
+    status(`${libs.length} belegte Bereiche: ${libs.join(", ")}`);
+    const dateien=[];
+    for(let k=0;k<libs.length&&!abbrechen;k++){
+      const lib=libs[k]; status(`Bereich ${lib} lesen (${k+1}/${libs.length}) …`);
+      let d=await libLesen(lib,0,LIB_WORTE,15*60000);
+      if(!d) throw new Error(`Bereich ${lib} nicht lesbar`);
+      for(let a=0;a<LIB_WORTE;a+=BLOCK){ if(!d.has(a)){const e=await libLesen(lib,a,BLOCK,8000); if(e&&e.has(a)) d.set(a,e.get(a)); else throw new Error(`Bereich ${lib}: Block ${a} fehlt`)}}
+      const bin=new Uint8Array(LIB_WORTE*2); for(let a=0;a<LIB_WORTE;a+=BLOCK) bin.set(hexBytes(d.get(a)),a*2);
+      dateien.push([`lib_${String(lib).padStart(3,"0")}.bin`,bin]);
+      $("fortschritt").value=0.15+0.85*(k+1)/libs.length;
+    }
+    if(abbrechen) throw new Error("abgebrochen");
+    sicherung=Object.fromEntries(dateien);
+    const stempel=new Date().toISOString().slice(0,16).replace(/[-:T]/g,"");
+    herunterladen(zip(dateien),`display-sicherung-${stempel}.zip`);
+    status(`Fertig: ${dateien.length} Bereiche gesichert, ZIP heruntergeladen. Aufheben!`); $("b_paket").disabled=false;
+  }catch(e){status("Sicherung nicht vollständig: "+e.message)}
+  finally{await senden("S"); await senden("e "+vorher); if(ausgabe) await senden("x"); $("b_sichern").disabled=false; $("b_abbruch").disabled=true}
+}
+
+// ─── ZIP schreiben (ohne Kompression) und lesen (store/deflate) ───────────
+const CRC=(()=>{const t=new Uint32Array(256); for(let n=0;n<256;n++){let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0} return t})();
+const crc32=d=>{let c=0xFFFFFFFF; for(let i=0;i<d.length;i++) c=CRC[(c^d[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0};
+function zip(dateien){const enc=new TextEncoder(), teile=[], zentral=[]; let o=0;
+  for(const [name,d] of dateien){const nb=enc.encode(name), c=crc32(d), k=new Uint8Array(30+nb.length), v=new DataView(k.buffer);
+    v.setUint32(0,0x04034b50,true); v.setUint16(4,20,true); v.setUint32(14,c,true); v.setUint32(18,d.length,true); v.setUint32(22,d.length,true); v.setUint16(26,nb.length,true); k.set(nb,30);
+    const z=new Uint8Array(46+nb.length), w=new DataView(z.buffer);
+    w.setUint32(0,0x02014b50,true); w.setUint16(4,20,true); w.setUint16(6,20,true); w.setUint32(16,c,true); w.setUint32(20,d.length,true); w.setUint32(24,d.length,true); w.setUint16(28,nb.length,true); w.setUint32(42,o,true); z.set(nb,46);
+    teile.push(k,d); zentral.push(z); o+=k.length+d.length}
+  const zg=zentral.reduce((s,z)=>s+z.length,0), e=new Uint8Array(22), v=new DataView(e.buffer);
+  v.setUint32(0,0x06054b50,true); v.setUint16(8,dateien.length,true); v.setUint16(10,dateien.length,true); v.setUint32(12,zg,true); v.setUint32(16,o,true);
+  return new Blob([...teile,...zentral,e],{type:"application/zip"})}
+// Liest ueber das zentrale Verzeichnis: Groessen stehen dort auch bei ZIPs aus dem Finder (Datendeskriptor)
+async function entpacken(buf){const d=new Uint8Array(buf), v=new DataView(buf), raus={};
+  let e=d.length-22; while(e>=0&&v.getUint32(e,true)!==0x06054b50) e--; if(e<0) throw new Error("keine ZIP-Datei");
+  let p=v.getUint32(e+16,true); const n=v.getUint16(e+10,true);
+  for(let k=0;k<n;k++){ const art=v.getUint16(p+10,true), gross=v.getUint32(p+20,true), nl=v.getUint16(p+28,true), xl=v.getUint16(p+30,true), kl=v.getUint16(p+32,true), lok=v.getUint32(p+42,true);
+    const name=new TextDecoder().decode(d.subarray(p+46,p+46+nl)).split("/").pop(); p+=46+nl+xl+kl;
+    const start=lok+30+v.getUint16(lok+26,true)+v.getUint16(lok+28,true), roh=d.subarray(start,start+gross);
+    if(!name) continue;
+    raus[name]=art===0?roh:new Uint8Array(await new Response(new Blob([roh]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer())}
+  return raus}
+function herunterladen(blob,name){const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+
+// ─── SD-Paket (wie tools/sd_paket.py) ─────────────────────────────────────
+const W=320,H=240,SEITE14=2048,EINTRAG=32,LIB=0x20000,SEITEN=300,LIBS14=[14,15,16,17,18];
+const FREI=new Set([96,97,98,99,196,197,198,199,296,297,298,299]);
+let sicherung=null;
+const w16=(a,o,v)=>{a[o]=(v>>8)&0xFF; a[o+1]=v&0xFF};
+const vpZahl=t=>String(t).trim().toLowerCase().startsWith("0x")?parseInt(t,16):parseInt(t);
+const rgb565=h=>{const n=parseInt(h.slice(1),16); return ((n>>8)&0xF800)|((n>>5)&0x07E0)|((n>>3)&0x1F)};
+const gleich=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
+function touchEintraege(d){const out=[]; let i=0;
+  while(i+16<=d.length){ if(d[i]===0xFF&&d[i+1]===0xFF) break; const s=i, art=d[i+14]; i+=16;
+    if(art===0xFE||art===0xFD){const v=i; while(i+16<=d.length&&d[i]===0xFE&&i-s<64) i+=16; if(i===v&&i+16<=d.length&&((d[i]<<8)|d[i+1])>0x0200) i+=16}
+    out.push([(d[s]<<8)|d[s+1], d.slice(s,i)])}
+  return out}
+function touchFuer(seite,e){const k=new Uint8Array(16);
+  w16(k,0,seite); w16(k,2,e.x); w16(k,4,e.y); w16(k,6,e.x+e.b-1); w16(k,8,e.y+e.h-1);
+  const nach=e.art==="seite"?e.ziel:e.ziel_danach; w16(k,10,nach==null||nach===""?0xFF00:+nach); w16(k,12,0xFF00);
+  if(e.art==="seite"){w16(k,14,0xFF00); return k}
+  w16(k,14,0xFD05); const b=new Uint8Array(16); b[0]=0xFE; w16(b,1,e.art==="code"?0:0x0300); w16(b,4,+e.wert||0);
+  const r=new Uint8Array(32); r.set(k); r.set(b,16); return r}
+function vorlagen(l14){const out=[], ges=new Set();
+  for(let s=0;s<SEITEN;s++) for(let i=0;i<64;i++){const o=s*SEITE14+i*EINTRAG; if(l14[o]!==0x5A) break; if(l14[o+1]!==0x10) continue;
+    const k=l14[o+14]+"/"+l14[o+15]; if(!ges.has(k)){ges.add(k); out.push(l14.slice(o,o+EINTRAG))}}
+  return out}
+function variableFuer(e,vl){const v=new Uint8Array(32);
+  if(e.typ==="flaeche"){v[0]=0x5A; v[1]=0x21; w16(v,2,0xFFFF); w16(v,4,8); w16(v,6,vpZahl(e.vp)); w16(v,8,e.x); w16(v,10,e.y); w16(v,12,e.x+e.b-1); w16(v,14,e.y+e.h-1); return v}
+  v.set(vl[e.vorlage||0]); w16(v,2,0xFFFF); w16(v,6,vpZahl(e.vp==="eigen"?e.vp_eigen:e.vp)); w16(v,8,e.x); w16(v,10,e.y); w16(v,12,rgb565(e.farbe||"#ffffff"));
+  v[0x11]=e.stellen??3; v[0x12]=e.nachkomma??0; return v}
+function rund(g,x,y,b,h,r){g.beginPath(); g.roundRect?g.roundRect(x,y,b,h,r):g.rect(x,y,b,h)}
+function bildBmp(p){const c=document.createElement("canvas"); c.width=W; c.height=H; const g=c.getContext("2d");
+  g.fillStyle=p.bg||"#000"; g.fillRect(0,0,W,H);
+  for(const e of p.el){
+    if(e.typ==="form"&&e.gestrichelt){g.fillStyle=e.farbe; for(let i=0;i<Math.max(e.b,e.h);i+=5) e.b>=e.h?g.fillRect(e.x+i,e.y,2,e.h):g.fillRect(e.x,e.y+i,e.b,2)}
+    else if(e.typ==="form"&&e.rahmen){g.strokeStyle=e.farbe; g.lineWidth=e.staerke||2; rund(g,e.x+1,e.y+1,e.b-2,e.h-2,e.radius||0); g.stroke()}
+    else if(e.typ==="form"){g.fillStyle=e.farbe; rund(g,e.x,e.y,e.b,e.h,e.radius||0); g.fill()}
+    if(e.typ==="taste"&&e.grafik){g.fillStyle=e.farbe||"#c4561c"; rund(g,e.x,e.y,e.b,e.h,e.radius??8); g.fill();
+      if(e.beschriftung){g.fillStyle=e.textfarbe||"#fff"; g.font=`600 ${e.groesse||16}px system-ui,sans-serif`; g.textAlign="center"; g.textBaseline="middle"; g.fillText(e.beschriftung,e.x+e.b/2,e.y+e.h/2)}}
+    if(e.typ==="text"){g.fillStyle=e.farbe; g.font=`${e.fett?"700 ":""}${e.groesse}px system-ui,sans-serif`; g.textAlign="left"; g.textBaseline="top"; g.fillText(e.text,e.x,e.y)}
+  }
+  const px=g.getImageData(0,0,W,H).data, zeile=W*3, n=54+zeile*H, b=new Uint8Array(n), dv=new DataView(b.buffer);
+  b[0]=0x42; b[1]=0x4D; dv.setUint32(2,n,true); dv.setUint32(10,54,true); dv.setUint32(14,40,true); dv.setInt32(18,W,true); dv.setInt32(22,H,true);
+  dv.setUint16(26,1,true); dv.setUint16(28,24,true); dv.setUint32(34,zeile*H,true); dv.setInt32(38,2835,true); dv.setInt32(42,2835,true);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){const q=((H-1-y)*W+x)*4, z=54+y*zeile+x*3; b[z]=px[q+2]; b[z+1]=px[q+1]; b[z+2]=px[q]}
+  return b}
+
+async function paketBauen(){
+  const st=t=>{$("paket_status").innerHTML=t; log(t.replace(/<[^>]+>/g,""))};
+  try{
+    if(!sicherung) throw new Error("erst sichern oder eine Sicherung (ZIP) laden");
+    const lies=n=>{const d=sicherung[`lib_${String(n).padStart(3,"0")}.bin`]; if(!d) throw new Error(`lib_${String(n).padStart(3,"0")}.bin fehlt in der Sicherung`); return d.slice(0,LIB)};
+    const lib13=lies(13), l14=new Uint8Array(SEITEN*SEITE14); let o=0;
+    for(const n of LIBS14){const t=lies(n).subarray(0,Math.min(LIB,l14.length-o)); l14.set(t,o); o+=t.length}
+    const alt14=l14.slice(), vl=vorlagen(l14), altTouch=touchEintraege(lib13); let touch=altTouch.slice();
+    const projekte=[], dateien=[], seiten=[];
+    if($("o_kurve").checked) for(const n of ["bruehkurve","start_1","start_101","start_201"]) projekte.push(await (await fetch(`beispiele/${n}.json`)).json());
+    for(const p of projekte){const s=p.seite, erg=!!p.ergaenzen;
+      if(!erg&&(!FREI.has(s)||altTouch.some(t=>t[0]===s)||l14[s*SEITE14]===0x5A)) throw new Error(`Seite ${s} ist im Display belegt`);
+      seiten.push(s);
+      const neu=p.el.filter(e=>e.typ==="taste").map(e=>[s,touchFuer(s,e)]);
+      let pos=touch.findIndex(t=>t[0]>s); if(pos<0) pos=touch.length; touch=[...touch.slice(0,pos),...neu,...touch.slice(pos)];
+      const vars=p.el.filter(e=>e.typ==="zahl"||e.typ==="flaeche"); let start=0;
+      if(erg) while(start<64&&l14[s*SEITE14+start*EINTRAG]===0x5A) start++; else l14.fill(0xFF,s*SEITE14,(s+1)*SEITE14);
+      if(start+vars.length>64) throw new Error("höchstens 64 Anzeigen je Seite");
+      vars.forEach((e,i)=>l14.set(variableFuer(e,vl),s*SEITE14+(start+i)*EINTRAG));
+      if(!erg) dateien.push([`DWIN_SET/${s}.bmp`,bildBmp(p)]);
+    }
+    // Pruefen: alles andere unveraendert
+    const rest=touch.filter(t=>!seiten.includes(t[0])), restAlt=altTouch.filter(t=>!seiten.includes(t[0]));
+    if(rest.length!==restAlt.length||rest.some((t,i)=>!gleich(t[1],restAlt[i][1]))) throw new Error("Touch-Tabelle: andere Seiten verändert");
+    for(let s=0;s<SEITEN;s++) if(!seiten.includes(s)&&!gleich(l14.subarray(s*SEITE14,(s+1)*SEITE14),alt14.subarray(s*SEITE14,(s+1)*SEITE14))) throw new Error(`Variablen Seite ${s} verändert`);
+    if(seiten.length){
+      const tabTeile=[...touch.map(t=>t[1]),new Uint8Array(16).fill(0xFF)], len=tabTeile.reduce((a,t)=>a+t.length,0);
+      const altEnde=altTouch.reduce((a,t)=>a+t[1].length,0)+16;
+      if(lib13.subarray(altEnde,len).some(b=>b!==0&&b!==0xFF)) throw new Error("hinter der Touch-Tabelle liegen Daten");
+      const t13=lib13.slice(); let p13=0; for(const t of tabTeile){t13.set(t,p13); p13+=t.length}
+      dateien.push(["DWIN_SET/13.bin",t13],["DWIN_SET/14.bin",l14]);
+    }
+    const cfg=await displayKonfig(); dateien.push(["DWIN_SET/CONFIG.TXT",new TextEncoder().encode(Object.entries(cfg).map(([k,v])=>`${k}=${v}\r\n`).join(""))]);
+    herunterladen(zip(dateien),"DWIN_SET.zip");
+    st(`<span class="ok">Fertig:</span> ${dateien.length} Dateien, Originalseiten unverändert. CONFIG: ${Object.entries(cfg).map(([k,v])=>k+"="+v).join(" ")}`);
+  }catch(e){st(`<span class="warn">Nicht gebaut:</span> ${e.message}`)}
+}
+// Display-Einstellungen: aus dem Display lesen, wenn verbunden, sonst die Werte des Displays 2.2
+async function displayKonfig(){
+  let r={R1:"07",R2:"04",R3:"C6",R6:"40",R7:"20",R8:"0A",RA:"A5"};
+  if(schreiber){const p=warteAuf(z=>/ A c6 a5 .. 81 10 0d /i.test(" "+z+" ")?z:undefined,2000);
+    const z0=await zustand(); if(z0&&z0.ausgabe!=="1") await senden("x");
+    await senden("d c6 a5 03 81 10 0d"); const z=await p; if(z0&&z0.ausgabe!=="1") await senden("x");
+    if(z){const b=z.split(" ").slice(-13).map(x=>x.toUpperCase()); const reg=i=>b[i];
+      r={R1:reg(1),R2:reg(2),R3:reg(3),R6:reg(6),R7:reg(7),R8:reg(8),RA:reg(10)}; log("Display-Einstellungen gelesen: "+b.join(" "))}}
+  if($("o_kopf").checked) r.R3="C6";
+  if($("o_piepen").checked) r.R2=(parseInt(r.R2,16)|1).toString(16).toUpperCase().padStart(2,"0");
+  return r}
+
+$("b_verbinden").onclick=()=>verbinden().catch(e=>log("Verbinden: "+e.message));
+$("b_sichern").onclick=sichern;
+$("b_abbruch").onclick=()=>{abbrechen=true};
+$("b_paket").onclick=paketBauen;
+$("sicherung_zip").onchange=async()=>{const f=$("sicherung_zip").files[0]; if(!f) return;
+  sicherung=await entpacken(await f.arrayBuffer()); const n=Object.keys(sicherung).filter(k=>/^lib_\d+\.bin$/.test(k)).length;
+  $("paket_status").textContent=`Sicherung geladen: ${n} Bereiche`; $("b_paket").disabled=!n};
+</script>
+</body>
+</html>
