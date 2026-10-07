@@ -23,7 +23,8 @@ labels, not the position.
 Classic ESP32 caveats: "RX2"/"TX2" are just names (GPIO16 sends to the
 mainboard, GPIO17 receives); boards with PSRAM (WROVER) use GPIO16/17 internally
 and do not work; keep the 10 kΩ/20 kΩ divider on the mainboard input; no
-Ethernet, no Matter, updates only via the flash page.
+Ethernet, no Matter, updates only via the flash page; little RAM, so enter ntfy as
+`http://ntfy.sh/…` (unencrypted); calendar and Telegram need TLS and may fail.
 
 Switching boards: machine off, move each wire to the same GPIO on the new board,
 flash it via the [flash page](https://larszu.github.io/bezzera-duo-protocol/),

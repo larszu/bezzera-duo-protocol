@@ -51,6 +51,7 @@
 //   x                    Mitschnitt-Ausgabe an/aus (Durchreichen laeuft immer)
 //   ?                    Zustand
 
+#include <esp_bt.h>
 #include <Arduino.h>
 #include <Preferences.h>
 #include <driver/gpio.h>
@@ -522,8 +523,8 @@ static size_t hexBytes(char *s, uint8_t *out, size_t max) {
 static void zustand() {
   Serial.printf("# baud=%lu kopf=%02X %02X ausgabe=%d scan=%s emulation=%d\n", (unsigned long)BAUD, KOPF0, KOPF1,
                 ausgabe, scanAktiv ? "an" : "aus", emulation);
-  Serial.printf("# display_kopf=%02X uebersetzt=%lu repariert=%lu\n", kopfDisplay, (unsigned long)kopfUebersetzt,
-                (unsigned long)kopfRepariert);
+  Serial.printf("# display_kopf=%02X uebersetzt=%lu repariert=%lu heap=%lu min=%lu\n", kopfDisplay, (unsigned long)kopfUebersetzt,
+                (unsigned long)kopfRepariert, (unsigned long)ESP.getFreeHeap(), (unsigned long)ESP.getMinFreeHeap());
   for (auto &o : overrides)
     if (o.aktiv) Serial.printf("# override vp=0x%04X wert=0x%04X rest=%ld\n", o.vp, o.wert, (long)o.rest);
 }
@@ -653,6 +654,11 @@ static void leseBefehle() {
 }
 
 void setup() {
+#if CONFIG_IDF_TARGET_ESP32
+  // Klassischer ESP32: Speicher fuer klassisches Bluetooth freigeben (nur BLE
+  // fuer die Waage wird gebraucht); sonst bleiben fuer das WLAN wenige KB
+  esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+#endif
 #if ARDUINO_USB_CDC_ON_BOOT
   Serial.begin(921600);  // USB-CDC (ESP32-S3), Baudrate ohne Bedeutung
 #else

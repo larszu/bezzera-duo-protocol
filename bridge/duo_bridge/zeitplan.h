@@ -363,7 +363,17 @@ static void zeitplanFeld(const String &k, const String &v) {
   }
 }
 
+// Die Hintergrund-Tasks (Kalender, Meldungen, Waage) starten erst, wenn sie
+// eingerichtet sind: Jeder belegt 8-12 KB Stapel, und auf dem klassischen
+// ESP32 bleibt sonst zu wenig RAM fuer WLAN und TLS.
+static bool kalenderTaskLaeuft = false;
+static void kalenderStarten() {
+  if (kalenderTaskLaeuft || !plan.kalenderAktiv || !plan.kalenderUrl[0]) return;
+  kalenderTaskLaeuft = true;
+  xTaskCreatePinnedToCore(kalenderTask, "kalender", 12288, nullptr, 1, nullptr, 0);
+}
+
 static void zeitplanSetup() {
   planLaden();
-  xTaskCreatePinnedToCore(kalenderTask, "kalender", 12288, nullptr, 1, nullptr, 0);
+  kalenderStarten();
 }

@@ -479,13 +479,16 @@ void zusatzBefehl(char *s) {
   usbAntwort("#Z " + antwort);
 }
 
+#define HEAP_PUNKT(n) Serial.printf("# heap %-10s %6lu frei, groesster Block %6lu\n", n, (unsigned long)ESP.getFreeHeap(), (unsigned long)ESP.getMaxAllocHeap())
 void webSetup() {
+  HEAP_PUNKT("vorher");
   Network.onEvent(netzEreignis);
 #if CONFIG_IDF_TARGET_ESP32S3
   // W5500 des Waveshare ESP32-S3-ETH; auf dem klassischen ESP32 sind GPIO 9-11 Flash-Pins
   ETH.begin(ETH_PHY_W5500, 1, ETH_CS, ETH_IRQ, ETH_RST, SPI2_HOST, ETH_SCK, ETH_MISO, ETH_MOSI);
 #endif
   WiFi.mode(WIFI_AP_STA);
+  HEAP_PUNKT("wlan-start");
   esp_wifi_set_country_code("DE", false);  // Kanaele 1-13 fest, nicht von Nachbar-Routern (802.11d) einschraenken lassen
   netzLaden();
   WiFi.softAP("duo-bridge", apPass.c_str());
@@ -500,6 +503,7 @@ void webSetup() {
   }
   Serial.printf("# WLAN duo-bridge: http://%s\n", WiFi.softAPIP().toString().c_str());
   MDNS.begin("duo");
+  HEAP_PUNKT("mdns");
   MDNS.addService("http", "tcp", 80);
   server.on("/", HTTP_GET, [] {
     if (zugang()) server.send_P(200, "text/html; charset=utf-8", WEB_UI);
@@ -557,14 +561,23 @@ void webSetup() {
         }
       });
   server.begin();
+  HEAP_PUNKT("server");
   zusatzSetup();
+  HEAP_PUNKT("zusatz");
   profileLaden();
+  HEAP_PUNKT("profile");
   shotsSetup();
+  HEAP_PUNKT("shots");
   zeitplanSetup();
+  HEAP_PUNKT("zeitplan");
   matterLaden();
+  HEAP_PUNKT("matter");
   benSetup();
+  HEAP_PUNKT("melden");
   mqttSetup();
+  HEAP_PUNKT("mqtt");
   waageSetup();
+  HEAP_PUNKT("waage");
 }
 
 // Werte, die nur das Display kennt, regelmaessig selbst nachlesen; die
@@ -588,6 +601,13 @@ static void displayNachlesen() {
 }
 
 void webLoop() {
+  static uint32_t taskPruefung = 0;
+  if (millis() - taskPruefung > 1000) {  // Hintergrund-Tasks starten, sobald eingerichtet
+    taskPruefung = millis();
+    kalenderStarten();
+    benStarten();
+    waageStarten();
+  }
   dns.processNextRequest();
   server.handleClient();
   displayNachlesen();
