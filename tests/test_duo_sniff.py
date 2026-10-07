@@ -204,3 +204,16 @@ class Dgus(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+class RocketR58(unittest.TestCase):
+    """Rocket R58 (Kaffee-Netz, HanDeKe): DWIN mit Kopf 5A A5 und CRC16 (Modbus)."""
+
+    def test_rahmen_mit_crc(self):
+        frames = [ds.Frame(0, "RX", bytes([90, 165, 6, 131, 16, 0, 3, 104, 100]))]
+        self.assertEqual(ds.dgus_kopf_erkennen(frames), b"\x5a\xa5")
+        r = list(ds.dgus_rahmen(frames))
+        self.assertEqual(len(r), 1)
+        self.assertTrue(r[0].crc)
+        self.assertEqual(ds.dgus_beschreibung(r[0])[0], "VP lesen 0x1000, 3 Wort")

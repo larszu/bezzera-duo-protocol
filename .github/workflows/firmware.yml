@@ -31,19 +31,23 @@ jobs:
           arduino-cli core install esp32:esp32@3.3.12
       - name: Kompilieren
         run: |
-          bash tools/firmware_bauen.sh   # build/s3 und build/esp32
           VERSION="${GITHUB_REF_NAME}"
           [[ "$GITHUB_REF_TYPE" == "tag" ]] || VERSION="main-$(git rev-parse --short HEAD)"
+          # Firmware traegt immer den Commit-Stand (wie manifest.json der Flash-Seite),
+          # damit der Update-Hinweis Release- und Seiten-Builds gleich bewertet
+          FW_VERSION="main-$(git rev-parse --short HEAD)" bash tools/firmware_bauen.sh   # build/s3 und build/esp32
           mkdir -p site
           cp -r flasher/* site/
           mkdir -p site/seitenbau && cp tools/seitenbau/index.html site/seitenbau/
+          mkdir -p site/werkstatt/beispiele && cp tools/seitenbau/beispiele/*.json site/werkstatt/beispiele/
           (cd tools/display_kopf_c6 && zip -r ../../site/display_kopf_c6.zip DWIN_SET)
           cp build/s3/duo_bridge.ino.merged.bin site/duo_bridge.bin
           cp build/s3/duo_bridge.ino.bin site/duo_bridge.ino.bin
           cp build/esp32/duo_bridge.ino.merged.bin site/duo_bridge_esp32.bin
           python3 -m pip install --quiet markdown 2>/dev/null || python3 -m pip install --quiet --break-system-packages markdown
           python3 tools/anleitung_pdf.py --version "$VERSION" --ziel site   # site/anleitung-de.pdf, -en.pdf
-          sed -i "s/__VERSION__/${VERSION}/" site/manifest.json site/index.html
+          sed -i "s/__VERSION__/main-$(git rev-parse --short HEAD)/" site/manifest.json
+          sed -i "s/__VERSION__/${VERSION}/" site/index.html
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site

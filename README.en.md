@@ -753,7 +753,7 @@ All Python scripts need only the standard library.
 | Script | used for |
 |---|---|
 | [`tools/sr2log.py`](tools/sr2log.py) | sigrok capture (`.sr`) → log, UART decoding, baud rate automatic |
-| [`tools/duo_sniff.py`](tools/duo_sniff.py) | analyse a log: `dgus` (frame header automatic), `stats`, `gicar`, `diff` |
+| [`tools/duo_sniff.py`](tools/duo_sniff.py) | analyse a log: `dgus` (frame header and CRC16 automatic, so other DWIN machines like the Rocket R58 too), `stats`, `gicar`, `diff` |
 | [`tools/duo_live.py`](tools/duo_live.py) | live view in the terminal directly from the analyzer or as a replay |
 | [`tools/bridge.py`](tools/bridge.py) | send commands to the bridge and read along |
 | [`tools/web_lokal.py`](tools/web_lokal.py) | web UI on the computer over USB; `--demo` without an ESP32 |

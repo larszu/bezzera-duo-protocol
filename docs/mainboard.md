@@ -46,6 +46,20 @@ DGUS-Befehl „VP lesen“, und das Display meldet Werte nur, wenn die Maschine 
 Die lange R58-Nachricht (35 Byte) ließ sich aus der abgerufenen Fassung nicht
 nachrechnen (CRC passt nicht); dafür braucht es die Bytes aus dem Originalbeitrag.
 
+## Vergleichsmatrix (Stand 08.10.2026)
+
+| Maschine | Elektronik | MCU | Display | Kopf / CRC | Quelle |
+|---|---|---|---|---|---|
+| Bezzera Duo DE (2018) | Pro.El.Ind, SDEDB / BZ1PTE | MC9S08PA32, LQFP-64 | DWIN Mini DGUS 320×240 | `C6 A5`, ohne CRC | gemessen (dieses Repo) |
+| Rocket R58 Cinquantotto | Pro.El.Ind | MC9S08PA32 | Remote-Display (6-polig, später USB-B) | `5A A5`, CRC16 | Kaffee-Netz-Thread, CRC nachgerechnet |
+| Rocket Giotto/Cellini Plus V2, Appartamento | Pro.El.Ind LIV-RET3A/B (Füllstandsregler) | ? | keins | – | [Ersatzteil](https://espressocare.com/products/rocket-giotto-control-box) |
+| ältere Bezzera (Füllstand) | Pro.El.Ind LIV-BZ3SC | ? | keins | – | [Ersatzteil](https://www.ebay.com/itm/175267981152) |
+| Fiorenzato (Gastro) | Pro.El.Ind „Brain Unit“ SDE3D F13 | ? | Tastenfeld | ? | [1st-line](https://www.1st-line.com/buy/pro-el-ind-a1500095/) |
+
+Mit DWIN-Display und Mitschnitt bekannt sind bisher nur Duo und R58. Weitere
+Maschinen hier ergänzen, sobald Mitschnitte oder Fotos der Platine vorliegen;
+`tools/duo_sniff.py dgus` liest beide Varianten (Kopf und CRC automatisch).
+
 ## Firmware sichern über BDM (Plan, noch nicht versucht)
 
 Der S08 hat eine Ein-Draht-Debugschnittstelle (BDM). Laut NXP-Referenzhandbuch

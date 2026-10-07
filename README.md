@@ -755,7 +755,7 @@ Alle Python-Skripte brauchen nur die Standardbibliothek.
 | Skript | wofür |
 |---|---|
 | [`tools/sr2log.py`](tools/sr2log.py) | sigrok-Mitschnitt (`.sr`) → Log, UART-Dekodierung, Baudrate automatisch |
-| [`tools/duo_sniff.py`](tools/duo_sniff.py) | Log auswerten: `dgus` (Rahmenkopf automatisch), `stats`, `gicar`, `diff` |
+| [`tools/duo_sniff.py`](tools/duo_sniff.py) | Log auswerten: `dgus` (Rahmenkopf und CRC16 automatisch, also auch andere DWIN-Maschinen wie die Rocket R58), `stats`, `gicar`, `diff` |
 | [`tools/duo_live.py`](tools/duo_live.py) | Live-Anzeige im Terminal direkt vom Analyzer oder als Replay |
 | [`tools/bridge.py`](tools/bridge.py) | Befehle an die Bridge schicken und mitlesen |
 | [`tools/web_lokal.py`](tools/web_lokal.py) | Weboberfläche am Rechner über USB; `--demo` ohne ESP32 |
