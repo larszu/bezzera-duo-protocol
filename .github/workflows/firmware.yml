@@ -6,7 +6,7 @@ name: Firmware
 on:
   push:
     branches: [main]
-    paths: ["bridge/**", "flasher/**", "tools/firmware_bauen.sh", "tools/seitenbau/**", "tools/display_kopf_c6/**", ".github/workflows/firmware.yml"]
+    paths: ["bridge/**", "flasher/**", "tools/firmware_bauen.sh", "tools/anleitung_pdf.py", "docs/**", "README.md", "README.en.md", "tools/seitenbau/**", "tools/display_kopf_c6/**", ".github/workflows/firmware.yml"]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -41,6 +41,8 @@ jobs:
           cp build/s3/duo_bridge.ino.merged.bin site/duo_bridge.bin
           cp build/s3/duo_bridge.ino.bin site/duo_bridge.ino.bin
           cp build/esp32/duo_bridge.ino.merged.bin site/duo_bridge_esp32.bin
+          python3 -m pip install --quiet markdown 2>/dev/null || python3 -m pip install --quiet --break-system-packages markdown
+          python3 tools/anleitung_pdf.py --version "$VERSION" --ziel site   # site/anleitung-de.pdf, -en.pdf
           sed -i "s/__VERSION__/${VERSION}/" site/manifest.json site/index.html
       - uses: actions/upload-pages-artifact@v4
         with:
@@ -54,7 +56,9 @@ jobs:
           cp build/s3/duo_bridge.ino.bin "duo_bridge-esp32s3-update-${GITHUB_REF_NAME}.bin"
           cp build/esp32/duo_bridge.ino.merged.bin "duo_bridge-esp32-${GITHUB_REF_NAME}.bin"
           cp site/display_kopf_c6.zip "display_kopf_c6.zip"
-          DATEIEN=("duo_bridge-esp32s3-${GITHUB_REF_NAME}.bin" "duo_bridge-esp32s3-update-${GITHUB_REF_NAME}.bin" "duo_bridge-esp32-${GITHUB_REF_NAME}.bin" "display_kopf_c6.zip")
+          cp site/anleitung-de.pdf "bauanleitung-de-${GITHUB_REF_NAME}.pdf"
+          cp site/anleitung-en.pdf "build-guide-en-${GITHUB_REF_NAME}.pdf"
+          DATEIEN=("duo_bridge-esp32s3-${GITHUB_REF_NAME}.bin" "duo_bridge-esp32s3-update-${GITHUB_REF_NAME}.bin" "duo_bridge-esp32-${GITHUB_REF_NAME}.bin" "display_kopf_c6.zip" "bauanleitung-de-${GITHUB_REF_NAME}.pdf" "build-guide-en-${GITHUB_REF_NAME}.pdf")
           gh release create "$GITHUB_REF_NAME" "${DATEIEN[@]}" --title "Bridge $GITHUB_REF_NAME" --notes-file docs/release-notes.md \
             || gh release upload "$GITHUB_REF_NAME" "${DATEIEN[@]}" --clobber
 
