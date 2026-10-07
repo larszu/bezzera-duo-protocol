@@ -34,6 +34,8 @@ der Position.
   wie beim S3: die Maschine sendet 5 V, der ESP32 verträgt 3,3 V.
 - Kein Ethernet, kein Matter, Update nur über die Flash-Seite
   ([flashen.md](flashen.md)).
+- Wenig RAM: ntfy als `http://ntfy.sh/…` eintragen (ohne Verschlüsselung, sonst
+  fehlt Speicher). Kalender und Telegram brauchen TLS und können scheitern.
 
 ## Umbau S3 → klassisch (oder zurück)
 

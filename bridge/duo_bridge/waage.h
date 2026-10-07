@@ -292,4 +292,10 @@ static void waageTask(void *) {
   }
 }
 
-static void waageSetup() { xTaskCreatePinnedToCore(waageTask, "waage", 8192, nullptr, 1, nullptr, 0); }
+static bool waageTaskLaeuft = false;
+static void waageSetup() {}
+static void waageStarten() {  // erst, wenn eine Waage eingerichtet ist oder gesucht wird (RAM, siehe zeitplan.h)
+  if (waageTaskLaeuft || (cfg.waageArt == 0 && !bleSucheAnfordern)) return;
+  waageTaskLaeuft = true;
+  xTaskCreatePinnedToCore(waageTask, "waage", 8192, nullptr, 1, nullptr, 0);
+}

@@ -228,7 +228,7 @@ static Probe *verlaufBuf = nullptr;
 static uint32_t verlaufGroesse = 0, verlaufN = 0;  // verlaufN: insgesamt geschrieben
 
 static void verlaufSetup() {
-  verlaufGroesse = psramFound() ? 86400 : 1800;
+  verlaufGroesse = psramFound() ? 86400 : 300;  // ohne PSRAM (klassischer ESP32) 5 min, das RAM braucht das WLAN
   verlaufBuf = (Probe *)(psramFound() ? ps_malloc(verlaufGroesse * sizeof(Probe)) : malloc(verlaufGroesse * sizeof(Probe)));
   if (!verlaufBuf) verlaufGroesse = 0;
 }

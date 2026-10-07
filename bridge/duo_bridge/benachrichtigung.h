@@ -95,8 +95,11 @@ static void benTask(void *) {
       WiFiClientSecure tls;
       tls.setInsecure();
       if (ben.ntfyUrl.length() && !m.chat[0]) {
+        // http:// ohne TLS: braucht ~40 KB weniger RAM (klassischer ESP32); ntfy.sh nimmt beides an
+        WiFiClient klar;
         HTTPClient h;
-        if (h.begin(tls, ben.ntfyUrl)) {
+        bool ok = ben.ntfyUrl.startsWith("http://") ? h.begin(klar, ben.ntfyUrl) : h.begin(tls, ben.ntfyUrl);
+        if (ok) {
           h.addHeader("Title", m.titel);
           h.addHeader("Tags", "coffee");
           int c = h.POST((uint8_t *)m.text, strlen(m.text));
@@ -221,6 +224,12 @@ static void benSetup() {
   benLaden();
   meldungen = xQueueCreate(8, sizeof(Meldung));
   tgBefehle = xQueueCreate(4, 64);
+}
+
+static bool benTaskLaeuft = false;
+static void benStarten() {  // erst, wenn ntfy oder Telegram eingerichtet ist (RAM, siehe zeitplan.h)
+  if (benTaskLaeuft || (!ben.ntfyUrl.length() && !ben.tgToken.length())) return;
+  benTaskLaeuft = true;
   xTaskCreatePinnedToCore(benTask, "melden", 12288, nullptr, 1, nullptr, 0);
 }
 

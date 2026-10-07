@@ -7,7 +7,7 @@ Die Bridge läuft auf zwei Boards:
 | Board | Was geht |
 |---|---|
 | **Waveshare ESP32-S3-ETH** (ESP32-S3, 8 MB PSRAM, 16 MB Flash, Ethernet), empfohlen | alles: Matter, Netzwerkkabel, Update über die Weboberfläche, 24 h Verlauf |
-| **klassischer ESP32** (ESP32-D0WD/WROOM-32, 4 MB Flash, USB über CP2102/CH340) | alles außer Matter, Netzwerkkabel und Update über die Weboberfläche; Verlauf 30 min |
+| **klassischer ESP32** (ESP32-D0WD/WROOM-32, 4 MB Flash, USB über CP2102/CH340) | alles außer Matter, Netzwerkkabel und Update über die Weboberfläche; Verlauf 5 min |
 
 Die Flash-Seite erkennt das Board selbst. Drei Wege, vom einfachsten zum flexibelsten.
 
@@ -44,7 +44,7 @@ Der klassische ESP32 wird aus einer Kopie ohne `partitions.csv` gebaut
   und Matter). Der Einstellungsspeicher liegt an derselben Stelle wie vorher,
   gespeicherte Einstellungen bleiben beim Wechsel erhalten.
 - `PSRAM=opi`: der ESP32-S3R8 dieses Boards. Ohne PSRAM läuft alles, nur der
-  Verlauf reicht dann 30 Minuten statt 24 Stunden.
+  Verlauf reicht dann 5 Minuten statt 24 Stunden.
 - `CDCOnBoot=cdc`: Ausgabe und Befehle über den USB-C-Anschluss.
 
 ## 3. Mit esptool (fertige Datei aus einem Release)
