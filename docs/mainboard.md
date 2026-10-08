@@ -46,6 +46,23 @@ DGUS-Befehl „VP lesen“, und das Display meldet Werte nur, wenn die Maschine 
 Die lange R58-Nachricht (35 Byte) ließ sich aus der abgerufenen Fassung nicht
 nachrechnen (CRC passt nicht); dafür braucht es die Bytes aus dem Originalbeitrag.
 
+## Ersatz-Mainboard: Befund aus Fotos (08.10.2026)
+
+Zweites Board SDEDB / BZ1PTE / 7661047PR, Aufkleber `1806` (Juni 2018),
+Leiterplatte „PRO.EL.IND. BEP1D1B LC“. Fotos lokal in `flash/mainboard_fotos/`
+(nicht im Repo).
+
+| Bauteil | Befund | Bedeutung |
+|---|---|---|
+| MCU | **M9S08PA32A VLH**, Datumscode 1746 (Nov. 2017) | VLH = LQFP-64, passt zum Handbuch (BKGD Pin 64, RESET Pin 63) |
+| CNPR | 4 Stifte links unter der MCU, bestückt | BDM-Kandidat; Belegung stromlos durchmessen |
+| CN7 „SERIAL“ | 4 Lötaugen, **unbestückt**, neben CN6 (Display) | vermutlich zweite serielle Schnittstelle (Service/Werkstatt); Pegel und Belegung messen |
+| Quarz | Zylinder (Uhrenquarz 32,768 kHz) neben dem 8-Pin-Uhrenbaustein M41T56 | gehört zur Echtzeituhr; die MCU läuft vermutlich mit internem Takt (ICS), EXTAL/XTAL prüfen |
+| Relais | 4 kleine Relais + Omron G2RL 16 A (Heizung Gruppe), ULN2003 als Treiber | Ein/Aus-Ausgänge 1–5 |
+| TLP3063 + Triac (DPAK) + X2-Kondensator | Nullspannungs-Optokoppler | Pumpe: nur ganze Netzwellen ein/aus. Phasenanschnitt (Druckregelung) geht damit nicht, höchstens Wellenpaket-Takten |
+| Q3–Q5 mit R28–R30 | Transistoren an CN13 „LED RETRO“ | LED-Ausgänge 12 V |
+| Steckverbinder | CN1 Füllstand/Mikroschalter/Durchflussmesser, CN6 Display, CN9 12 V, CN13 LED, Keyboard 2×8, NTC Gruppe/Kaffee/Dampf, SSR Kaffee/Dampf, PRESS., CAP. SENS | wie Deckelaufkleber |
+
 ## Vergleichsmatrix (Stand 08.10.2026)
 
 | Maschine | Elektronik | MCU | Display | Kopf / CRC | Quelle |
