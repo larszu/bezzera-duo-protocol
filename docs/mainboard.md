@@ -49,8 +49,12 @@ nachrechnen (CRC passt nicht); dafür braucht es die Bytes aus dem Originalbeitr
 ## Ersatz-Mainboard: Befund aus Fotos (08.10.2026)
 
 Zweites Board SDEDB / BZ1PTE / 7661047PR, Aufkleber `1806` (Juni 2018),
-Leiterplatte „PRO.EL.IND. BEP1D1B LC“. Fotos lokal in `flash/mainboard_fotos/`
-(nicht im Repo).
+Leiterplatte „PRO.EL.IND. BEP1D1B LC“.
+
+| | |
+|---|---|
+| ![Ersatz-Mainboard 1](bilder/mainboard/ersatz_6730.jpg) | ![Ersatz-Mainboard 2](bilder/mainboard/ersatz_6731.jpg) |
+| ![Ersatz-Mainboard 3](bilder/mainboard/ersatz_6732.jpg) | ![Ersatz-Mainboard 4](bilder/mainboard/ersatz_6733.jpg) |
 
 | Bauteil | Befund | Bedeutung |
 |---|---|---|
