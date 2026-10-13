@@ -108,6 +108,20 @@ dann nur das **Komplettlöschen**, und danach ist das Mainboard leer. Deshalb:
 
 Gelingt der Dump: 32 KB Flash + 256 B EEPROM in Ghidra (HCS08), Ziel ist die
 Zuordnung MCU-Pin → Stecker → Funktion und die Zustandsmaschine der Maschine.
+### Erster USBDM-Versuch (13.10.2026)
+
+- USBDM (JMxx, Firmware 4.12, VID 16D0 PID 0567) läuft am Mac ohne Herstellersoftware
+  über `tools/usbdm_lesen.py` (nur lesend; `--special` für Reset in den Debug-Modus,
+  `--watch N` zum Mitlaufen beim Umstecken).
+- **Keine Verbindung** (SYNC_TIMEOUT). Die Spannungsanzeige des USBDM („extern“) und
+  RESET „high“ erscheinen auch **ohne** angeschlossenes Board, sie taugen nicht als Prüfung.
+- Ein MacBook liefert an USB-C nur 5 V; ein 12-V-PD-Trigger bleibt daran stromlos.
+  Board an einem Netzteil mit 12 V (PD-Ladegerät ab etwa 30 W oder 12-V-Netzteil) betreiben.
+- Stecker am USBDM: rote Ader = Spalte mit Pin 1 (BKGD) und 2 (GND); GND, RESET (4) und
+  VDD (6) liegen in einer Reihe. Welche Reihe Pin 1 ist, per Durchgang USB-Gehäuse ↔ Loch klären.
+- Nächster Schritt: die vier CNPR-Spannungen gegen Minus an CN9 messen (USBDM abgezogen),
+  dann gezielt verdrahten.
+
 Offen in [Issue „Firmware über BDM sichern“](https://github.com/larszu/bezzera-duo-protocol/issues).
 
 ## Korrekturen zu einer KI-Recherche (ChatGPT, Oktober 2026)
