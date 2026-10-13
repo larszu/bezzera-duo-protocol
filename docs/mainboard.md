@@ -59,7 +59,8 @@ Leiterplatte „PRO.EL.IND. BEP1D1B LC“.
 | Bauteil | Befund | Bedeutung |
 |---|---|---|
 | MCU | **M9S08PA32A VLH**, Datumscode 1746 (Nov. 2017) | VLH = LQFP-64, passt zum Handbuch (BKGD Pin 64, RESET Pin 63) |
-| CNPR | 4 Stifte links unter der MCU, bestückt | BDM-Kandidat; Belegung stromlos durchmessen |
+| CNPR | 4 Stifte links unter der MCU, bestückt; daneben R1/C1 (typisch RESET-Pull-up + Kondensator) | BDM-Kandidat; BKGD (Pin 64) und RESET (Pin 63) liegen an der Ecke zur CNPR hin; Belegung stromlos durchmessen |
+| CN6 „ISP“ | Display-Stecker, auf der Platine mit **ISP** beschriftet | Display-Leitung dient offenbar auch zum Programmieren (vermutlich serieller Bootloader, kein BDM: es fehlt eine BKGD-Leitung) |
 | CN7 „SERIAL“ | 4 Lötaugen, **unbestückt**, neben CN6 (Display) | vermutlich zweite serielle Schnittstelle (Service/Werkstatt); Pegel und Belegung messen |
 | Quarz | Zylinder (Uhrenquarz 32,768 kHz) neben dem 8-Pin-Uhrenbaustein M41T56 | gehört zur Echtzeituhr; die MCU läuft vermutlich mit internem Takt (ICS), EXTAL/XTAL prüfen |
 | Relais | 4 kleine Relais + Omron G2RL 16 A (Heizung Gruppe), ULN2003 als Treiber | Ein/Aus-Ausgänge 1–5 |
