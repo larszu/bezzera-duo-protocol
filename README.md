@@ -206,7 +206,7 @@ gleiche DWIN-Befehle, Kopf `5A A5` mit CRC16) und der Plan zur Firmware-Sicherun
 | Bauteil | Was es ist | Bedeutung |
 |---|---|---|
 | NXP **MC9S08PA32** (LQFP-64) | 8-Bit-MCU S08, 32 KB Flash | die ganze Maschinenlogik; spricht TTL |
-| **CNPR**, 4-polige Stiftleiste | vermutlich BDM-Programmieranschluss | Werks-Update; bei gesetztem Security-Bit gesperrt — Finger weg |
+| **CNPR**, 4-polige Stiftleiste | BDM-Anschluss, von links: C = RESET (vermutet), N = BKGD (vermutet), P = GND, R = VDD 5 V | Firmware-Auslesen abgebrochen, Ersatzboard dabei zerstört: [docs/mainboard.md](docs/mainboard.md) — Finger weg |
 | ST **M41T56** + Quarz + Knopfzelle | I²C-Echtzeituhr | stellt beim Start die Uhr im Display |
 | RECOM-DC/DC-Wandler | 12 V → 5 V | die 5 V für das Display |
 | ULN2003 + 5 Omron-Relais, TLP3063 | Relais- und Lasttreiber | Heizung Gruppe, Magnetventile, Pumpe |

@@ -202,7 +202,7 @@ Supply 12 V DC, fuse 3.15 A.
 | Component | What it is | Significance |
 |---|---|---|
 | NXP **MC9S08PA32** (LQFP-64) | 8-bit S08 MCU, 32 KB flash | all of the machine logic; speaks TTL |
-| **CNPR**, 4-pin header | probably BDM programming header | factory update; locked if the security bit is set — hands off |
+| **CNPR**, 4-pin header | BDM header, from the left: C = RESET (assumed), N = BKGD (assumed), P = GND, R = VDD 5 V | firmware readout abandoned, spare board destroyed in the attempt: [docs/mainboard.md](docs/mainboard.md) — hands off |
 | ST **M41T56** + crystal + coin cell | I²C real-time clock | sets the display clock at start-up |
 | RECOM DC/DC converter | 12 V → 5 V | the 5 V for the display |
 | ULN2003 + 5 Omron relays, TLP3063 | relay and load drivers | group heater, solenoid valves, pump |

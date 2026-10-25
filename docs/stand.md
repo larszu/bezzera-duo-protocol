@@ -30,7 +30,10 @@ von der **kalten Maschine mit leerem Tank**; ein Bezug war noch nie auf der Leit
 | ✅ | Mainboard von **PRO.EL.IND**, MCU MC9S08PA32, RTC M41T56, Aufkleber-Belegung (Relais, Fühler, PRESS, CAP. SENS, KEYBOARD) | Fotos |
 | ✅ | Das Mainboard stellt beim Start die Uhr des Displays | `boot.sr` |
 | 💡 | Die Uhr kommt aus dem M41T56 | Bauteil auf dem Foto |
-| 💡 | CNPR ist der BDM-Programmieranschluss, 5 Pads auf dem Display ein Debug-Anschluss | Analogie |
+| ✅ | CNPR: P = GND (Durchgang zu CN9), R = VDD 5 V (gemessen) | Messung 25.10.2026 |
+| 💡 | CNPR: C = RESET, N = BKGD | Zeitverhalten beim Einschalten, keine BDM-Verbindung erreicht |
+| ❌ | Firmware über BDM ausgelesen | abgebrochen, MCU des Ersatzboards zerstört ([mainboard.md](mainboard.md)) |
+| 💡 | 5 Pads auf dem Display sind ein Debug-Anschluss | Analogie |
 | 💡 | LCD-Panel ist LQ035NC111 | Aufkleber abgeschnitten |
 | 💡 | Zwischenstecker ist Molex Mini-Fit Jr. (4,2 mm) | Kodierung auf dem Foto, Raster nicht gemessen |
 | 💡 | Ersatz-Touchpanels mit FocalTech-/Goodix-Controller laufen nicht | Annahme zur Display-Firmware |
