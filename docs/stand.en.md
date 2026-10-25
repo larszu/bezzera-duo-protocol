@@ -30,7 +30,10 @@ from the **cold machine with an empty tank**; a shot has never been on the line.
 | ✅ | Mainboard by **PRO.EL.IND**, MCU MC9S08PA32, RTC M41T56, label pinout (relays, probes, PRESS, CAP. SENS, KEYBOARD) | photos |
 | ✅ | The mainboard sets the display clock at startup | `boot.sr` |
 | 💡 | The time comes from the M41T56 | part on the photo |
-| 💡 | CNPR is the BDM programming header; 5 pads on the display are a debug header | analogy |
+| ✅ | CNPR: P = GND (continuity to CN9), R = VDD 5 V (measured) | measurement 2026-10-25 |
+| 💡 | CNPR: C = RESET, N = BKGD | power-up timing, no BDM connection achieved |
+| ❌ | firmware read out via BDM | abandoned, MCU of the spare board destroyed ([mainboard.md](mainboard.md)) |
+| 💡 | 5 pads on the display are a debug header | analogy |
 | 💡 | The LCD panel is an LQ035NC111 | label cut off |
 | 💡 | The inline connector is a Molex Mini-Fit Jr. (4.2 mm) | keying on the photo, pitch not measured |
 | 💡 | Replacement touch panels with FocalTech/Goodix controllers will not work | assumption about the display firmware |

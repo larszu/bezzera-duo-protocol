@@ -16,6 +16,8 @@ python3 tools/duo_live.py --replay captures/boot.sr
 | `tank.sr` | 3 s nach Wackeln am Touch-Kabel, Display zeigt wieder „Bitte Tank füllen“ |
 | `probe.sr` | Testaufnahme ohne Signal |
 | `neukabel.sr` | Ersatzkabel mit Displayfarben direkt am Display, Analyzer parallel: D1 = TX Mainboard, D2 = TX Display (D0 ohne Daten) |
+| `cnpr_einschalten.sr` | 25.10.2026, 35 s, 4 MHz, Ersatzboard an 12 V aus/ein, Masse an CNPR P: D0 = C (blau), D1 = N (grün), D3 = R (orange), siehe docs/mainboard.md |
+| `usbdm_selbsttest.sr` | 25.10.2026, USBDM-Klon ohne Board, D0–D5 = Flachband-Ader 1–6: Sync-Pulse ~1 ms nur auf Ader 2 (BKGD), Ader 1 = GND |
 | `adern.sr` | 5 s, 2 MHz, beim Zuordnen der Adern: auf D0 wiederholt das Mainboard alle 200 ms den Verbindungstest (VP `0x0063` = 21 schreiben und lesen), D1 ohne Daten |
 
 Die Seitenfotos liegen verkleinert unter [`docs/seiten/`](../docs/seiten/).

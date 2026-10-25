@@ -81,7 +81,7 @@ Mit DWIN-Display und Mitschnitt bekannt sind bisher nur Duo und R58. Weitere
 Maschinen hier ergänzen, sobald Mitschnitte oder Fotos der Platine vorliegen;
 `tools/duo_sniff.py dgus` liest beide Varianten (Kopf und CRC automatisch).
 
-## Firmware sichern über BDM (Plan, noch nicht versucht)
+## Firmware sichern über BDM (abgebrochen am 25.10.2026)
 
 Der S08 hat eine Ein-Draht-Debugschnittstelle (BDM). Laut NXP-Referenzhandbuch
 MC9S08PA60/PA32 (Rev. 3, Tabelle 2-1), LQFP-64:
@@ -121,6 +121,87 @@ Zuordnung MCU-Pin → Stecker → Funktion und die Zustandsmaschine der Maschine
   VDD (6) liegen in einer Reihe. Welche Reihe Pin 1 ist, per Durchgang USB-Gehäuse ↔ Loch klären.
 - Nächster Schritt: die vier CNPR-Spannungen gegen Minus an CN9 messen (USBDM abgezogen),
   dann gezielt verdrahten.
+
+### CNPR mit dem Logic Analyzer (25.10.2026)
+
+Board am 12-V-Netzteil, Logic Analyzer (fx2lafw, Windows, sigrok-cli) an den vier
+CNPR-Stiften. Ader → Kanal:
+
+| Ader | Analyzer | Pegel im Betrieb | Deutung |
+|---|---|---|---|
+| blau | CH1 / D0 | 1 | VDD, RESET oder BKGD |
+| grün | CH2 / D1 | 1 | VDD, RESET oder BKGD |
+| gelb | CH3 / D2 | 0 | **vermutlich GND** |
+| orange | CH4 / D3 | 1 | VDD, RESET oder BKGD |
+
+- Aus- und Einschalten (`zyklus.sr`, 45 s, 2 MHz): Stromlos lesen alle vier Kanäle 1,
+  auch gelb. Die Masse des Analyzers lag also nicht am Board; die Verbindung lief nur über
+  Netzteil und PC (50-Hz-Brummen auf allen vier Kanälen beim Einstecken).
+- Zweite Aufnahme (`zyklus2.sr`, 35 s, 4 MHz) mit Analyzer-Masse an Minus von CN9:
+
+  | Ader | Ausschalten fällt | Einschalten steigt | Signal |
+  |---|---|---|---|
+  | orange (D3) | zuletzt (+46 ms) | zuerst (0 ms) | **VDD** (Siebkondensator hält am längsten) |
+  | blau (D0) | +20 ms | +2,5 ms, langsame verrauschte Flanke | **RESET** (RC über R1/C1) |
+  | grün (D1) | zuerst (0 ms) | zuletzt (+10,6 ms), saubere Flanke | **BKGD** (Pull-up nach dem Reset) |
+  | gelb | – | – | **GND** (3. Stift von links, Stift „P“) |
+
+  Die erste Deutung (blau = BKGD) wurde verworfen; die scheinbare Sync-Antwort mit BKGD an grün
+  erwies sich später als Artefakt (siehe unten). Grün = BKGD ist also nur aus dem Zeitverhalten
+  geschlossen, nicht per BDM bestätigt.
+
+**Belegung CNPR (25.10.2026):** gelb = GND (Durchgang zu Minus CN9), orange = VDD (5 V gemessen),
+grün = BKGD und blau = RESET (vermutet, aus dem Zeitverhalten).
+
+USBDM-Stecker (6-polig, Freescale-BDM-Standard, Draufsicht):
+
+| | |
+|---|---|
+| 1 BKGD | 2 GND |
+| 3 frei | 4 RESET |
+| 5 frei | 6 VDD (Messeingang; USBDM speist nicht, `SET_VDD OFF`) |
+
+**Falle beim vorhandenen USBDM (JS16, FW 4.12):** Das Flachband sitzt gespiegelt, die
+**rote Ader ist GND**, nicht Pin 1. Gemessen (Selbsttest ohne Board, Analyzer an allen Adern):
+
+| Flachband-Ader | Signal | an CNPR |
+|---|---|---|
+| 1 (rot) | GND (Durchgang zum USB-Gehäuse) | gelb |
+| 2 | BKGD (Sync-Pulse ~1 ms) | grün |
+| 3 | RESET (laut Spiegelung; dieser USBDM treibt RESET nicht) | blau |
+| 4 | frei | – |
+| 5 | VDD-Messeingang (laut Spiegelung) | orange |
+| 6 | frei | – |
+
+Weitere Fallen dieses Tages:
+
+- Logic Analyzer ohne USB, aber mit Adern am Board, speist sich über die Eingänge aus VDD und
+  zieht die MCU in den Reset. Erst USB einstecken, dann die Adern anklemmen.
+- Ohne gemeinsame Masse (12-V-Netzteil potentialfrei) liest der USBDM RESET falsch als LOW.
+- Der USBDM treibt RESET nicht; `--special` bringt also nichts. Debug-Einstieg von Hand:
+  BKGD (grün) beim Einstecken der 12 V gegen GND halten.
+
+Stand der Verbindung: Die scheinbare Sync-Antwort (~1,32 MHz, danach `BDM_EN_FAILED`) kam
+genauso **ohne** Board-Spannung, war also ein Artefakt. Ursache: Der USBDM-Klon („USB BDM
+Freescale“, JS16) hat einen Jumper „Target Vdd supply“ (TVDD–TVDD / TVDD–5V / TVDD–3V3). In
+der Stellung TVDD–TVDD sind seine Treiber unversorgt; BKGD (Ader 2) und VDD (Ader 5) ziehen
+die 5 V des Boards dann auf 1,7–1,9 V herunter, die MCU hängt im Reset. `getcap` meldet weder
+VDD-Steuerung noch VDD-Messung, „Vdd-External“ und die PWR-LED sagen nichts.
+Mit Jumper auf TVDD–5V (Adapter allein gemessen): Ader 5 = 5 V Ausgang, Ader 2 = 3,6 V,
+Ader 3 = 3,5 V (Pull-ups) – bestätigt die gespiegelte Belegung.
+
+**Schaden am Ersatzboard (25.10.2026):** Mit Jumper TVDD–5V und allen vier Adern an CNPR
+(1→P/gelb, 2→N/grün, 3→C/blau, **5→R/orange**) bei ausgeschalteten 12 V lief das Board aus dem
+USB-5-V des Adapters an (Relais schaltete); beim Zuschalten der 12 V rauchte die MCU. Danach VDD–GND 1,9 Ω, Kurzschluss in der MCU selbst; die Firmware dieses Boards ist verloren. Vermutete
+Ursachen (nicht belegt): zwei 5-V-Quellen parallel auf VDD und/oder Latch-up durch Signale an
+der MCU vor ihrer eigenen Versorgung. Regeln für jeden weiteren Versuch:
+
+- Bei Jumper TVDD–5V/3V3 ist Ader 5 ein **Ausgang**: nie an ein selbst versorgtes Board.
+- Erst Board einschalten, dann BDM-Signale anschließen; beim Abschalten umgekehrt.
+- Erstversuche an einem neuen Board mit strombegrenztem Labornetzteil.
+
+Stiftfolge CNPR von links: C = blau (RESET, vermutet), N = grün (BKGD, vermutet),
+P = gelb (GND, Durchgang zu Minus CN9), R = orange (VDD, 5 V gemessen).
 
 Offen in [Issue „Firmware über BDM sichern“](https://github.com/larszu/bezzera-duo-protocol/issues).
 

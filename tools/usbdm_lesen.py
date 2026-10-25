@@ -18,7 +18,14 @@ import usb.core, usb.util, usb.backend.libusb1
 
 import os, time
 LIB = "/opt/homebrew/lib/libusb-1.0.dylib"
-be = usb.backend.libusb1.get_backend(find_library=(lambda x: LIB) if os.path.exists(LIB) else None)
+if os.path.exists(LIB):
+    be = usb.backend.libusb1.get_backend(find_library=lambda x: LIB)
+else:
+    try:  # Windows: pip install libusb-package (bringt libusb-1.0.dll mit)
+        import libusb_package
+        be = libusb_package.get_libusb1_backend()
+    except ImportError:
+        be = usb.backend.libusb1.get_backend()
 dev = usb.core.find(idVendor=0x16D0, idProduct=0x0567, backend=be)
 if dev is None:
     sys.exit("USBDM nicht gefunden")
